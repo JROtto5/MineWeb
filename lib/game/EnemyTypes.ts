@@ -26,9 +26,9 @@ export interface EnemyStats {
 export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   [EnemyType.GRUNT]: {
     health: 50,
-    speed: 80,
+    speed: 140, // FASTER! (was 80)
     damage: 5,
-    attackRange: 300,
+    attackRange: 400, // Larger range
     attackSpeed: 1000,
     moneyDrop: [10, 30],
     xpDrop: [5, 15],
@@ -38,9 +38,9 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.SCOUT]: {
     health: 30,
-    speed: 150,
+    speed: 220, // MUCH FASTER! (was 150)
     damage: 3,
-    attackRange: 250,
+    attackRange: 350,
     attackSpeed: 500,
     moneyDrop: [15, 35],
     xpDrop: [8, 18],
@@ -50,9 +50,9 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.TANK]: {
     health: 200,
-    speed: 40,
+    speed: 70, // Faster tank (was 40)
     damage: 15,
-    attackRange: 350,
+    attackRange: 400,
     attackSpeed: 2000,
     moneyDrop: [30, 80],
     xpDrop: [25, 50],
@@ -62,10 +62,10 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.SNIPER]: {
     health: 40,
-    speed: 60,
+    speed: 100, // Faster (was 60)
     damage: 25,
     attackRange: 600,
-    attackSpeed: 3000,
+    attackSpeed: 2500, // Shoots faster (was 3000)
     moneyDrop: [20, 50],
     xpDrop: [15, 30],
     color: 0x16a085,
@@ -74,9 +74,9 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.BERSERKER]: {
     health: 100,
-    speed: 120,
+    speed: 170, // MUCH FASTER! (was 120)
     damage: 20,
-    attackRange: 400,
+    attackRange: 450,
     attackSpeed: 600,
     moneyDrop: [40, 90],
     xpDrop: [30, 60],
@@ -86,10 +86,10 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.BOSS]: {
     health: 500,
-    speed: 60,
+    speed: 90, // Faster boss (was 60)
     damage: 30,
-    attackRange: 500,
-    attackSpeed: 1500,
+    attackRange: 550,
+    attackSpeed: 1200, // Attacks faster (was 1500)
     moneyDrop: [200, 500],
     xpDrop: [100, 200],
     color: 0xe67e22,
