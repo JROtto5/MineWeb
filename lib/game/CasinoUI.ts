@@ -23,20 +23,24 @@ export class CasinoUI {
     // Pause game
     this.scene.physics.pause()
 
+    // FIX V5: Use screen dimensions for proper positioning!
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+
     // Dark overlay
     this.overlay = this.scene.add.rectangle(
-      this.scene.cameras.main.scrollX + this.scene.cameras.main.width / 2,
-      this.scene.cameras.main.scrollY + this.scene.cameras.main.height / 2,
-      this.scene.cameras.main.width,
-      this.scene.cameras.main.height,
+      screenWidth / 2,
+      screenHeight / 2,
+      screenWidth * 2,
+      screenHeight * 2,
       0x000000,
       0.8
     ).setScrollFactor(0).setDepth(1000)
 
     // Create main container
     this.container = this.scene.add.container(
-      this.scene.cameras.main.scrollX + this.scene.cameras.main.width / 2,
-      this.scene.cameras.main.scrollY + this.scene.cameras.main.height / 2
+      screenWidth / 2,
+      screenHeight / 2
     ).setScrollFactor(0).setDepth(1001)
 
     this.showMainMenu()

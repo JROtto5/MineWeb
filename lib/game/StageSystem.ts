@@ -19,33 +19,33 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 1,
     name: 'BACKSTREETS',
-    enemyCount: 25, // INCREASED from 10 for faster pace!
+    enemyCount: 50, // V5: DOUBLED AGAIN! (was 25, originally 10) 🔥🔥🔥
     enemyTypes: [EnemyType.GRUNT],
     bossEnabled: false,
-    moneyReward: 150,
-    xpReward: 75,
+    moneyReward: 200,
+    xpReward: 100,
     backgroundColor: 0x1a1a1a,
     gridColor: 0x2a2a2a,
   },
   {
     stageNumber: 2,
     name: 'WAREHOUSE DISTRICT',
-    enemyCount: 30, // INCREASED from 15 for faster pace!
+    enemyCount: 60, // V5: DOUBLED! (was 30)
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT],
     bossEnabled: true,
-    moneyReward: 300,
-    xpReward: 150,
+    moneyReward: 400,
+    xpReward: 200,
     backgroundColor: 0x1a1a2a,
     gridColor: 0x2a2a3a,
   },
   {
     stageNumber: 3,
     name: 'DOWNTOWN CHAOS',
-    enemyCount: 35, // INCREASED from 20
+    enemyCount: 70, // V5: DOUBLED! (was 35)
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK],
     bossEnabled: true,
-    moneyReward: 450,
-    xpReward: 200,
+    moneyReward: 600,
+    xpReward: 300,
     backgroundColor: 0x2a1a1a,
     gridColor: 0x3a2a2a,
     specialModifier: 'fast_enemies',
@@ -53,22 +53,22 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 4,
     name: 'INDUSTRIAL COMPLEX',
-    enemyCount: 40, // INCREASED from 25
+    enemyCount: 80, // V5: DOUBLED! (was 40)
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER],
     bossEnabled: true,
-    moneyReward: 600,
-    xpReward: 250,
+    moneyReward: 800,
+    xpReward: 350,
     backgroundColor: 0x1a2a1a,
     gridColor: 0x2a3a2a,
   },
   {
     stageNumber: 5,
     name: 'CASINO ROYALE',
-    enemyCount: 45, // INCREASED from 30
+    enemyCount: 90, // V5: DOUBLED! (was 45)
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
-    moneyReward: 850,
-    xpReward: 350,
+    moneyReward: 1000,
+    xpReward: 450,
     backgroundColor: 0x2a1a2a,
     gridColor: 0x3a2a3a,
     specialModifier: 'more_health',
@@ -76,11 +76,11 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 6,
     name: 'ROOFTOP RUMBLE',
-    enemyCount: 50, // INCREASED from 35
+    enemyCount: 100, // V5: DOUBLED! (was 50)
     enemyTypes: [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
-    moneyReward: 1100,
-    xpReward: 450,
+    moneyReward: 1300,
+    xpReward: 550,
     backgroundColor: 0x1a1a3a,
     gridColor: 0x2a2a4a,
     specialModifier: 'rapid_spawn',
@@ -88,22 +88,22 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 7,
     name: 'UNDERGROUND ARENA',
-    enemyCount: 55, // INCREASED from 40
+    enemyCount: 110, // V5: DOUBLED! (was 55)
     enemyTypes: [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
-    moneyReward: 1600,
-    xpReward: 550,
+    moneyReward: 1800,
+    xpReward: 650,
     backgroundColor: 0x3a1a1a,
     gridColor: 0x4a2a2a,
   },
   {
     stageNumber: 8,
     name: 'HARBOR HEIST',
-    enemyCount: 60, // INCREASED from 45
+    enemyCount: 120, // V5: DOUBLED! (was 60)
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
-    moneyReward: 2200,
-    xpReward: 650,
+    moneyReward: 2500,
+    xpReward: 750,
     backgroundColor: 0x1a2a2a,
     gridColor: 0x2a3a3a,
     specialModifier: 'fast_enemies',
@@ -111,11 +111,11 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 9,
     name: 'SKYSCRAPER SHOWDOWN',
-    enemyCount: 70, // INCREASED from 50
+    enemyCount: 140, // V5: DOUBLED! (was 70)
     enemyTypes: [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
-    moneyReward: 3500,
-    xpReward: 900,
+    moneyReward: 4000,
+    xpReward: 1100,
     backgroundColor: 0x2a2a1a,
     gridColor: 0x3a3a2a,
     specialModifier: 'more_health',
@@ -124,11 +124,11 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 10,
     name: '💀 FINAL BOSS GAUNTLET 💀',
-    enemyCount: 80, // INCREASED from 60
+    enemyCount: 150, // V5: ALMOST DOUBLED! (was 80) - EPIC FINALE!
     enemyTypes: [EnemyType.BOSS],
     bossEnabled: true,
-    moneyReward: 15000,
-    xpReward: 2500,
+    moneyReward: 20000,
+    xpReward: 3000,
     backgroundColor: 0x4a0a0a,
     gridColor: 0x5a1a1a,
     specialModifier: 'all_bosses',

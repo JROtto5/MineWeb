@@ -148,6 +148,8 @@ export default function Home() {
           <div className="control-line">R - Reload</div>
           <div className="control-line">E - Casino</div>
           <div className="control-line" style={{ color: '#f39c12' }}>T - Skill Tree</div>
+          <div className="control-line" style={{ color: '#2ecc71', fontWeight: 'bold' }}>B - Shop</div>
+          <div className="control-line" style={{ fontSize: '11px', color: '#888' }}>SPACE/Q/F - Abilities (if purchased)</div>
         </div>
 
         {/* Messages */}

@@ -131,10 +131,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     if (combo > 0) {
       this.comboDisplay.setVisible(true)
 
-      // Position in center top
-      const cam = this.cameras.main
+      // Position in center top - FIX V5: Use screen dimensions
       this.comboDisplay.setPosition(
-        cam.width / 2,
+        this.scale.width / 2,
         100
       )
 
@@ -159,9 +158,10 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
-    const cam = this.cameras.main
+    // FIX V5: Use screen dimensions for kill feed
+    const screenWidth = this.scale.width
 
-    const message = this.add.text(cam.width - 20, 20 + this.killFeedMessages.length * 35, text, {
+    const message = this.add.text(screenWidth - 20, 20 + this.killFeedMessages.length * 35, text, {
       fontSize: '18px',
       color: color,
       fontStyle: 'bold',
@@ -172,11 +172,11 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Slide in animation
     message.setAlpha(0)
-    message.setX(cam.width + 20)
+    message.setX(screenWidth + 20)
 
     this.tweens.add({
       targets: message,
-      x: cam.width - 20,
+      x: screenWidth - 20,
       alpha: 1,
       duration: 300,
       ease: 'Back.easeOut',
@@ -195,6 +195,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private updateKillFeed() {
     const currentTime = this.time.now
+    const screenWidth = this.scale.width
 
     // Remove expired messages
     this.killFeedMessages = this.killFeedMessages.filter(msg => {
@@ -202,7 +203,7 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.tweens.add({
           targets: msg.text,
           alpha: 0,
-          x: this.cameras.main.width + 20,
+          x: screenWidth + 20,
           duration: 300,
           onComplete: () => msg.text.destroy(),
         })
@@ -659,22 +660,24 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.physics.pause()
 
-    const cam = this.cameras.main
+    // FIX V5: Use actual screen dimensions, not camera dimensions!
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
 
     // Overlay - FIX V4: Don't make overlay interactive - it blocks clicks!
     const overlay = this.add.rectangle(
-      cam.width / 2,
-      cam.height / 2,
-      cam.width * 2, // Make it larger to cover everything
-      cam.height * 2,
+      screenWidth / 2,
+      screenHeight / 2,
+      screenWidth * 2, // Make it larger to cover everything
+      screenHeight * 2,
       0x000000,
       0.9
     ).setScrollFactor(0).setDepth(9000)
     // Removed .setInteractive() - this was blocking skill button clicks!
 
     const container = this.add.container(
-      cam.width / 2,
-      cam.height / 2
+      screenWidth / 2,
+      screenHeight / 2
     ).setScrollFactor(0).setDepth(9001)
 
     const title = this.add.text(0, -250, '⚡ SKILL TREE ⚡', {

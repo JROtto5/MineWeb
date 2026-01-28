@@ -244,21 +244,23 @@ export class ShopUI {
 
     this.scene.physics.pause()
 
-    const cam = this.scene.cameras.main
+    // FIX V5: Use screen dimensions for proper positioning!
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
 
     // Dark overlay
     const overlay = this.scene.add.rectangle(
-      cam.width / 2,
-      cam.height / 2,
-      cam.width * 2,
-      cam.height * 2,
+      screenWidth / 2,
+      screenHeight / 2,
+      screenWidth * 2,
+      screenHeight * 2,
       0x000000,
       0.85
     ).setScrollFactor(0).setDepth(10000)
 
     const container = this.scene.add.container(
-      cam.width / 2,
-      cam.height / 2
+      screenWidth / 2,
+      screenHeight / 2
     ).setScrollFactor(0).setDepth(10001)
 
     // Title
@@ -277,35 +279,50 @@ export class ShopUI {
       fontStyle: 'bold',
     }).setOrigin(0.5)
 
-    // Category tabs
+    // Category tabs - FIX V5: Create tabs OUTSIDE container for proper click handling!
     const categories = [
       { id: 'weapon', name: 'WEAPONS', icon: '💥' },
       { id: 'stat', name: 'STATS', icon: '⚡' },
       { id: 'ability', name: 'ABILITIES', icon: '🌟' },
     ]
 
-    const tabY = -180
+    const tabsY = screenHeight / 2 - 180
+    const tabObjects: any[] = []
+
     categories.forEach((cat, index) => {
-      const x = -200 + index * 200
+      const tabX = screenWidth / 2 + (-200 + index * 200)
       const isActive = cat.id === this.currentCategory
 
-      const tabBg = this.scene.add.rectangle(x, tabY, 180, 50, isActive ? 0xf39c12 : 0x34495e, 1)
-      const tabText = this.scene.add.text(x, tabY, `${cat.icon} ${cat.name}`, {
+      const tabBg = this.scene.add.rectangle(tabX, tabsY, 180, 50, isActive ? 0xf39c12 : 0x34495e, 1)
+        .setScrollFactor(0)
+        .setDepth(10002) // Above container!
+      const tabText = this.scene.add.text(tabX, tabsY, `${cat.icon} ${cat.name}`, {
         fontSize: '16px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(10003) // Above background!
 
+      // Make interactive AFTER setting position and depth
       tabBg.setInteractive({ useHandCursor: true })
-        .on('pointerover', () => !isActive && tabBg.setFillStyle(0x2c3e50, 1))
-        .on('pointerout', () => !isActive && tabBg.setFillStyle(0x34495e, 1))
+        .on('pointerover', () => {
+          if (!isActive) {
+            tabBg.setFillStyle(0x2c3e50, 1)
+          }
+        })
+        .on('pointerout', () => {
+          if (!isActive) {
+            tabBg.setFillStyle(0x34495e, 1)
+          }
+        })
         .on('pointerdown', () => {
           this.currentCategory = cat.id as any
           this.close()
           this.open() // Refresh
         })
 
-      container.add([tabBg, tabText])
+      tabObjects.push(tabBg, tabText)
     })
 
     // Items list
@@ -385,7 +402,7 @@ export class ShopUI {
 
     container.add([title, moneyText, closeBtn, closeTxt])
 
-    this.ui = { overlay, container }
+    this.ui = { overlay, container, tabObjects }
   }
 
   private buyItem(itemId: string) {
@@ -420,6 +437,10 @@ export class ShopUI {
     if (this.ui) {
       this.ui.overlay.destroy()
       this.ui.container.destroy()
+      // FIX V5: Destroy tab objects too!
+      if (this.ui.tabObjects) {
+        this.ui.tabObjects.forEach((obj: any) => obj.destroy())
+      }
       this.ui = null
     }
   }
