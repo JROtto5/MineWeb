@@ -138,16 +138,6 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Welcome message
     this.addKillFeedMessage('🎮 CRIME CITY V3 - All systems online!', '#2ecc71', 5000)
     this.showStageIntro()
-
-    // FIX V8: Listen for weapon switch events and show shorter messages
-    if (typeof window !== 'undefined') {
-      window.addEventListener('gameEvent', ((event: CustomEvent) => {
-        if (event.detail.type === 'message' && event.detail.data.text.includes('Switched to')) {
-          // Show weapon switch with SHORT duration (1 second)
-          this.addKillFeedMessage(event.detail.data.text, '#3498db', 1000)
-        }
-      }) as EventListener)
-    }
   }
 
   private abilityHotbarUI: any[] = []
@@ -388,8 +378,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private createEnemyTracker() {
-    // FIXED: Move to top-left for better visibility
-    const trackerX = 150
+    // FIXED: Move to top-center for maximum visibility without overlap
+    const screenWidth = this.scale.width
+    const trackerX = screenWidth / 2
     const trackerY = 80
 
     // Background panel

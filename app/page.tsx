@@ -144,12 +144,11 @@ export default function Home() {
           <div className="control-line">WASD - Move</div>
           <div className="control-line">Mouse - Aim</div>
           <div className="control-line">Left Click - Shoot</div>
-          <div className="control-line">1-3 - Switch Weapon</div>
           <div className="control-line">R - Reload</div>
           <div className="control-line">E - Casino</div>
           <div className="control-line" style={{ color: '#f39c12' }}>T - Skill Tree</div>
           <div className="control-line" style={{ color: '#2ecc71', fontWeight: 'bold' }}>B - Shop</div>
-          <div className="control-line" style={{ fontSize: '11px', color: '#888' }}>SPACE/Q/F - Abilities (if purchased)</div>
+          <div className="control-line" style={{ fontSize: '11px', color: '#888' }}>1-9 - Abilities (buy in shop)</div>
         </div>
 
         {/* Messages */}
