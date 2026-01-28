@@ -14,8 +14,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   public maxAmmo = 30
   public skillPoints = 0
 
-  private baseSpeed = 200
-  private speed = 200
+  private baseSpeed = 250 // FAST: Increased from 200
+  private speed = 250
   private currentWeapon = 2 // ROGUELIKE: Always shotgun!
   private weaponSystem: WeaponSystem
   public skillTree: SkillTreeManager
@@ -41,6 +41,33 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   private dashCooldown = 0
   private shieldCooldown = 0
   private timeSlowCooldown = 0
+
+  // NEW ABILITIES (Keys 4-9)
+  private hasExplosiveRounds = false
+  private explosiveRoundsActive = false
+  private explosiveRoundsShots = 0
+  private explosiveRoundsCooldown = 0
+
+  private hasBerserk = false
+  private berserkActive = false
+  private berserkEnd = 0
+  private berserkCooldown = 0
+
+  private hasTeleport = false
+  private teleportCooldown = 0
+
+  private hasLifeDrain = false
+  private lifeDrainActive = false
+  private lifeDrainEnd = 0
+  private lifeDrainCooldown = 0
+
+  private hasBulletTime = false
+  private bulletTimeActive = false
+  private bulletTimeEnd = 0
+  private bulletTimeCooldown = 0
+
+  private hasOrbitalStrike = false
+  private orbitalStrikeCooldown = 0
 
   private weapons: WeaponType[] = [
     { name: 'Pistol', damage: 20, fireRate: 300, ammo: 30, maxAmmo: 30 },
@@ -274,10 +301,18 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.shopMoneyBonus = shopManager.getBonus('moneyBoost')
     this.shopXPBonus = shopManager.getBonus('xpBoost')
 
-    // Abilities
+    // Abilities (Keys 1-3)
     this.hasDash = shopManager.hasAbility('dash')
     this.hasShield = shopManager.hasAbility('shield')
     this.hasTimeSlow = shopManager.hasAbility('timeSlow')
+
+    // ROGUELIKE: Advanced Abilities (Keys 4-9)
+    this.hasExplosiveRounds = shopManager.hasAbility('explosiveRounds')
+    this.hasBerserk = shopManager.hasAbility('berserk')
+    this.hasTeleport = shopManager.hasAbility('teleport')
+    this.hasLifeDrain = shopManager.hasAbility('lifeDrain')
+    this.hasBulletTime = shopManager.hasAbility('bulletTime')
+    this.hasOrbitalStrike = shopManager.hasAbility('orbitalStrike')
 
     // Update stats
     this.applySkillBonuses()
@@ -453,7 +488,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   performDash() {
     if (!this.canDash()) return
 
-    this.dashCooldown = this.scene.time.now + 3000 // 3 second cooldown
+    this.dashCooldown = this.scene.time.now + 2000 // FAST: 2 second cooldown
 
     // Get cursor direction
     const pointer = this.scene.input.activePointer
@@ -487,7 +522,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (!this.canActivateShield()) return
 
     this.shieldHits = 5
-    this.shieldCooldown = this.scene.time.now + 15000 // 15 second cooldown
+    this.shieldCooldown = this.scene.time.now + 10000 // FAST: 10 second cooldown
 
     // Visual feedback
     this.setTint(0x00ffff)
@@ -505,13 +540,100 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.timeSlowActive = true
     this.timeSlowEnd = this.scene.time.now + 5000 // 5 seconds
-    this.timeSlowCooldown = this.scene.time.now + 20000 // 20 second cooldown
+    this.timeSlowCooldown = this.scene.time.now + 12000 // FAST: 12 second cooldown
 
     // Slow down enemies (handled in GameScene)
     this.scene.time.timeScale = 0.5
 
     this.emitMessage('⏱️ TIME SLOW ACTIVATED!', 'warning')
   }
+
+  // NEW ABILITIES (Keys 4-9)
+  canActivateExplosiveRounds(): boolean {
+    return this.hasExplosiveRounds && !this.explosiveRoundsActive && this.scene.time.now >= this.explosiveRoundsCooldown
+  }
+
+  activateExplosiveRounds() {
+    if (!this.canActivateExplosiveRounds()) return
+    this.explosiveRoundsActive = true
+    this.explosiveRoundsShots = 10 // Next 10 shots explode
+    this.explosiveRoundsCooldown = this.scene.time.now + 8000 // FAST: 8 second cooldown
+    this.setTint(0xff6600)
+    this.scene.time.delayedCall(200, () => this.clearTint())
+  }
+
+  canActivateBerserk(): boolean {
+    return this.hasBerserk && !this.berserkActive && this.scene.time.now >= this.berserkCooldown
+  }
+
+  activateBerserk() {
+    if (!this.canActivateBerserk()) return
+    this.berserkActive = true
+    this.berserkEnd = this.scene.time.now + 8000 // 8 seconds
+    this.berserkCooldown = this.scene.time.now + 10000 // FAST: 10 second cooldown
+    this.setTint(0xff0000)
+  }
+
+  canActivateTeleport(): boolean {
+    return this.hasTeleport && this.scene.time.now >= this.teleportCooldown
+  }
+
+  activateTeleport(targetX: number, targetY: number) {
+    if (!this.canActivateTeleport()) return
+    // Teleport particle effect
+    const startX = this.x
+    const startY = this.y
+
+    // Instant teleport
+    this.setPosition(targetX, targetY)
+    this.teleportCooldown = this.scene.time.now + 6000 // FAST: 6 second cooldown
+
+    // Flash effect
+    this.scene.cameras.main.flash(100, 150, 0, 255)
+  }
+
+  canActivateLifeDrain(): boolean {
+    return this.hasLifeDrain && !this.lifeDrainActive && this.scene.time.now >= this.lifeDrainCooldown
+  }
+
+  activateLifeDrain() {
+    if (!this.canActivateLifeDrain()) return
+    this.lifeDrainActive = true
+    this.lifeDrainEnd = this.scene.time.now + 10000 // 10 seconds
+    this.lifeDrainCooldown = this.scene.time.now + 12000 // FAST: 12 second cooldown
+    this.setTint(0x9900ff)
+  }
+
+  canActivateBulletTime(): boolean {
+    return this.hasBulletTime && !this.bulletTimeActive && this.scene.time.now >= this.bulletTimeCooldown
+  }
+
+  activateBulletTime() {
+    if (!this.canActivateBulletTime()) return
+    this.bulletTimeActive = true
+    this.bulletTimeEnd = this.scene.time.now + 4000 // 4 seconds
+    this.bulletTimeCooldown = this.scene.time.now + 15000 // FAST: 15 second cooldown
+    this.scene.time.timeScale = 0.3 // Even slower than time slow
+    this.setTint(0x00ffff)
+  }
+
+  canActivateOrbitalStrike(): boolean {
+    return this.hasOrbitalStrike && this.scene.time.now >= this.orbitalStrikeCooldown
+  }
+
+  activateOrbitalStrike(targetX: number, targetY: number) {
+    if (!this.canActivateOrbitalStrike()) return
+    this.orbitalStrikeCooldown = this.scene.time.now + 20000 // FAST: 20 second cooldown
+    // Emit event for GameScene to handle the strike
+    this.scene.events.emit('orbitalStrike', { x: targetX, y: targetY })
+    this.scene.cameras.main.shake(500, 0.01)
+  }
+
+  // Getters for ability states
+  isExplosiveRoundsActive(): boolean { return this.explosiveRoundsActive }
+  isBerserkActive(): boolean { return this.berserkActive }
+  isLifeDrainActive(): boolean { return this.lifeDrainActive }
+  isBulletTimeActive(): boolean { return this.bulletTimeActive }
 
   // TESTING: Auto-click/reload checkers
   hasAutoClick(): boolean {
@@ -527,7 +649,31 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.timeSlowActive && this.scene.time.now >= this.timeSlowEnd) {
       this.timeSlowActive = false
       this.scene.time.timeScale = 1.0
-      this.emitMessage('⏱️ Time slow ended', 'warning')
+    }
+
+    // Check berserk expiration
+    if (this.berserkActive && this.scene.time.now >= this.berserkEnd) {
+      this.berserkActive = false
+      this.clearTint()
+    }
+
+    // Check life drain expiration
+    if (this.lifeDrainActive && this.scene.time.now >= this.lifeDrainEnd) {
+      this.lifeDrainActive = false
+      this.clearTint()
+    }
+
+    // Check bullet time expiration
+    if (this.bulletTimeActive && this.scene.time.now >= this.bulletTimeEnd) {
+      this.bulletTimeActive = false
+      this.scene.time.timeScale = 1.0
+      this.clearTint()
+    }
+
+    // Reset explosive rounds when shots run out
+    if (this.explosiveRoundsActive && this.explosiveRoundsShots <= 0) {
+      this.explosiveRoundsActive = false
+      this.clearTint()
     }
   }
 

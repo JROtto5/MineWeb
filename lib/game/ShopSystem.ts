@@ -15,6 +15,7 @@ export interface ShopItem {
           'piercing' | 'explosive' | 'reloadSpeed' | 'dualWield' | 'homing' | 'multishot' |
           'healthRegen' | 'dodgeChance' | 'luck' | 'armor' | 'lifesteal' | 'comboBonus' |
           'teleport' | 'berserk' | 'invisibility' | 'orbitalStrike' |
+          'explosiveRounds' | 'lifeDrain' | 'bulletTime' |
           'autoClick' | 'autoReload'
     value: number
   }
@@ -284,11 +285,33 @@ export const SHOP_ITEMS: ShopItem[] = [
     effect: { type: 'comboBonus', value: 0.10 }
   },
 
-  // CREATIVE EXPANSION: More Special Abilities!
+  // ROGUELIKE: Advanced Abilities (Keys 4-9)!
+  {
+    id: 'explosive_rounds',
+    name: 'Explosive Rounds',
+    description: 'Key 4: Next 10 shots explode in area - 8s CD',
+    icon: '💥',
+    category: 'ability',
+    basePrice: 5000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'explosiveRounds', value: 1 }
+  },
+  {
+    id: 'berserk_mode',
+    name: 'Berserk Rage',
+    description: 'Key 5: 2x fire rate + damage for 8s - 10s CD',
+    icon: '😈',
+    category: 'ability',
+    basePrice: 6000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'berserk', value: 1 }
+  },
   {
     id: 'teleport',
     name: 'Teleportation',
-    description: 'Unlock teleport ability (V key) - instant movement',
+    description: 'Key 6: Instant teleport to cursor - 6s CD',
     icon: '✨',
     category: 'ability',
     basePrice: 7000,
@@ -297,37 +320,171 @@ export const SHOP_ITEMS: ShopItem[] = [
     effect: { type: 'teleport', value: 1 }
   },
   {
-    id: 'berserk_mode',
-    name: 'Berserk Rage',
-    description: 'Unlock berserk mode (G key) - 3x damage for 10s',
-    icon: '😈',
+    id: 'life_drain',
+    name: 'Life Drain',
+    description: 'Key 7: Steal HP from enemies for 10s - 12s CD',
+    icon: '🩸',
     category: 'ability',
     basePrice: 8000,
     maxLevel: 1,
     priceScaling: 1,
-    effect: { type: 'berserk', value: 1 }
+    effect: { type: 'lifeDrain', value: 1 }
   },
   {
-    id: 'invisibility',
-    name: 'Ghost Cloak',
-    description: 'Unlock invisibility (H key) - enemies ignore you for 8s',
-    icon: '👻',
+    id: 'bullet_time',
+    name: 'Bullet Time',
+    description: 'Key 8: Ultra slow-mo for 4s - 15s CD',
+    icon: '⏳',
     category: 'ability',
-    basePrice: 9000,
+    basePrice: 10000,
     maxLevel: 1,
     priceScaling: 1,
-    effect: { type: 'invisibility', value: 1 }
+    effect: { type: 'bulletTime', value: 1 }
   },
   {
     id: 'orbital_strike',
     name: 'Orbital Strike',
-    description: 'Unlock orbital strike (Z key) - massive AOE damage',
+    description: 'Key 9: Massive AOE damage at cursor - 20s CD',
     icon: '☄️',
     category: 'ability',
     basePrice: 12000,
     maxLevel: 1,
     priceScaling: 1,
     effect: { type: 'orbitalStrike', value: 1 }
+  },
+
+  // OPTIMIZATION: More Upgrades!
+  {
+    id: 'mega_damage',
+    name: 'Mega Damage',
+    description: '+25% Damage per level',
+    icon: '⚔️',
+    category: 'weapon',
+    basePrice: 1500,
+    maxLevel: 10,
+    priceScaling: 1.8,
+    effect: { type: 'damage', value: 0.25 }
+  },
+  {
+    id: 'ultra_fire_rate',
+    name: 'Ultra Fire Rate',
+    description: '+20% Fire Rate per level',
+    icon: '🔫',
+    category: 'weapon',
+    basePrice: 1200,
+    maxLevel: 10,
+    priceScaling: 1.7,
+    effect: { type: 'fireRate', value: 0.20 }
+  },
+  {
+    id: 'speed_demon',
+    name: 'Speed Demon',
+    description: '+15% Move Speed per level',
+    icon: '🏃',
+    category: 'stat',
+    basePrice: 800,
+    maxLevel: 8,
+    priceScaling: 1.6,
+    effect: { type: 'speed', value: 0.15 }
+  },
+  {
+    id: 'health_regen',
+    name: 'Health Regeneration',
+    description: '+2 HP/s Regen per level',
+    icon: '💚',
+    category: 'stat',
+    basePrice: 2000,
+    maxLevel: 5,
+    priceScaling: 2.0,
+    effect: { type: 'healthRegen', value: 2 }
+  },
+  {
+    id: 'crit_damage',
+    name: 'Critical Damage',
+    description: '+30% Crit Damage per level',
+    icon: '💀',
+    category: 'weapon',
+    basePrice: 1800,
+    maxLevel: 5,
+    priceScaling: 1.9,
+    effect: { type: 'critChance', value: 0.30 }
+  },
+  {
+    id: 'money_printer',
+    name: 'Money Printer',
+    description: '+35% Money Gain per level',
+    icon: '💰',
+    category: 'stat',
+    basePrice: 1000,
+    maxLevel: 8,
+    priceScaling: 1.8,
+    effect: { type: 'moneyBoost', value: 0.35 }
+  },
+  {
+    id: 'xp_magnet',
+    name: 'XP Magnet',
+    description: '+30% XP Gain per level',
+    icon: '⭐',
+    category: 'stat',
+    basePrice: 1000,
+    maxLevel: 8,
+    priceScaling: 1.8,
+    effect: { type: 'xpBoost', value: 0.30 }
+  },
+  {
+    id: 'combo_master',
+    name: 'Combo Master',
+    description: '+20% Combo Duration per level',
+    icon: '🔥',
+    category: 'stat',
+    basePrice: 1500,
+    maxLevel: 5,
+    priceScaling: 1.7,
+    effect: { type: 'comboBonus', value: 0.20 }
+  },
+  {
+    id: 'dodge_expert',
+    name: 'Dodge Expert',
+    description: '+8% Dodge Chance per level',
+    icon: '🌪️',
+    category: 'stat',
+    basePrice: 2500,
+    maxLevel: 5,
+    priceScaling: 2.0,
+    effect: { type: 'dodgeChance', value: 0.08 }
+  },
+  {
+    id: 'armored_plating',
+    name: 'Armored Plating',
+    description: '+5% Damage Reduction per level',
+    icon: '🛡️',
+    category: 'stat',
+    basePrice: 2000,
+    maxLevel: 8,
+    priceScaling: 1.8,
+    effect: { type: 'armor', value: 0.05 }
+  },
+  {
+    id: 'vampire',
+    name: 'Vampire',
+    description: '+5% Lifesteal per level',
+    icon: '🧛',
+    category: 'stat',
+    basePrice: 2500,
+    maxLevel: 5,
+    priceScaling: 2.2,
+    effect: { type: 'lifesteal', value: 0.05 }
+  },
+  {
+    id: 'ammo_storage',
+    name: 'Ammo Storage',
+    description: '+50 Max Ammo per level',
+    icon: '📦',
+    category: 'weapon',
+    basePrice: 500,
+    maxLevel: 10,
+    priceScaling: 1.5,
+    effect: { type: 'ammo', value: 50 }
   },
 
   // TESTING: Free automation items!

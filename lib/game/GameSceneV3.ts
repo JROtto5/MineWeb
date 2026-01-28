@@ -286,9 +286,15 @@ export default class GameSceneV3 extends Phaser.Scene {
     const barY = screenHeight - 100
 
     const abilities = [
-      { key: '1', name: 'Dash', icon: '💨', cooldown: 3000, check: () => this.player.canDash() },
-      { key: '2', name: 'Shield', icon: '🛡️', cooldown: 15000, check: () => this.player.canActivateShield() },
-      { key: '3', name: 'Time Slow', icon: '⏰', cooldown: 20000, check: () => this.player.canActivateTimeSlow() },
+      { key: '1', name: 'Dash', icon: '💨', check: () => this.player.canDash() },
+      { key: '2', name: 'Shield', icon: '🛡️', check: () => this.player.canActivateShield() },
+      { key: '3', name: 'Time Slow', icon: '⏰', check: () => this.player.canActivateTimeSlow() },
+      { key: '4', name: 'Explosive Rounds', icon: '💥', check: () => this.player.canActivateExplosiveRounds() },
+      { key: '5', name: 'Berserk', icon: '😈', check: () => this.player.canActivateBerserk() },
+      { key: '6', name: 'Teleport', icon: '✨', check: () => this.player.canActivateTeleport() },
+      { key: '7', name: 'Life Drain', icon: '🩸', check: () => this.player.canActivateLifeDrain() },
+      { key: '8', name: 'Bullet Time', icon: '⏳', check: () => this.player.canActivateBulletTime() },
+      { key: '9', name: 'Orbital Strike', icon: '☄️', check: () => this.player.canActivateOrbitalStrike() },
     ]
 
     for (let i = 0; i < totalSlots; i++) {
@@ -505,6 +511,54 @@ export default class GameSceneV3 extends Phaser.Scene {
       if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
         if (this.player.canActivateTimeSlow()) {
           this.player.activateTimeSlow()
+        }
+      }
+    })
+    this.input.keyboard!.on('keydown-FOUR', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateExplosiveRounds()) {
+          this.player.activateExplosiveRounds()
+        }
+      }
+    })
+    this.input.keyboard!.on('keydown-FIVE', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateBerserk()) {
+          this.player.activateBerserk()
+        }
+      }
+    })
+    this.input.keyboard!.on('keydown-SIX', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateTeleport()) {
+          const pointer = this.input.activePointer
+          const worldX = pointer.worldX
+          const worldY = pointer.worldY
+          this.player.activateTeleport(worldX, worldY)
+        }
+      }
+    })
+    this.input.keyboard!.on('keydown-SEVEN', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateLifeDrain()) {
+          this.player.activateLifeDrain()
+        }
+      }
+    })
+    this.input.keyboard!.on('keydown-EIGHT', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateBulletTime()) {
+          this.player.activateBulletTime()
+        }
+      }
+    })
+    this.input.keyboard!.on('keydown-NINE', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateOrbitalStrike()) {
+          const pointer = this.input.activePointer
+          const worldX = pointer.worldX
+          const worldY = pointer.worldY
+          this.player.activateOrbitalStrike(worldX, worldY)
         }
       }
     })
