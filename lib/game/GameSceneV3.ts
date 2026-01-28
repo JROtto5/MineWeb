@@ -8,10 +8,12 @@ import { PowerUpManager, PowerUpType } from './PowerUps'
 import { ComboSystem, StageManager, STAGES } from './StageSystem'
 import { SkillTreeManager, SKILLS } from './SkillTree'
 import { ShopManager, ShopUI } from './ShopSystem'
+import Boss, { BossType, BOSS_CONFIGS } from './Boss'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
   private enemies!: Phaser.GameObjects.Group
+  private bosses!: Phaser.GameObjects.Group
   private weaponSystem!: WeaponSystem
   private casinoManager!: CasinoManager
   private casinoUI!: CasinoUI
@@ -77,6 +79,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Create enemies group
     this.enemies = this.add.group()
+
+    // CREATIVE EXPANSION: Create bosses group!
+    this.bosses = this.add.group()
 
     // Create persistent UI
     this.createPersistentUI()
@@ -336,6 +341,15 @@ export default class GameSceneV3 extends Phaser.Scene {
       this
     )
 
+    // CREATIVE EXPANSION: Player bullets hit bosses!
+    this.physics.add.overlap(
+      this.weaponSystem.bullets,
+      this.bosses,
+      this.bulletHitBoss as any,
+      undefined,
+      this
+    )
+
     // Enemy bullets hit player
     this.physics.add.overlap(
       this.player,
@@ -350,6 +364,15 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.player,
       this.enemies,
       this.playerHitEnemy as any,
+      undefined,
+      this
+    )
+
+    // CREATIVE EXPANSION: Bosses touch player!
+    this.physics.add.overlap(
+      this.player,
+      this.bosses,
+      this.playerHitBoss as any,
       undefined,
       this
     )
@@ -385,6 +408,13 @@ export default class GameSceneV3 extends Phaser.Scene {
       }
     })
 
+    // CREATIVE EXPANSION: Update bosses!
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        boss.update(this.player, delta)
+      }
+    })
+
     // Combo system
     if (this.comboSystem.update(time)) {
       this.addKillFeedMessage('Combo ended!', '#f39c12', 2000)
@@ -417,6 +447,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Clear existing enemies
     this.enemies.clear(true, true)
 
+    // CREATIVE EXPANSION: Clear existing bosses!
+    this.bosses.clear(true, true)
+
     // Spawn regular enemies
     const regularCount = stage.bossEnabled ? stage.enemyCount - 1 : stage.enemyCount
     this.spawnEnemies(regularCount, stage.enemyTypes)
@@ -447,22 +480,42 @@ export default class GameSceneV3 extends Phaser.Scene {
     }
   }
 
+  // CREATIVE EXPANSION: New epic boss system!
   private spawnBoss() {
+    const stageNum = this.stageManager.getCurrentStageNumber()
+
+    // Spawn bosses every 5 stages (5, 10, 15, 20, etc.)
+    if (stageNum % 5 !== 0) return
+
     if (this.bossSpawned) return
     this.bossSpawned = true
 
     // Spawn boss far from player
     let bossX, bossY
     do {
-      bossX = Phaser.Math.Between(300, this.worldWidth - 300)
-      bossY = Phaser.Math.Between(300, this.worldHeight - 300)
-    } while (Phaser.Math.Distance.Between(bossX, bossY, this.player.x, this.player.y) < 600)
+      bossX = Phaser.Math.Between(400, this.worldWidth - 400)
+      bossY = Phaser.Math.Between(400, this.worldHeight - 400)
+    } while (Phaser.Math.Distance.Between(bossX, bossY, this.player.x, this.player.y) < 800)
 
-    const boss = new AdvancedEnemy(this, bossX, bossY, EnemyType.BOSS)
-    this.enemies.add(boss)
+    // Choose boss type based on stage
+    let bossType: BossType
+    if (stageNum >= 20) {
+      bossType = 'mega' // Crime Lord at stage 20+
+    } else if (stageNum >= 15) {
+      bossType = 'healer' // Plague Doctor at stage 15
+    } else if (stageNum >= 10) {
+      bossType = 'sniper' // Death Archer at stage 10
+    } else if (stageNum === 5) {
+      const types: BossType[] = ['tank', 'speed']
+      bossType = Phaser.Math.RND.pick(types)
+    } else {
+      bossType = 'tank'
+    }
 
-    this.addKillFeedMessage('💀 BOSS HAS ARRIVED! 💀', '#ff0000', 5000)
-    this.cameras.main.shake(500, 0.01)
+    const boss = new Boss(this, bossX, bossY, bossType)
+    this.bosses.add(boss)
+
+    this.addKillFeedMessage(`💀 ${BOSS_CONFIGS[bossType].icon} BOSS WAVE! 💀`, '#ff0000', 5000)
   }
 
   private bulletHitEnemy(bullet: any, enemy: any) {
@@ -546,6 +599,51 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Throttle damage
     if (this.time.now % 500 < 50) {
       player.takeDamage(enemy.getDamage())
+
+      if (player.isDead()) {
+        this.gameOver()
+      }
+    }
+  }
+
+  // CREATIVE EXPANSION: Boss collision handlers!
+  private bulletHitBoss(bullet: any, boss: any) {
+    bullet.destroy()
+
+    const killed = boss.takeDamage(this.player.getCurrentWeaponDamage())
+
+    if (killed) {
+      // Boss defeated! Count as enemy kill
+      this.enemiesKilled++
+
+      const combo = this.comboSystem.addKill(this.time.now)
+
+      // EPIC rewards with combo multiplier
+      const money = Math.floor(boss.getMoneyDrop() * combo.multiplier)
+      const xp = Math.floor(boss.getXPDrop() * combo.multiplier)
+
+      this.player.addMoney(money)
+      this.player.addXP(xp)
+
+      // Add skill point for boss kill!
+      this.player.skillPoints++
+
+      // Epic kill feed message
+      this.addKillFeedMessage(`💀 BOSS DEFEATED! 💀`, '#ff0000', 5000)
+      this.addKillFeedMessage(`+$${money} +${xp}XP +1 SKILL POINT`, '#ffd700', 5000)
+
+      // Camera shake for epic feel
+      this.cameras.main.shake(800, 0.02)
+
+      // Check if stage complete (boss was last enemy)
+      this.checkStageCompletion()
+    }
+  }
+
+  private playerHitBoss(player: any, boss: any) {
+    // Throttle damage - bosses hit HARD
+    if (this.time.now % 500 < 50) {
+      player.takeDamage(boss.getDamage())
 
       if (player.isDead()) {
         this.gameOver()
