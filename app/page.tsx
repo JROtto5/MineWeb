@@ -1,136 +1,146 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Game } from '@/lib/engine/Game'
+import dynamic from 'next/dynamic'
+
+// Dynamically import Phaser to avoid SSR issues
+const GameWrapper = dynamic(() => import('../lib/game/GameWrapper'), {
+  ssr: false,
+  loading: () => (
+    <div id="loading">
+      <div className="loading-title">CRIME CITY</div>
+      <div className="loading-subtitle">Underground Empire</div>
+      <div className="loading-bar">
+        <div className="loading-bar-fill"></div>
+      </div>
+    </div>
+  ),
+})
 
 export default function Home() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const gameRef = useRef<Game | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [showClickToStart, setShowClickToStart] = useState(true)
-  const [fps, setFps] = useState(0)
-  const [position, setPosition] = useState({ x: 0, y: 0, z: 0 })
-  const [chunksLoaded, setChunksLoaded] = useState(0)
-  const [selectedSlot, setSelectedSlot] = useState(0)
+  const [gameStats, setGameStats] = useState({
+    health: 100,
+    maxHealth: 100,
+    ammo: 30,
+    maxAmmo: 30,
+    money: 0,
+    xp: 0,
+    level: 1,
+    weapon: 'Pistol',
+  })
 
-  const blockTypes = [
-    { name: 'Grass', color: '#32DC46' },
-    { name: 'Dirt', color: '#A06432' },
-    { name: 'Stone', color: '#8C8C91' },
-    { name: 'Sand', color: '#FAE6B4' },
-    { name: 'Wood', color: '#966428' },
-  ]
+  const [currentMission, setCurrentMission] = useState({
+    title: 'Welcome to Crime City',
+    objective: 'Explore the city and eliminate enemies',
+    progress: '0 / 10 enemies',
+  })
+
+  const [messages, setMessages] = useState<Array<{ text: string; type: string; id: number }>>([])
 
   useEffect(() => {
-    if (!canvasRef.current) return
+    // Listen for game events
+    const handleGameEvent = (event: CustomEvent) => {
+      const { type, data } = event.detail
 
-    // Create game instance
-    const game = new Game(canvasRef.current)
-    gameRef.current = game
-
-    // Initialize game
-    game.init().then(() => {
-      console.log('Game initialized!')
-      setIsLoading(false)
-    })
-
-    // Update debug info
-    const debugInterval = setInterval(() => {
-      if (game.isRunning) {
-        setFps(game.getFPS())
-        setPosition(game.getPlayerPosition())
-        setChunksLoaded(game.getChunksLoaded())
-        setSelectedSlot(game.getSelectedSlot())
-      }
-    }, 100)
-
-    // Keyboard shortcuts for hotbar selection
-    const handleKeyPress = (e: KeyboardEvent) => {
-      const key = parseInt(e.key)
-      if (key >= 1 && key <= 5) {
-        game.selectSlot(key - 1)
-        setSelectedSlot(key - 1)
+      switch (type) {
+        case 'statsUpdate':
+          setGameStats(data)
+          break
+        case 'missionUpdate':
+          setCurrentMission(data)
+          break
+        case 'message':
+          const newMessage = { ...data, id: Date.now() }
+          setMessages(prev => [...prev.slice(-4), newMessage])
+          setTimeout(() => {
+            setMessages(prev => prev.filter(m => m.id !== newMessage.id))
+          }, 5000)
+          break
       }
     }
-    window.addEventListener('keydown', handleKeyPress)
 
-    // Cleanup
-    return () => {
-      clearInterval(debugInterval)
-      window.removeEventListener('keydown', handleKeyPress)
-      game.dispose()
-    }
+    window.addEventListener('gameEvent' as any, handleGameEvent)
+    return () => window.removeEventListener('gameEvent' as any, handleGameEvent)
   }, [])
 
-  const handleClickToStart = () => {
-    if (gameRef.current && !isLoading) {
-      gameRef.current.start()
-      setShowClickToStart(false)
-
-      // Request pointer lock
-      canvasRef.current?.requestPointerLock()
-    }
-  }
-
   return (
-    <main>
-      <canvas ref={canvasRef} />
+    <div id="game-container">
+      <GameWrapper />
 
-      <div id="ui-overlay">
-        {/* Crosshair */}
-        {!showClickToStart && !isLoading && <div id="crosshair" />}
-
-        {/* Debug Info */}
-        {!showClickToStart && !isLoading && (
-          <div id="debug-info">
-            <div>FPS: {fps}</div>
-            <div>Position: {position.x.toFixed(1)}, {position.y.toFixed(1)}, {position.z.toFixed(1)}</div>
-            <div>Chunks: {chunksLoaded}</div>
-            <div>---</div>
-            <div>WASD - Move</div>
-            <div>Space - Jump</div>
-            <div>Shift - Sprint</div>
-            <div>Left Click - Break</div>
-            <div>Right Click - Place</div>
-            <div>1-5 - Select Block</div>
-            <div>ESC - Unlock Mouse</div>
-          </div>
-        )}
-
-        {/* Hotbar */}
-        {!showClickToStart && !isLoading && (
-          <div id="hotbar">
-            {blockTypes.map((block, index) => (
+      <div id="hud">
+        {/* Stats */}
+        <div id="stats">
+          <div className="stat-bar">
+            <div className="stat-label">Health</div>
+            <div className="stat-bar-bg">
               <div
-                key={index}
-                className={`hotbar-slot ${index === selectedSlot ? 'selected' : ''}`}
-              >
-                <div className="hotbar-slot-number">{index + 1}</div>
-                <div style={{
-                  width: '30px',
-                  height: '30px',
-                  backgroundColor: block.color,
-                  border: '1px solid rgba(0,0,0,0.3)'
-                }} />
-              </div>
-            ))}
+                className="stat-bar-fill health-bar"
+                style={{ width: `${(gameStats.health / gameStats.maxHealth) * 100}%` }}
+              ></div>
+            </div>
+            <div className="stat-value">{gameStats.health} / {gameStats.maxHealth}</div>
           </div>
-        )}
 
-        {/* Loading Screen */}
-        {isLoading && (
-          <div id="loading">
-            LOADING WORLD...
+          <div className="stat-bar">
+            <div className="stat-label">Ammo</div>
+            <div className="stat-bar-bg">
+              <div
+                className="stat-bar-fill ammo-bar"
+                style={{ width: `${(gameStats.ammo / gameStats.maxAmmo) * 100}%` }}
+              ></div>
+            </div>
+            <div className="stat-value">{gameStats.ammo} / {gameStats.maxAmmo}</div>
           </div>
-        )}
 
-        {/* Click to Start */}
-        {!isLoading && showClickToStart && (
-          <div id="click-to-start" onClick={handleClickToStart}>
-            CLICK TO START
+          <div className="stat-bar">
+            <div className="stat-label">Level {gameStats.level}</div>
+            <div className="stat-bar-bg">
+              <div
+                className="stat-bar-fill xp-bar"
+                style={{ width: `${(gameStats.xp % 100)}%` }}
+              ></div>
+            </div>
+            <div className="stat-value">XP: {gameStats.xp}</div>
           </div>
-        )}
+        </div>
+
+        {/* Money */}
+        <div id="money">
+          ${gameStats.money.toLocaleString()}
+        </div>
+
+        {/* Mission */}
+        <div id="mission">
+          <div className="mission-title">{currentMission.title}</div>
+          <div className="mission-objective">{currentMission.objective}</div>
+          <div className="mission-progress">{currentMission.progress}</div>
+        </div>
+
+        {/* Weapon */}
+        <div id="weapon">
+          <div className="weapon-name">{gameStats.weapon}</div>
+          <div className="weapon-ammo">{gameStats.ammo} rounds</div>
+        </div>
+
+        {/* Controls */}
+        <div id="controls">
+          <div className="control-line">WASD - Move</div>
+          <div className="control-line">Mouse - Aim</div>
+          <div className="control-line">Left Click - Shoot</div>
+          <div className="control-line">E - Interact</div>
+          <div className="control-line">R - Reload</div>
+          <div className="control-line">1-3 - Switch Weapon</div>
+        </div>
+
+        {/* Messages */}
+        <div id="messages">
+          {messages.map(msg => (
+            <div key={msg.id} className={`message ${msg.type}`}>
+              {msg.text}
+            </div>
+          ))}
+        </div>
       </div>
-    </main>
+    </div>
   )
 }

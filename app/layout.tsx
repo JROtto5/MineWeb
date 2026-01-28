@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Minecraft Web - Voxel Game',
-  description: 'Browser-based Minecraft clone with Three.js',
+  title: 'Crime City: Underground Empire',
+  description: 'Top-down crime-fighting action game with casino gambling',
 }
 
 export default function RootLayout({

@@ -1,7 +1,7 @@
 {
-  "name": "minecraft-web",
+  "name": "crime-city-game",
   "version": "1.0.0",
-  "description": "Browser-based Minecraft clone with Three.js",
+  "description": "Crime City: Underground Empire - Top-down action game with gambling",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,14 +13,12 @@
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "three": "^0.170.0",
-    "simplex-noise": "^4.0.3"
+    "phaser": "^3.80.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/three": "^0.170.0",
     "typescript": "^5.6.0"
   }
 }

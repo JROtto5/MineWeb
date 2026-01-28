@@ -1,163 +1,256 @@
-# 🎮 Minecraft Web - Browser Voxel Game
+# 🎮 Crime City: Underground Empire
 
-A fully-featured Minecraft-like voxel game running in your browser using Three.js and Next.js!
+A browser-based top-down action game with shooting combat, enemies, and casino gambling mechanics.
 
-## ✨ Features
+![Crime City](https://img.shields.io/badge/Status-Playable-success)
+![Tech](https://img.shields.io/badge/Tech-Phaser.js%20%7C%20Next.js-blue)
 
-- **🏔️ Procedural Terrain Generation** - Infinite world with Perlin noise
-- **⚡ Optimized Rendering** - Face culling and efficient mesh generation
-- **🎮 First-Person Controls** - WASD movement, mouse look, jumping
-- **🔨 Block Interaction** - Break and place blocks
-- **🌊 Multiple Block Types** - Grass, dirt, stone, sand, water
-- **🌫️ Atmospheric Fog** - Distance-based fog for depth perception
-- **💡 Dynamic Lighting** - Directional lighting for 3D depth
+## 🚀 Features
 
-## 🚀 Quick Start
+### ✅ Currently Implemented
 
-### Installation
+#### Combat System
+- **Three Weapons**:
+  - Pistol: Balanced damage and fire rate (20 dmg, 300ms)
+  - SMG: Fast fire rate, lower damage (15 dmg, 100ms)
+  - Shotgun: High damage, spread shot (40 dmg, 600ms)
+- **Weapon Switching**: Press 1-3 to switch weapons
+- **Bullet Physics**: Projectiles with proper collision detection
+- **Enemy AI**: Enemies chase and attack the player
+- **Health System**: Player and enemy health bars
+- **Damage Feedback**: Screen shake, red tint, visual effects
 
-```bash
-npm install
-```
+#### Player System
+- **WASD Movement**: Smooth 8-directional movement
+- **Mouse Aiming**: Aim with mouse, auto-rotate to face cursor
+- **Stats**: Health, ammo, XP, level, money
+- **Leveling**: Gain XP from kills, level up increases max health
+- **Money System**: Earn money from enemy kills
 
-### Development
+#### Mission System
+- **Enemy Waves**: Complete waves to progress
+- **Kill Objectives**: Eliminate all enemies to advance
+- **Progressive Difficulty**: Each wave adds more enemies
+- **Rewards**: Money and XP for completing missions
 
-```bash
-npm run dev
-```
+#### Visual Polish
+- **Grid Background**: Cyberpunk-style grid world
+- **Health Bars**: Enemy health indicators
+- **Aim Line**: Visual aiming guide
+- **Muzzle Flash**: Weapon fire effects
+- **Camera Shake**: Impact feedback
+- **Smooth Animations**: Tweened effects
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+#### UI/HUD
+- **Stats Display**: Real-time health, ammo, XP, level
+- **Money Counter**: Live money tracking
+- **Mission Tracker**: Current objective and progress
+- **Weapon Info**: Current weapon and ammo count
+- **Controls Guide**: On-screen control reference
+- **Message System**: Pop-up notifications for events
 
-### Build for Production
+### 🎰 Casino System (Implemented, Not Yet Wired to UI)
 
-```bash
-npm run build
-npm start
-```
+The game includes a fully functional casino system ready to be activated:
+
+- **Slot Machine**: Spin 3 reels, match symbols for payouts (2x - 50x)
+- **Blackjack**: Play against the dealer (simplified rules)
+- **Roulette**: Bet on red/black for 2x payout
+- **Loot Boxes**: Random rewards with rarity tiers
+  - Common (50%): 0.5x return
+  - Uncommon (30%): 2x return
+  - Rare (15%): 5x return
+  - Epic (4%): 20x return
+  - Legendary (1%): 100x return
+
+### 🎯 Coming Soon
+
+- Casino UI overlays (press E at casino zones)
+- More enemy types with different behaviors
+- Boss fights
+- Weapon upgrades and customization
+- More missions and story
+- Save/load progress
+- Sound effects and music
+- Power-ups and pickups
 
 ## 🎮 Controls
 
-- **WASD** - Move
-- **Mouse** - Look around
-- **Space** - Jump
-- **Shift** - Sprint
-- **Left Click** - Break block
-- **Right Click** - Place block
-- **ESC** - Release mouse
+| Key | Action |
+|-----|--------|
+| W/A/S/D | Move |
+| Mouse | Aim |
+| Left Click | Shoot |
+| 1/2/3 | Switch Weapon |
+| R | Reload |
+| E | Interact (Casino zones) |
 
-## 🔧 Performance Optimizations
+## 🛠️ Tech Stack
 
-- **Render Distance**: 3 chunks (configurable in `World.ts`)
-- **Face Culling**: Only renders exposed block faces
-- **Efficient Mesh Generation**: Minimal vertex count
-- **Fog System**: Distance-based rendering optimization
+- **Phaser 3**: 2D game framework with physics
+- **Next.js 14**: React framework for deployment
+- **TypeScript**: Type-safe development
+- **Vercel**: Serverless hosting (recommended)
 
-## 📦 Deployment to Vercel
-
-### Option 1: Deploy via CLI
+## 📦 Installation
 
 ```bash
-npm install -g vercel
-vercel
+# Clone the repository
+git clone https://github.com/JROtto5/MineWeb.git
+cd MineWeb
+
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
 ```
 
-### Option 2: Deploy via GitHub
+## 🌐 Deployment to Vercel
 
-1. Push code to GitHub repository
+### Option 1: Automatic (Recommended)
+
+1. Push your code to GitHub
 2. Go to [vercel.com](https://vercel.com)
-3. Import your GitHub repository
-4. Vercel will auto-detect Next.js and deploy!
+3. Click "New Project"
+4. Import your GitHub repository
+5. Vercel auto-detects Next.js - just click "Deploy"
+6. Done! Your game is live
 
-### Environment Variables
+### Option 2: Vercel CLI
 
-No environment variables needed! The game runs entirely client-side.
+```bash
+# Install Vercel CLI
+npm i -g vercel
 
-## 🏗️ Project Structure
+# Login
+vercel login
+
+# Deploy
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+### Option 3: Manual GitHub Integration
+
+1. Connect Vercel to your GitHub account
+2. Every push to `main` branch auto-deploys
+3. Pull requests get preview deployments
+
+## 🎯 Game Design
+
+### Combat Loop
+1. Spawn in safe area
+2. Enemies spawn around the map
+3. Chase and eliminate enemies
+4. Earn money and XP
+5. Level up for health boost
+6. New wave spawns with more enemies
+7. Repeat
+
+### Progression System
+- **Kills → XP → Levels**: Every 100 XP = level up
+- **Kills → Money**: $10-50 per enemy
+- **Levels → Health**: +20 max health per level
+- **Money → Gambling**: Use at casino zones (future)
+
+### Casino Integration
+- Find casino zones marked with 🎰
+- Press E to gamble
+- Slots, Blackjack, Roulette available
+- Win big or lose it all
+- Rewards fund weapon upgrades (future)
+
+## 📁 Project Structure
 
 ```
 MinecraftWeb/
 ├── app/
-│   ├── layout.tsx       # Root layout
-│   ├── page.tsx         # Main game page
-│   └── globals.css      # Global styles
+│   ├── page.tsx          # Main React component with HUD
+│   ├── layout.tsx        # App layout
+│   └── globals.css       # Styling
 ├── lib/
-│   ├── engine/
-│   │   ├── Game.ts          # Main game loop
-│   │   ├── Player.ts        # Player controller
-│   │   ├── World.ts         # World manager
-│   │   ├── Chunk.ts         # Chunk mesh generation
-│   │   └── InputManager.ts  # Input handling
-│   └── terrain/
-│       └── TerrainGenerator.ts  # Perlin noise terrain
-├── public/              # Static assets
+│   └── game/
+│       ├── GameWrapper.tsx    # Phaser initialization
+│       ├── GameScene.ts       # Main game scene
+│       ├── Player.ts          # Player class
+│       ├── Enemy.ts           # Enemy AI
+│       ├── Weapon.ts          # Weapon & bullet system
+│       └── Casino.ts          # Gambling mechanics
+├── public/
+│   └── assets/               # Game assets (textures, sounds)
 ├── package.json
-└── next.config.js
+├── next.config.js
+└── tsconfig.json
 ```
 
-## 🎨 Customization
+## 🎨 Art Style
 
-### Change Render Distance
+Currently using **procedural graphics** (no external assets):
+- Simple colored circles for player/enemies
+- Geometric shapes for UI
+- Grid-based cyberpunk background
+- Particle effects for combat
 
-Edit `lib/engine/World.ts`:
+Future plans:
+- Custom sprite sheets
+- Animated characters
+- Environmental tiles
+- Casino visuals
 
-```typescript
-private readonly RENDER_DISTANCE = 3 // Increase for more chunks
-```
+## 🐛 Known Issues
 
-### Change World Height
+- Phaser import warnings during build (harmless)
+- Casino zones exist but UI not yet implemented
+- No sound/music yet
+- Enemies can stack on each other
 
-Edit `lib/engine/World.ts`:
+## 🔮 Roadmap
 
-```typescript
-private readonly CHUNK_HEIGHT = 64 // Increase for taller mountains
-```
+### Phase 1: Core Polish (Current)
+- ✅ Player movement and shooting
+- ✅ Enemy AI and combat
+- ✅ Basic progression
+- ✅ HUD system
 
-### Add New Block Types
+### Phase 2: Casino Integration
+- Add casino UI overlays
+- Wire up gambling systems
+- Add win/loss animations
+- Integrate with economy
 
-Edit `lib/engine/Chunk.ts`:
+### Phase 3: Content Expansion
+- More enemy types
+- Boss encounters
+- Weapon variety
+- Map variety
 
-```typescript
-export const BlockType = {
-  // ... existing blocks
-  WOOD: 6,
-  LEAVES: 7,
-  // Add your blocks here
-}
-
-const BLOCK_COLORS = {
-  // ... existing colors
-  [BlockType.WOOD]: new THREE.Color(0x966428),
-  [BlockType.LEAVES]: new THREE.Color(0x28B428),
-}
-```
-
-## 🐛 Troubleshooting
-
-### Low FPS?
-
-1. Reduce `RENDER_DISTANCE` in `World.ts`
-2. Lower `CHUNK_HEIGHT` for fewer blocks
-3. Disable fog in `Game.ts` for slight performance boost
-
-### Mouse not capturing?
-
-Make sure you click "CLICK TO START" and allow pointer lock in your browser.
-
-### Blocks not appearing?
-
-Check browser console for errors. Make sure you're running on a modern browser with WebGL support.
+### Phase 4: Meta Systems
+- Save/load
+- Achievements
+- Daily challenges
+- Leaderboards
 
 ## 📝 License
 
-MIT
+MIT License - Feel free to use and modify
 
-## 🙏 Credits
+## 🤝 Contributing
 
-Built with:
-- [Next.js](https://nextjs.org/)
-- [Three.js](https://threejs.org/)
-- [simplex-noise](https://www.npmjs.com/package/simplex-noise)
+This is a personal project but feedback is welcome!
+
+## 🎮 Play Now
+
+Once deployed to Vercel, share your link and start playing!
 
 ---
 
-**Enjoy building in your browser! 🎉**
+**Built with Phaser.js and Next.js** | **Deployed on Vercel**
