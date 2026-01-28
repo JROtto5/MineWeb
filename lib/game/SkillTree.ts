@@ -93,6 +93,11 @@ export class SkillTreeManager {
     return this.skillPoints
   }
 
+  // FIX V11++: Add setter to sync skill points
+  setSkillPoints(points: number) {
+    this.skillPoints = points
+  }
+
   getSkillLevel(skillId: string): number {
     return this.skills.get(skillId) || 0
   }

@@ -739,6 +739,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.physics.pause()
 
+    // FIX V11++: Sync skillTree skillPoints with player skillPoints!
+    this.player.skillTree.setSkillPoints(this.player.skillPoints)
+
     // FIX V6: Use actual screen dimensions!
     const screenWidth = this.scale.width
     const screenHeight = this.scale.height
@@ -795,7 +798,10 @@ export default class GameSceneV3 extends Phaser.Scene {
       const level = skillData.level
 
       const y = startY + index * gap
-      const canUpgrade = this.player.skillTree.canUpgradeSkill(skill.id)
+      // FIX V11++: Check if player has points AND skill can be upgraded!
+      const hasPoints = this.player.skillPoints > 0
+      const notMaxed = level < skill.maxLevel
+      const canUpgrade = hasPoints && notMaxed
 
       // Background - ABSOLUTE position!
       const skillBg = this.add.rectangle(centerX - 30, y, 400, 48, 0x2c3e50, 0.8)
@@ -849,8 +855,10 @@ export default class GameSceneV3 extends Phaser.Scene {
           .on('pointerout', () => upgradeBtn.setFillStyle(0x2ecc71, 0.9))
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
             event.stopPropagation()
+            // FIX V11++: Try to upgrade (handles skill point deduction internally)
             if (this.player.skillTree.upgradeSkill(skill.id)) {
-              this.player.skillPoints--
+              // Sync player skillPoints with skillTree
+              this.player.skillPoints = this.player.skillTree.getSkillPoints()
               this.player.applySkillBonuses()
               this.showBigPopup(`⚡ ${skill.name} Upgraded!`, '#2ecc71')
               this.cameras.main.flash(200, 50, 255, 50)
