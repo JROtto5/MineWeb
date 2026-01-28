@@ -114,11 +114,11 @@ export const SHOP_ITEMS: ShopItem[] = [
     effect: { type: 'xpBoost', value: 0.20 }
   },
 
-  // Special Abilities (expensive, single purchase)
+  // Special Abilities (Keys 1-9)
   {
     id: 'dash_ability',
     name: 'Dash Ability',
-    description: 'Unlock dash ability (Space key)',
+    description: 'Key 1: Dash forward - 2s CD',
     icon: '💨',
     category: 'ability',
     basePrice: 2500,
@@ -129,7 +129,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'shield_ability',
     name: 'Energy Shield',
-    description: 'Unlock shield ability (Q key) - blocks 5 hits',
+    description: 'Key 2: Blocks 5 hits - 10s CD',
     icon: '🛡️',
     category: 'ability',
     basePrice: 3000,
@@ -140,7 +140,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'time_slow',
     name: 'Time Slow',
-    description: 'Unlock time slow ability (F key) - 5s duration',
+    description: 'Key 3: Slow time 5s - 12s CD',
     icon: '⏱️',
     category: 'ability',
     basePrice: 5000,
@@ -697,10 +697,10 @@ export class ShopUI {
       this.uiElements.push(tabBg, tabText)
     })
 
-    // Items list - SCROLLABLE!
+    // Items list - SCROLLABLE! (COMPACT LAYOUT)
     const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
     const startY = centerY - 120
-    const itemHeight = 70
+    const itemHeight = 55 // REDUCED from 70 for compact display
     this.scrollOffset = 0
     this.scrollableItems = []
 
@@ -748,36 +748,36 @@ export class ShopUI {
       const itemBg = this.scene.add.rectangle(centerX, absY, 650, 65, bgColor, 0.9)
         .setScrollFactor(0).setDepth(10003)
 
-      // Icon and name
-      const itemText = this.scene.add.text(centerX - 300, absY, `${item.icon} ${item.name}`, {
-        fontSize: '20px',
+      // Icon and name (REDUCED FONT SIZE)
+      const itemText = this.scene.add.text(centerX - 300, absY - 8, `${item.icon} ${item.name}`, {
+        fontSize: '16px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004)
       itemText.disableInteractive()
 
-      // Description
-      const descText = this.scene.add.text(centerX - 300, absY + 20, item.description, {
-        fontSize: '13px',
+      // Description (REDUCED FONT SIZE)
+      const descText = this.scene.add.text(centerX - 300, absY + 10, item.description, {
+        fontSize: '11px',
         color: '#bdc3c7',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004)
       descText.disableInteractive()
 
-      // Level
-      const levelText = this.scene.add.text(centerX + 140, absY, `Level: ${itemData.level}/${item.maxLevel}`, {
-        fontSize: '16px',
+      // Level (REDUCED FONT SIZE)
+      const levelText = this.scene.add.text(centerX + 140, absY, `Lv ${itemData.level}/${item.maxLevel}`, {
+        fontSize: '13px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
       levelText.disableInteractive()
 
-      // Price button
+      // Price button (SMALLER)
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
-      const priceBg = this.scene.add.rectangle(centerX + 260, absY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+      const priceBg = this.scene.add.rectangle(centerX + 260, absY, 100, 45, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
         .setScrollFactor(0).setDepth(10003)
 
       const priceText = this.scene.add.text(centerX + 260, absY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
-        fontSize: '18px',
+        fontSize: '15px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)

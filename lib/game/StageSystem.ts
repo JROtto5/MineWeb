@@ -18,8 +18,8 @@ export interface StageConfig {
 export const STAGES: StageConfig[] = [
   {
     stageNumber: 1,
-    name: 'BACKSTREETS',
-    enemyCount: 30, // FAST-PACED: Reduced for quicker stages!
+    name: 'CASINO ENTRANCE',
+    enemyCount: 20, // ULTRA FAST: Get into action immediately!
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT],
     bossEnabled: false,
     moneyReward: 200,

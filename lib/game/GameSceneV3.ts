@@ -388,28 +388,30 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private createEnemyTracker() {
-    const screenWidth = this.scale.width
+    // FIXED: Move to top-left for better visibility
+    const trackerX = 150
+    const trackerY = 80
 
     // Background panel
-    const bg = this.add.rectangle(screenWidth - 150, 150, 280, 100, 0x000000, 0.8)
+    const bg = this.add.rectangle(trackerX, trackerY, 280, 90, 0x000000, 0.8)
       .setScrollFactor(0).setDepth(5000)
 
     // Title
-    const title = this.add.text(screenWidth - 150, 120, '🎯 NEAREST ENEMY', {
-      fontSize: '16px',
+    const title = this.add.text(trackerX, trackerY - 25, '🎯 NEAREST ENEMY', {
+      fontSize: '14px',
       color: '#f39c12',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(5001)
 
     // Distance text
-    const distText = this.add.text(screenWidth - 150, 150, '---', {
-      fontSize: '32px',
+    const distText = this.add.text(trackerX, trackerY + 5, '---', {
+      fontSize: '28px',
       color: '#e74c3c',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(5001)
 
     // Direction arrow
-    const arrow = this.add.triangle(screenWidth - 150, 175, 0, -10, -8, 10, 8, 10, 0xff0000)
+    const arrow = this.add.triangle(trackerX, trackerY + 30, 0, -10, -8, 10, 8, 10, 0xff0000)
       .setScrollFactor(0).setDepth(5001)
 
     this.enemyTrackerUI = { bg, title, distText, arrow }
@@ -1443,10 +1445,10 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     uiElements.push(title, pointsText)
 
-    // Skills grid - SCROLLABLE!
+    // Skills grid - SCROLLABLE! (COMPACT)
     const skills = this.player.skillTree.getAllSkills()
     const startY = centerY - 140
-    const gap = 55
+    const gap = 48 // REDUCED from 55 for compact display
     this.skillTreeScrollOffset = 0
     this.skillTreeSkillElements = []
 
@@ -1493,40 +1495,40 @@ export default class GameSceneV3 extends Phaser.Scene {
       const canUpgrade = hasPoints && notMaxed
 
       // Background - ABSOLUTE position!
-      const skillBg = this.add.rectangle(centerX - 30, y, 400, 48, 0x2c3e50, 0.8)
+      const skillBg = this.add.rectangle(centerX - 30, y, 400, 42, 0x2c3e50, 0.8)
         .setScrollFactor(0)
         .setDepth(9001)
 
-      // FIX V11: CRITICAL - Disable text interactivity so it doesn't block clicks!
-      const skillText = this.add.text(centerX - 220, y, `${skill.icon} ${skill.name}`, {
-        fontSize: '18px',
+      // COMPACT: Reduced font sizes
+      const skillText = this.add.text(centerX - 220, y - 6, `${skill.icon} ${skill.name}`, {
+        fontSize: '15px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
-      skillText.disableInteractive() // Prevent text from intercepting events
+      skillText.disableInteractive()
 
-      const levelText = this.add.text(centerX - 70, y, `Lv ${level}/${skill.maxLevel}`, {
-        fontSize: '16px',
+      const levelText = this.add.text(centerX - 70, y - 6, `Lv ${level}/${skill.maxLevel}`, {
+        fontSize: '13px',
         color: level === skill.maxLevel ? '#f1c40f' : '#95a5a6',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
-      levelText.disableInteractive() // Prevent text from intercepting events
+      levelText.disableInteractive()
 
-      const descText = this.add.text(centerX - 220, y + 18, skill.description, {
-        fontSize: '12px',
+      const descText = this.add.text(centerX - 220, y + 10, skill.description, {
+        fontSize: '10px',
         color: '#bdc3c7',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
-      descText.disableInteractive() // Prevent text from intercepting events
+      descText.disableInteractive()
 
-      // FIX V11: Add visible UPGRADE button like Casino/Shop!
+      // Upgrade button (COMPACT)
       const buttonColor = canUpgrade ? 0x2ecc71 : (level === skill.maxLevel ? 0x7f8c8d : 0x95a5a6)
-      const upgradeBtn = this.add.rectangle(centerX + 200, y, 100, 42, buttonColor, canUpgrade ? 0.9 : 0.5)
+      const upgradeBtn = this.add.rectangle(centerX + 200, y, 90, 36, buttonColor, canUpgrade ? 0.9 : 0.5)
         .setScrollFactor(0)
         .setDepth(9003)
 
-      const buttonText = canUpgrade ? '⚡ UPGRADE' : (level === skill.maxLevel ? 'MAX' : 'LOCKED')
+      const buttonText = canUpgrade ? '⚡ UP' : (level === skill.maxLevel ? 'MAX' : 'LOCK')
       const upgradeLabel = this.add.text(centerX + 200, y, buttonText, {
-        fontSize: '14px',
+        fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
