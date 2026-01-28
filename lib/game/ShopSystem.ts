@@ -857,9 +857,11 @@ export class ShopUI {
           const newY = baseY - this.scrollOffset
           el.setY(newY)
 
-          // Improved clipping - account for card height and text offsets
-          const cardHalfHeight = 26 // Half of 52px card height
-          const isVisible = (newY + cardHalfHeight >= visibleTop - 10) && (newY - cardHalfHeight <= visibleBottom + 10)
+          // AGGRESSIVE clipping - account for full card extent including text
+          // Card: ±26px, Text extends: -16px (top of name) to +15px (bottom of desc)
+          // Total extent: ±30px to be safe
+          const fullExtent = 30
+          const isVisible = (newY + fullExtent >= visibleTop) && (newY - fullExtent <= visibleBottom)
           el.setVisible(isVisible)
         })
       }
