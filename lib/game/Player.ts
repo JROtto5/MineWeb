@@ -556,6 +556,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  // CREATIVE EXPANSION: XP requirement calculator for level scaling
+  private getXPForLevel(level: number): number {
+    // Exponential scaling: level 1 needs 100 XP, level 50 needs ~12,500 XP, level 100 needs ~50,000 XP
+    return Math.floor(100 * Math.pow(level, 1.3))
+  }
+
+  private getTotalXPForLevel(targetLevel: number): number {
+    let total = 0
+    for (let i = 1; i < targetLevel; i++) {
+      total += this.getXPForLevel(i)
+    }
+    return total
+  }
+
   // Override addXP for skill points
   addXP(amount: number) {
     // Apply luck bonus
@@ -566,22 +580,51 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.xp += amount
 
-    // Level up every 100 XP
-    const newLevel = Math.floor(this.xp / 100) + 1
-    if (newLevel > this.level) {
-      this.level = newLevel
-      this.skillPoints++ // Gain 1 skill point per level
-      this.applySkillBonuses()
-      this.health = this.maxHealth
+    // CREATIVE EXPANSION: Level scaling up to level 100!
+    const MAX_LEVEL = 100
 
-      // Message
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('gameEvent', {
-          detail: {
-            type: 'message',
-            data: { text: `Level Up! Now level ${this.level} (+1 Skill Point)`, type: 'success' }
-          }
-        }))
+    while (this.level < MAX_LEVEL) {
+      const xpNeeded = this.getTotalXPForLevel(this.level + 1)
+      if (this.xp >= xpNeeded) {
+        this.level++
+        this.skillPoints++ // Gain 1 skill point per level
+
+        // CREATIVE EXPANSION: Milestone rewards!
+        let bonusMessage = ''
+        if (this.level === 10) {
+          this.money += 5000
+          bonusMessage = ' +$5000 BONUS!'
+        } else if (this.level === 25) {
+          this.money += 15000
+          bonusMessage = ' +$15000 BONUS!'
+        } else if (this.level === 50) {
+          this.money += 50000
+          this.skillPoints += 5
+          bonusMessage = ' +$50000 + 5 SKILL POINTS!'
+        } else if (this.level === 75) {
+          this.money += 100000
+          this.skillPoints += 10
+          bonusMessage = ' +$100000 + 10 SKILL POINTS!'
+        } else if (this.level === 100) {
+          this.money += 500000
+          this.skillPoints += 25
+          bonusMessage = ' 🎉 MAX LEVEL! +$500000 + 25 SKILL POINTS!'
+        }
+
+        this.applySkillBonuses()
+        this.health = this.maxHealth
+
+        // Message
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('gameEvent', {
+            detail: {
+              type: 'message',
+              data: { text: `Level Up! Now level ${this.level} (+1 Skill Point)${bonusMessage}`, type: 'success' }
+            }
+          }))
+        }
+      } else {
+        break
       }
     }
   }

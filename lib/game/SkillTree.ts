@@ -72,6 +72,53 @@ export const SKILLS: Record<string, Skill> = {
     icon: '🍀',
     effects: { luck: 0.1 }
   },
+
+  // CREATIVE EXPANSION: New Skills!
+  resilience: {
+    id: 'resilience',
+    name: 'Resilience',
+    description: '+5% Damage Reduction per level',
+    maxLevel: 5,
+    cost: 1,
+    icon: '🛡️',
+    effects: { damage: -0.05 }
+  },
+  bloodlust: {
+    id: 'bloodlust',
+    name: 'Bloodlust',
+    description: '+2% Lifesteal per level',
+    maxLevel: 5,
+    cost: 1,
+    icon: '🩸',
+    effects: { health: 0.02 }
+  },
+  sharpshooter: {
+    id: 'sharpshooter',
+    name: 'Sharpshooter',
+    description: '+15% Critical Damage per level',
+    maxLevel: 5,
+    cost: 1,
+    icon: '🎯',
+    effects: { damage: 0.15 }
+  },
+  explorer: {
+    id: 'explorer',
+    name: 'Explorer',
+    description: '+8% Better Item Drops per level',
+    maxLevel: 5,
+    cost: 1,
+    icon: '🗺️',
+    effects: { luck: 0.08 }
+  },
+  executioner: {
+    id: 'executioner',
+    name: 'Executioner',
+    description: '+20% Damage to Low HP Enemies per level',
+    maxLevel: 5,
+    cost: 1,
+    icon: '⚔️',
+    effects: { damage: 0.20 }
+  },
 }
 
 export class SkillTreeManager {
