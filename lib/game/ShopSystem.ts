@@ -852,16 +852,14 @@ export class ShopUI {
         const visibleBottom = centerY + (panelHeight / 2) - 80
 
         this.scrollableItems.forEach(el => {
-          const idx = this.scrollableItems.indexOf(el) / 8 // 8 elements per item (shadow, bg, text, desc, levelBg, levelText, priceBg, priceText)
+          const idx = this.scrollableItems.indexOf(el) / 7 // 7 elements per item (shadow, bg, text, levelBg, levelText, priceBg, priceText)
           const baseY = startY + Math.floor(idx) * itemHeight
           const newY = baseY - this.scrollOffset
           el.setY(newY)
 
-          // AGGRESSIVE clipping - account for full card extent including text
-          // Card: ±26px, Text extends: -16px (top of name) to +15px (bottom of desc)
-          // Total extent: ±30px to be safe
-          const fullExtent = 30
-          const isVisible = (newY + fullExtent >= visibleTop) && (newY - fullExtent <= visibleBottom)
+          // Clean clipping - just card height now (no more description text)
+          const cardHalfHeight = 26 // Half of 52px card height
+          const isVisible = (newY + cardHalfHeight >= visibleTop) && (newY - cardHalfHeight <= visibleBottom)
           el.setVisible(isVisible)
         })
       }
@@ -894,20 +892,13 @@ export class ShopUI {
         ease: 'Power2'
       })
 
-      // Icon and name with better spacing
-      const itemText = this.scene.add.text(centerX - 330, absY - 8, `${item.icon} ${item.name}`, {
-        fontSize: '15px',
+      // Icon and name - centered vertically now (no description below)
+      const itemText = this.scene.add.text(centerX - 330, absY, `${item.icon} ${item.name}`, {
+        fontSize: '16px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
       itemText.disableInteractive()
-
-      // Description with better color
-      const descText = this.scene.add.text(centerX - 330, absY + 9, item.description, {
-        fontSize: '11px',
-        color: '#95a5a6',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
-      descText.disableInteractive()
 
       // Level indicator with pill background
       const levelBg = this.scene.add.rectangle(centerX + 150, absY, 70, 24, 0x34495e, 0.8)
@@ -937,20 +928,42 @@ export class ShopUI {
 
       // Fade in text elements
       this.scene.tweens.add({
-        targets: [itemText, descText, levelBg, levelText, priceBg, priceText],
+        targets: [itemText, levelBg, levelText, priceBg, priceText],
         alpha: 1,
         duration: 200,
         delay: 320 + (index * 30),
         ease: 'Power2'
       })
 
-      this.uiElements.push(cardShadow, itemBg, itemText, descText, levelBg, levelText, priceBg, priceText)
-      this.scrollableItems.push(cardShadow, itemBg, itemText, descText, levelBg, levelText, priceBg, priceText)
+      // Create hover tooltip for description
+      let tooltip: any = null
 
-      // Make clickable with modern hover effects
-      if (canBuy) {
-        itemBg.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => {
+      this.uiElements.push(cardShadow, itemBg, itemText, levelBg, levelText, priceBg, priceText)
+      this.scrollableItems.push(cardShadow, itemBg, itemText, levelBg, levelText, priceBg, priceText)
+
+      // Make all cards interactive to show tooltip on hover
+      itemBg.setInteractive({ useHandCursor: canBuy })
+        .on('pointerover', () => {
+          // Show tooltip with description
+          const tooltipX = centerX + 360
+          const tooltipY = absY
+
+          const tooltipBg = this.scene.add.rectangle(tooltipX, tooltipY, 300, 60, 0x1a1a2e, 0.95)
+            .setScrollFactor(0).setDepth(15000)
+            .setStrokeStyle(2, 0xf39c12, 1)
+
+          const tooltipText = this.scene.add.text(tooltipX, tooltipY, item.description, {
+            fontSize: '13px',
+            color: '#ecf0f1',
+            align: 'center',
+            wordWrap: { width: 280 }
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
+          tooltipText.disableInteractive()
+
+          tooltip = { bg: tooltipBg, text: tooltipText }
+          this.uiElements.push(tooltipBg, tooltipText)
+
+          if (canBuy) {
             itemBg.setFillStyle(0x2ecc71, 1)
             this.scene.tweens.add({
               targets: itemBg,
@@ -960,8 +973,17 @@ export class ShopUI {
               ease: 'Power2'
             })
             this.scene.cameras.main.flash(50, 0, 255, 0)
-          })
-          .on('pointerout', () => {
+          }
+        })
+        .on('pointerout', () => {
+          // Hide and destroy tooltip
+          if (tooltip) {
+            tooltip.bg.destroy()
+            tooltip.text.destroy()
+            tooltip = null
+          }
+
+          if (canBuy) {
             itemBg.setFillStyle(0x27ae60, 0.95)
             this.scene.tweens.add({
               targets: itemBg,
@@ -970,7 +992,12 @@ export class ShopUI {
               duration: 150,
               ease: 'Power2'
             })
-          })
+          }
+        })
+
+      // Make clickable for purchase
+      if (canBuy) {
+        itemBg
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
             event.stopPropagation()
             // Pulse animation on purchase

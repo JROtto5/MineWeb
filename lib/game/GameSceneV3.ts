@@ -1558,15 +1558,13 @@ export default class GameSceneV3 extends Phaser.Scene {
         const visibleBottom = centerY + (panelHeight / 2) - 70
 
         this.skillTreeSkillElements.forEach((el, idx) => {
-          const baseY = startY + Math.floor(idx / 7) * gap // 7 elements per skill (shadow, bg, text, level, desc, btn, label)
+          const baseY = startY + Math.floor(idx / 6) * gap // 6 elements per skill (shadow, bg, text, level, btn, label)
           const newY = baseY - this.skillTreeScrollOffset
           el.setY(newY)
 
-          // AGGRESSIVE clipping - account for full card extent including text
-          // Card: ±23px, Text extends: -14px (top of name) to +13px (bottom of desc)
-          // Total extent: ±30px to be safe
-          const fullExtent = 30
-          const isVisible = (newY + fullExtent >= visibleTop) && (newY - fullExtent <= visibleBottom)
+          // Clean clipping - just card height now (no more description text)
+          const cardHalfHeight = 23 // Half of 46px card height
+          const isVisible = (newY + cardHalfHeight >= visibleTop) && (newY - cardHalfHeight <= visibleBottom)
           el.setVisible(isVisible)
         })
       }
@@ -1601,28 +1599,21 @@ export default class GameSceneV3 extends Phaser.Scene {
         ease: 'Power2'
       })
 
-      // Icon and name
-      const skillText = this.add.text(centerX - 320, y - 7, `${skill.icon} ${skill.name}`, {
-        fontSize: '14px',
+      // Icon and name - centered vertically now (no description below)
+      const skillText = this.add.text(centerX - 320, y, `${skill.icon} ${skill.name}`, {
+        fontSize: '15px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
       skillText.disableInteractive()
 
       // Level pill
-      const levelText = this.add.text(centerX - 70, y - 7, `${level}/${skill.maxLevel}`, {
-        fontSize: '12px',
+      const levelText = this.add.text(centerX - 70, y, `${level}/${skill.maxLevel}`, {
+        fontSize: '13px',
         color: level === skill.maxLevel ? '#f1c40f' : '#ecf0f1',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
       levelText.disableInteractive()
-
-      // Description
-      const descText = this.add.text(centerX - 320, y + 8, skill.description, {
-        fontSize: '10px',
-        color: '#95a5a6',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
-      descText.disableInteractive()
 
       // Upgrade button with modern style
       const buttonColor = canUpgrade ? 0x27ae60 : (level === skill.maxLevel ? 0x7f8c8d : 0x95a5a6)
@@ -1641,15 +1632,49 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // Fade in text and button
       this.tweens.add({
-        targets: [skillText, levelText, descText, upgradeBtn, upgradeLabel],
+        targets: [skillText, levelText, upgradeBtn, upgradeLabel],
         alpha: 1,
         duration: 200,
         delay: 320 + (index * 25),
         ease: 'Power2'
       })
 
-      uiElements.push(cardShadow, skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
-      this.skillTreeSkillElements.push(cardShadow, skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
+      // Create hover tooltip for description
+      let tooltip: any = null
+
+      uiElements.push(cardShadow, skillBg, skillText, levelText, upgradeBtn, upgradeLabel)
+      this.skillTreeSkillElements.push(cardShadow, skillBg, skillText, levelText, upgradeBtn, upgradeLabel)
+
+      // Add hover tooltip to card background
+      skillBg.setInteractive()
+        .on('pointerover', () => {
+          // Show tooltip with description
+          const tooltipX = centerX + 350
+          const tooltipY = y
+
+          const tooltipBg = this.add.rectangle(tooltipX, tooltipY, 280, 60, 0x1a1a2e, 0.95)
+            .setScrollFactor(0).setDepth(15000)
+            .setStrokeStyle(2, 0x9b59b6, 1)
+
+          const tooltipText = this.add.text(tooltipX, tooltipY, skill.description, {
+            fontSize: '12px',
+            color: '#ecf0f1',
+            align: 'center',
+            wordWrap: { width: 260 }
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
+          tooltipText.disableInteractive()
+
+          tooltip = { bg: tooltipBg, text: tooltipText }
+          uiElements.push(tooltipBg, tooltipText)
+        })
+        .on('pointerout', () => {
+          // Hide and destroy tooltip
+          if (tooltip) {
+            tooltip.bg.destroy()
+            tooltip.text.destroy()
+            tooltip = null
+          }
+        })
 
       // Modern hover effects for clickable buttons
       if (canUpgrade) {
