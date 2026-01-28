@@ -745,7 +745,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    // FIX V7: Overlay MUST be interactive to block clicks to world!
+    // FIX V11: Overlay should NOT be interactive - it blocks button clicks!
+    // The buttons at depth 9003/9004 are above overlay at depth 8000
     const overlay = this.add.rectangle(
       centerX,
       centerY,
@@ -755,12 +756,12 @@ export default class GameSceneV3 extends Phaser.Scene {
       0.9
     ).setScrollFactor(0).setDepth(8000) // LOWER depth!
 
-    // CRITICAL: Make overlay interactive to consume all clicks
-    overlay.setInteractive()
-      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        // Stop event from reaching game world below
-        event.stopPropagation()
-      })
+    // FIX V11: DON'T make overlay interactive - let buttons handle clicks!
+    // overlay.setInteractive()
+    //   .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+    //     // Stop event from reaching game world below
+    //     event.stopPropagation()
+    //   })
 
     // Store all UI elements for cleanup
     const uiElements: any[] = [overlay]
