@@ -26,7 +26,7 @@ export interface EnemyStats {
 export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   [EnemyType.GRUNT]: {
     health: 50,
-    speed: 140, // FASTER! (was 80)
+    speed: 200, // MUCH FASTER! (was 140)
     damage: 5,
     attackRange: 400, // Larger range
     attackSpeed: 1000,
@@ -38,7 +38,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.SCOUT]: {
     health: 30,
-    speed: 220, // MUCH FASTER! (was 150)
+    speed: 300, // ULTRA FAST! (was 220)
     damage: 3,
     attackRange: 350,
     attackSpeed: 500,
@@ -50,7 +50,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.TANK]: {
     health: 200,
-    speed: 70, // Faster tank (was 40)
+    speed: 110, // Much faster tank (was 70)
     damage: 15,
     attackRange: 400,
     attackSpeed: 2000,
@@ -62,7 +62,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.SNIPER]: {
     health: 40,
-    speed: 100, // Faster (was 60)
+    speed: 150, // Much faster (was 100)
     damage: 25,
     attackRange: 600,
     attackSpeed: 2500, // Shoots faster (was 3000)
@@ -74,7 +74,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.BERSERKER]: {
     health: 100,
-    speed: 170, // MUCH FASTER! (was 120)
+    speed: 240, // ULTRA FAST! (was 170)
     damage: 20,
     attackRange: 450,
     attackSpeed: 600,
@@ -86,7 +86,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
   },
   [EnemyType.BOSS]: {
     health: 500,
-    speed: 90, // Faster boss (was 60)
+    speed: 130, // Much faster boss (was 90)
     damage: 30,
     attackRange: 550,
     attackSpeed: 1200, // Attacks faster (was 1500)

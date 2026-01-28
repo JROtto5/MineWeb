@@ -31,8 +31,8 @@ export default class GameSceneV3 extends Phaser.Scene {
   private bossSpawned = false
   private stageCompleted = false // FIX: Prevent multiple completions
 
-  private worldWidth = 3200
-  private worldHeight = 2400
+  private worldWidth = 2000 // Much smaller arena (was 3200)
+  private worldHeight = 1500 // Much smaller arena (was 2400)
 
   private casinoZones: any[] = []
   private skillTreeUI: any = null
@@ -166,6 +166,58 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // PERSISTENT ENEMY TRACKER (always visible)
     this.createEnemyTracker()
+
+    // Add resize event listener for responsive UI
+    this.scale.on('resize', this.handleResize, this)
+  }
+
+  private handleResize() {
+    // Reposition ability hotbar
+    this.repositionAbilityHotbar()
+    // Reposition enemy tracker
+    this.repositionEnemyTracker()
+  }
+
+  private repositionAbilityHotbar() {
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const slotSize = 60
+    const slotGap = 10
+    const totalSlots = 9
+    const startX = (screenWidth - (totalSlots * (slotSize + slotGap) - slotGap)) / 2
+    const barY = screenHeight - 100
+
+    this.abilityHotbarUI.forEach((slot: any, index: number) => {
+      const x = startX + index * (slotSize + slotGap)
+
+      slot.slotBg.setPosition(x, barY)
+      slot.slotBorder.setPosition(x, barY)
+      slot.keyText.setPosition(x - 22, barY - 22)
+
+      if (slot.icon) {
+        slot.icon.setPosition(x, barY)
+        slot.cooldownOverlay.setPosition(x, barY)
+        slot.cooldownText.setPosition(x, barY)
+      }
+
+      if (slot.emptyText) {
+        slot.emptyText.setPosition(x, barY)
+      }
+    })
+  }
+
+  private repositionEnemyTracker() {
+    if (!this.enemyTrackerUI) return
+
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const trackerX = screenWidth / 2
+    const trackerY = screenHeight - 210
+
+    this.enemyTrackerUI.bg.setPosition(trackerX, trackerY)
+    this.enemyTrackerUI.title.setPosition(trackerX, trackerY - 25)
+    this.enemyTrackerUI.distText.setPosition(trackerX, trackerY + 5)
+    this.enemyTrackerUI.arrow.setPosition(trackerX, trackerY + 30)
   }
 
   private updateComboDisplay() {
@@ -921,8 +973,8 @@ export default class GameSceneV3 extends Phaser.Scene {
       // Drop power-up chance
       this.powerUpManager.tryDropPowerUp(enemy.x, enemy.y)
 
-      // FIX V6: FLASH SCREEN + BIG EXPLOSION!
-      this.cameras.main.flash(enemy.isBoss() ? 200 : 100, 255, 100, 0)
+      // FIX V6: FLASH SCREEN + BIG EXPLOSION! (Reduced flash duration)
+      this.cameras.main.flash(enemy.isBoss() ? 80 : 30, 255, 100, 0)
 
       // Create explosion effect
       this.createExplosion(enemy.x, enemy.y, enemy.isBoss())
@@ -1650,9 +1702,17 @@ export default class GameSceneV3 extends Phaser.Scene {
         .on('pointerover', () => {
           // Show tooltip with description
           const tooltipX = centerX + 350
-          const tooltipY = y
+          const tooltipHeight = 60
+          // Clamp tooltip Y to stay on screen
+          const screenHeight = this.scale.height
+          let tooltipY = y
+          if (tooltipY - tooltipHeight / 2 < 10) {
+            tooltipY = 10 + tooltipHeight / 2
+          } else if (tooltipY + tooltipHeight / 2 > screenHeight - 10) {
+            tooltipY = screenHeight - 10 - tooltipHeight / 2
+          }
 
-          const tooltipBg = this.add.rectangle(tooltipX, tooltipY, 280, 60, 0x1a1a2e, 0.95)
+          const tooltipBg = this.add.rectangle(tooltipX, tooltipY, 280, tooltipHeight, 0x1a1a2e, 0.95)
             .setScrollFactor(0).setDepth(15000)
             .setStrokeStyle(2, 0x9b59b6, 1)
 
@@ -1688,7 +1748,6 @@ export default class GameSceneV3 extends Phaser.Scene {
               duration: 150,
               ease: 'Power2'
             })
-            this.cameras.main.flash(40, 0, 255, 0)
           })
           .on('pointerout', () => {
             upgradeBtn.setFillStyle(0x27ae60, 0.9)
@@ -1715,7 +1774,7 @@ export default class GameSceneV3 extends Phaser.Scene {
             if (this.player.skillTree.upgradeSkill(skill.id)) {
               this.player.skillPoints = this.player.skillTree.getSkillPoints()
               this.player.applySkillBonuses()
-              this.cameras.main.flash(150, 100, 200, 255)
+              this.cameras.main.flash(50, 100, 200, 255) // Reduced flash duration
               this.closeSkillTree()
               this.openSkillTree() // Refresh
             }

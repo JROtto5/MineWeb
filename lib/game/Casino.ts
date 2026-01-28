@@ -117,7 +117,7 @@ export class CasinoManager {
     }
   }
 
-  // Loot box (BALANCED: Expected return of 1.55x = exactly 55% profit)
+  // Loot box (BALANCED: Expected return of ~0.89x = 11% house edge, like real casinos)
   openLootBox(cost: number): { reward: string; value: number; rarity: string } {
     const rarityRoll = Math.random()
 
@@ -127,23 +127,23 @@ export class CasinoManager {
     if (rarityRoll < 0.01) {
       // 1% legendary - JACKPOT!
       rarity = 'Legendary'
-      multiplier = 20
-    } else if (rarityRoll < 0.05) {
-      // 4% epic - Big win
+      multiplier = 12
+    } else if (rarityRoll < 0.04) {
+      // 3% epic - Big win
       rarity = 'Epic'
-      multiplier = 6
-    } else if (rarityRoll < 0.20) {
-      // 15% rare - Good profit
+      multiplier = 4
+    } else if (rarityRoll < 0.12) {
+      // 8% rare - Good profit
       rarity = 'Rare'
-      multiplier = 2.5
-    } else if (rarityRoll < 0.55) {
-      // 35% uncommon - Small profit
+      multiplier = 2
+    } else if (rarityRoll < 0.35) {
+      // 23% uncommon - Break even
       rarity = 'Uncommon'
-      multiplier = 1.2
+      multiplier = 1.0
     } else {
-      // 45% common - Small loss
+      // 65% common - Loss
       rarity = 'Common'
-      multiplier = 0.7
+      multiplier = 0.4
     }
 
     const value = Math.floor(cost * multiplier)

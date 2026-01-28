@@ -946,9 +946,17 @@ export class ShopUI {
         .on('pointerover', () => {
           // Show tooltip with description
           const tooltipX = centerX + 360
-          const tooltipY = absY
+          const tooltipHeight = 60
+          // Clamp tooltip Y to stay on screen
+          const screenHeight = this.scene.scale.height
+          let tooltipY = absY
+          if (tooltipY - tooltipHeight / 2 < 10) {
+            tooltipY = 10 + tooltipHeight / 2
+          } else if (tooltipY + tooltipHeight / 2 > screenHeight - 10) {
+            tooltipY = screenHeight - 10 - tooltipHeight / 2
+          }
 
-          const tooltipBg = this.scene.add.rectangle(tooltipX, tooltipY, 300, 60, 0x1a1a2e, 0.95)
+          const tooltipBg = this.scene.add.rectangle(tooltipX, tooltipY, 300, tooltipHeight, 0x1a1a2e, 0.95)
             .setScrollFactor(0).setDepth(15000)
             .setStrokeStyle(2, 0xf39c12, 1)
 
@@ -972,7 +980,6 @@ export class ShopUI {
               duration: 150,
               ease: 'Power2'
             })
-            this.scene.cameras.main.flash(50, 0, 255, 0)
           }
         })
         .on('pointerout', () => {
