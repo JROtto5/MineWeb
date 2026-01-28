@@ -9,6 +9,7 @@ import { ComboSystem, StageManager, STAGES } from './StageSystem'
 import { SkillTreeManager, SKILLS } from './SkillTree'
 import { ShopManager, ShopUI } from './ShopSystem'
 import Boss, { BossType, BOSS_CONFIGS } from './Boss'
+import { AudioManager } from './AudioManager'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
@@ -22,6 +23,7 @@ export default class GameSceneV3 extends Phaser.Scene {
   private stageManager!: StageManager
   private shopManager!: ShopManager
   private shopUI!: ShopUI
+  private audioManager!: AudioManager
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: any
@@ -87,6 +89,12 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.casinoManager = new CasinoManager(this)
     this.powerUpManager = new PowerUpManager(this)
     this.shopManager = new ShopManager()
+    this.audioManager = AudioManager.getInstance()
+
+    // Start background music (after user interaction)
+    this.input.once('pointerdown', () => {
+      this.audioManager.enableAudio()
+    })
 
     // Set world bounds
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight)
@@ -937,6 +945,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     if (killed) {
       this.enemiesKilled++
 
+      // Play kill sound
+      this.audioManager.playSound('kill')
+
       // ROGUELIKE: Track run stats
       this.runStats.totalKills++
 
@@ -1064,13 +1075,14 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // Add skill point for boss kill!
       this.player.skillPoints++
+      this.audioManager.playSound('levelUp')
 
       // Epic kill feed message
       this.addKillFeedMessage(`💀 BOSS DEFEATED! 💀`, '#ff0000', 5000)
       this.addKillFeedMessage(`+$${money} +${xp}XP +1 SKILL POINT`, '#ffd700', 5000)
 
-      // Camera shake for epic feel
-      this.cameras.main.shake(800, 0.02)
+      // Camera shake for epic feel (reduced)
+      this.cameras.main.shake(150, 0.003)
 
       // Check if stage complete (boss was last enemy)
       this.checkStageCompletion()
@@ -1237,7 +1249,69 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.scene.restart()
       })
 
-    this.pauseMenuUI = [overlay, title, stats, resumeBg, resumeLabel, restartBg, restartLabel]
+    // Audio controls title
+    const audioTitle = this.add.text(centerX, centerY + 180, '🔊 AUDIO CONTROLS', {
+      fontSize: '20px',
+      color: '#3498db',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
+
+    // Mute All button
+    const muteAllBg = this.add.rectangle(centerX, centerY + 230, 300, 50, 0x3498db)
+      .setScrollFactor(0).setDepth(15001)
+    const muteAllLabel = this.add.text(centerX, centerY + 230,
+      this.audioManager.isMusicMuted() ? '🔇 Unmute All' : '🔊 Mute All', {
+      fontSize: '20px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    muteAllBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => muteAllBg.setFillStyle(0x2980b9))
+      .on('pointerout', () => muteAllBg.setFillStyle(0x3498db))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        const muted = this.audioManager.toggleAllMute()
+        muteAllLabel.setText(muted ? '🔇 Unmute All' : '🔊 Mute All')
+      })
+
+    // Mute Music button
+    const muteMusicBg = this.add.rectangle(centerX - 160, centerY + 295, 140, 45, 0x9b59b6)
+      .setScrollFactor(0).setDepth(15001)
+    const muteMusicLabel = this.add.text(centerX - 160, centerY + 295,
+      this.audioManager.isMusicMuted() ? '🎵 Music: OFF' : '🎵 Music: ON', {
+      fontSize: '16px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    muteMusicBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => muteMusicBg.setFillStyle(0x8e44ad))
+      .on('pointerout', () => muteMusicBg.setFillStyle(0x9b59b6))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        const muted = this.audioManager.toggleMusicMute()
+        muteMusicLabel.setText(muted ? '🎵 Music: OFF' : '🎵 Music: ON')
+      })
+
+    // Mute SFX button
+    const muteSfxBg = this.add.rectangle(centerX + 160, centerY + 295, 140, 45, 0xe67e22)
+      .setScrollFactor(0).setDepth(15001)
+    const muteSfxLabel = this.add.text(centerX + 160, centerY + 295,
+      this.audioManager.isSfxMuted() ? '🔔 SFX: OFF' : '🔔 SFX: ON', {
+      fontSize: '16px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    muteSfxBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => muteSfxBg.setFillStyle(0xd35400))
+      .on('pointerout', () => muteSfxBg.setFillStyle(0xe67e22))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        const muted = this.audioManager.toggleSfxMute()
+        muteSfxLabel.setText(muted ? '🔔 SFX: OFF' : '🔔 SFX: ON')
+      })
+
+    this.pauseMenuUI = [overlay, title, stats, resumeBg, resumeLabel, restartBg, restartLabel,
+      audioTitle, muteAllBg, muteAllLabel, muteMusicBg, muteMusicLabel, muteSfxBg, muteSfxLabel]
   }
 
   private closePauseMenu() {
@@ -1249,6 +1323,10 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private gameOver() {
+    // Play death sound and stop music
+    this.audioManager.playSound('death')
+    this.audioManager.stopMusic()
+
     this.addKillFeedMessage('💀 GAME OVER 💀', '#e74c3c', 3000)
     this.showRunStats(false)
     this.time.delayedCall(8000, () => {
@@ -1388,7 +1466,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     })
 
     if (isBig) {
-      this.cameras.main.shake(800, 0.02)
+      this.cameras.main.shake(150, 0.003)
     }
   }
 
@@ -1776,7 +1854,6 @@ export default class GameSceneV3 extends Phaser.Scene {
             if (this.player.skillTree.upgradeSkill(skill.id)) {
               this.player.skillPoints = this.player.skillTree.getSkillPoints()
               this.player.applySkillBonuses()
-              this.cameras.main.flash(50, 100, 200, 255) // Reduced flash duration
               this.closeSkillTree()
               this.openSkillTree() // Refresh
             }

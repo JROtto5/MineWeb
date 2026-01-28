@@ -128,9 +128,8 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
 
     this.updateHealthBar()
 
-    // Boss entrance effect
-    scene.cameras.main.shake(500, 0.01)
-    scene.cameras.main.flash(500, 255, 0, 0)
+    // Boss entrance effect (minimal)
+    scene.cameras.main.shake(150, 0.003)
 
     // Announce boss spawn
     this.announceBoss()
@@ -281,8 +280,7 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         break
 
       case 'mega':
-        // Create explosion effect
-        this.scene.cameras.main.shake(200, 0.005)
+        // Create explosion effect (no camera shake)
         break
     }
   }
@@ -364,9 +362,8 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
       })
     }
 
-    // Camera effects
-    this.scene.cameras.main.shake(800, 0.02)
-    this.scene.cameras.main.flash(800, 255, 215, 0)
+    // Camera effects (minimal)
+    this.scene.cameras.main.shake(200, 0.005)
 
     // Emit boss death event
     if (typeof window !== 'undefined') {

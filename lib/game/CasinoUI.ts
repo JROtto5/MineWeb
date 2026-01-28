@@ -608,7 +608,6 @@ export class CasinoUI {
       .on('pointerout', () => bg.setFillStyle(color, 1))
       .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
         event.stopPropagation()
-        this.scene.cameras.main.flash(100, 0, 255, 0)
         onClick()
       })
 

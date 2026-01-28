@@ -1039,6 +1039,12 @@ export class ShopUI {
       this.shopManager.purchase(itemId)
       this.player.addMoney(-price)
 
+      // Play purchase sound
+      const gameScene = this.scene as any
+      if (gameScene.audioManager) {
+        gameScene.audioManager.playSound('purchase')
+      }
+
       const item = SHOP_ITEMS.find(i => i.id === itemId)!
       this.emitMessage(`✅ Purchased ${item.icon} ${item.name}!`, 'success')
 

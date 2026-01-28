@@ -446,8 +446,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.weaponSystem.fireBullet(this.x, this.y, angle, damage)
     }
 
-    // Visual feedback
-    this.scene.cameras.main.shake(50, 0.002)
+    // Visual feedback removed (too flashy)
   }
 
   // Override takeDamage for invincibility and shield
@@ -457,7 +456,6 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Shield blocks damage
     if (this.shieldHits > 0) {
       this.shieldHits--
-      this.scene.cameras.main.flash(100, 100, 200, 255)
       if (this.shieldHits === 0) {
         this.emitMessage('🛡️ Shield depleted!', 'warning')
       }
@@ -477,7 +475,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       }
     })
 
-    this.scene.cameras.main.shake(200, 0.01)
+    this.scene.cameras.main.shake(50, 0.002)
   }
 
   // ABILITY METHODS
@@ -588,8 +586,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.setPosition(targetX, targetY)
     this.teleportCooldown = this.scene.time.now + 6000 // FAST: 6 second cooldown
 
-    // Flash effect
-    this.scene.cameras.main.flash(100, 150, 0, 255)
+    // Flash effect removed (too flashy)
   }
 
   canActivateLifeDrain(): boolean {
@@ -626,7 +623,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.orbitalStrikeCooldown = this.scene.time.now + 20000 // FAST: 20 second cooldown
     // Emit event for GameScene to handle the strike
     this.scene.events.emit('orbitalStrike', { x: targetX, y: targetY })
-    this.scene.cameras.main.shake(500, 0.01)
+    this.scene.cameras.main.shake(150, 0.003)
   }
 
   // Getters for ability states
