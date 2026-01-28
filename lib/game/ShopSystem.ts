@@ -1,0 +1,438 @@
+import Phaser from 'phaser'
+import Player from './Player'
+
+export interface ShopItem {
+  id: string
+  name: string
+  description: string
+  icon: string
+  category: 'weapon' | 'stat' | 'ability'
+  basePrice: number
+  maxLevel: number
+  priceScaling: number // Multiplier per level
+  effect: {
+    type: 'damage' | 'fireRate' | 'ammo' | 'health' | 'speed' | 'critChance' | 'moneyBoost' | 'xpBoost' | 'dash' | 'shield' | 'timeSlow'
+    value: number
+  }
+}
+
+export const SHOP_ITEMS: ShopItem[] = [
+  // Weapon Upgrades
+  {
+    id: 'weapon_damage',
+    name: 'Weapon Damage',
+    description: '+15% damage per level',
+    icon: '💥',
+    category: 'weapon',
+    basePrice: 500,
+    maxLevel: 10,
+    priceScaling: 1.5,
+    effect: { type: 'damage', value: 0.15 }
+  },
+  {
+    id: 'fire_rate',
+    name: 'Fire Rate',
+    description: '+20% fire rate per level',
+    icon: '🔫',
+    category: 'weapon',
+    basePrice: 600,
+    maxLevel: 10,
+    priceScaling: 1.6,
+    effect: { type: 'fireRate', value: 0.20 }
+  },
+  {
+    id: 'ammo_capacity',
+    name: 'Ammo Capacity',
+    description: '+50 max ammo per level',
+    icon: '📦',
+    category: 'weapon',
+    basePrice: 400,
+    maxLevel: 5,
+    priceScaling: 1.4,
+    effect: { type: 'ammo', value: 50 }
+  },
+  {
+    id: 'crit_boost',
+    name: 'Critical Boost',
+    description: '+8% crit chance per level',
+    icon: '🎯',
+    category: 'weapon',
+    basePrice: 800,
+    maxLevel: 5,
+    priceScaling: 1.8,
+    effect: { type: 'critChance', value: 0.08 }
+  },
+
+  // Stat Upgrades
+  {
+    id: 'max_health',
+    name: 'Max Health',
+    description: '+50 max health per level',
+    icon: '❤️',
+    category: 'stat',
+    basePrice: 700,
+    maxLevel: 8,
+    priceScaling: 1.5,
+    effect: { type: 'health', value: 50 }
+  },
+  {
+    id: 'movement_speed',
+    name: 'Movement Speed',
+    description: '+12% speed per level',
+    icon: '⚡',
+    category: 'stat',
+    basePrice: 650,
+    maxLevel: 5,
+    priceScaling: 1.6,
+    effect: { type: 'speed', value: 0.12 }
+  },
+  {
+    id: 'money_magnet',
+    name: 'Money Magnet',
+    description: '+25% money drops per level',
+    icon: '💰',
+    category: 'stat',
+    basePrice: 900,
+    maxLevel: 5,
+    priceScaling: 1.7,
+    effect: { type: 'moneyBoost', value: 0.25 }
+  },
+  {
+    id: 'xp_booster',
+    name: 'XP Booster',
+    description: '+20% XP gains per level',
+    icon: '✨',
+    category: 'stat',
+    basePrice: 850,
+    maxLevel: 5,
+    priceScaling: 1.7,
+    effect: { type: 'xpBoost', value: 0.20 }
+  },
+
+  // Special Abilities (expensive, single purchase)
+  {
+    id: 'dash_ability',
+    name: 'Dash Ability',
+    description: 'Unlock dash ability (Space key)',
+    icon: '💨',
+    category: 'ability',
+    basePrice: 2500,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'dash', value: 1 }
+  },
+  {
+    id: 'shield_ability',
+    name: 'Energy Shield',
+    description: 'Unlock shield ability (Q key) - blocks 5 hits',
+    icon: '🛡️',
+    category: 'ability',
+    basePrice: 3000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'shield', value: 1 }
+  },
+  {
+    id: 'time_slow',
+    name: 'Time Slow',
+    description: 'Unlock time slow ability (F key) - 5s duration',
+    icon: '⏱️',
+    category: 'ability',
+    basePrice: 5000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'timeSlow', value: 1 }
+  },
+]
+
+export class ShopManager {
+  private purchasedItems: Map<string, number> = new Map() // itemId -> level
+
+  constructor() {
+    // Initialize all items at level 0
+    SHOP_ITEMS.forEach(item => {
+      this.purchasedItems.set(item.id, 0)
+    })
+  }
+
+  getItemLevel(itemId: string): number {
+    return this.purchasedItems.get(itemId) || 0
+  }
+
+  canPurchase(itemId: string, playerMoney: number): boolean {
+    const item = SHOP_ITEMS.find(i => i.id === itemId)
+    if (!item) return false
+
+    const currentLevel = this.getItemLevel(itemId)
+    if (currentLevel >= item.maxLevel) return false
+
+    const price = this.getPrice(itemId)
+    return playerMoney >= price
+  }
+
+  getPrice(itemId: string): number {
+    const item = SHOP_ITEMS.find(i => i.id === itemId)
+    if (!item) return 0
+
+    const currentLevel = this.getItemLevel(itemId)
+    return Math.floor(item.basePrice * Math.pow(item.priceScaling, currentLevel))
+  }
+
+  purchase(itemId: string): boolean {
+    const item = SHOP_ITEMS.find(i => i.id === itemId)
+    if (!item) return false
+
+    const currentLevel = this.getItemLevel(itemId)
+    if (currentLevel >= item.maxLevel) return false
+
+    this.purchasedItems.set(itemId, currentLevel + 1)
+    return true
+  }
+
+  getAllItems(): Array<{ item: ShopItem; level: number; price: number; canUpgrade: boolean }> {
+    return SHOP_ITEMS.map(item => ({
+      item,
+      level: this.getItemLevel(item.id),
+      price: this.getPrice(item.id),
+      canUpgrade: this.getItemLevel(item.id) < item.maxLevel
+    }))
+  }
+
+  getBonus(effectType: string): number {
+    let total = 0
+    this.purchasedItems.forEach((level, itemId) => {
+      const item = SHOP_ITEMS.find(i => i.id === itemId)
+      if (item && item.effect.type === effectType) {
+        total += item.effect.value * level
+      }
+    })
+    return total
+  }
+
+  hasAbility(abilityType: string): boolean {
+    const item = SHOP_ITEMS.find(i => i.effect.type === abilityType)
+    if (!item) return false
+    return this.getItemLevel(item.id) > 0
+  }
+}
+
+export class ShopUI {
+  private scene: Phaser.Scene
+  private shopManager: ShopManager
+  private player: Player
+  private isOpen = false
+  private ui: any = null
+  private currentCategory: 'weapon' | 'stat' | 'ability' = 'weapon'
+
+  constructor(scene: Phaser.Scene, shopManager: ShopManager, player: Player) {
+    this.scene = scene
+    this.shopManager = shopManager
+    this.player = player
+  }
+
+  toggle() {
+    if (this.isOpen) {
+      this.close()
+    } else {
+      this.open()
+    }
+  }
+
+  open() {
+    if (this.isOpen) return
+    this.isOpen = true
+
+    this.scene.physics.pause()
+
+    const cam = this.scene.cameras.main
+
+    // Dark overlay
+    const overlay = this.scene.add.rectangle(
+      cam.width / 2,
+      cam.height / 2,
+      cam.width * 2,
+      cam.height * 2,
+      0x000000,
+      0.85
+    ).setScrollFactor(0).setDepth(10000)
+
+    const container = this.scene.add.container(
+      cam.width / 2,
+      cam.height / 2
+    ).setScrollFactor(0).setDepth(10001)
+
+    // Title
+    const title = this.scene.add.text(0, -280, '🏪 WEAPON SHOP 🏪', {
+      fontSize: '48px',
+      color: '#f39c12',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5,
+    }).setOrigin(0.5)
+
+    // Money display
+    const moneyText = this.scene.add.text(0, -230, `💰 Money: $${this.player.money}`, {
+      fontSize: '24px',
+      color: '#2ecc71',
+      fontStyle: 'bold',
+    }).setOrigin(0.5)
+
+    // Category tabs
+    const categories = [
+      { id: 'weapon', name: 'WEAPONS', icon: '💥' },
+      { id: 'stat', name: 'STATS', icon: '⚡' },
+      { id: 'ability', name: 'ABILITIES', icon: '🌟' },
+    ]
+
+    const tabY = -180
+    categories.forEach((cat, index) => {
+      const x = -200 + index * 200
+      const isActive = cat.id === this.currentCategory
+
+      const tabBg = this.scene.add.rectangle(x, tabY, 180, 50, isActive ? 0xf39c12 : 0x34495e, 1)
+      const tabText = this.scene.add.text(x, tabY, `${cat.icon} ${cat.name}`, {
+        fontSize: '16px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5)
+
+      tabBg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => !isActive && tabBg.setFillStyle(0x2c3e50, 1))
+        .on('pointerout', () => !isActive && tabBg.setFillStyle(0x34495e, 1))
+        .on('pointerdown', () => {
+          this.currentCategory = cat.id as any
+          this.close()
+          this.open() // Refresh
+        })
+
+      container.add([tabBg, tabText])
+    })
+
+    // Items list
+    const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
+    const startY = -120
+    const itemHeight = 70
+
+    items.forEach((itemData, index) => {
+      const item = itemData.item
+      const y = startY + index * itemHeight
+
+      // Can afford?
+      const canAfford = this.player.money >= itemData.price
+      const canBuy = itemData.canUpgrade && canAfford
+
+      // Background
+      const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
+      const itemBg = this.scene.add.rectangle(0, y, 650, 65, bgColor, 0.9)
+
+      // Icon and name
+      const itemText = this.scene.add.text(-300, y, `${item.icon} ${item.name}`, {
+        fontSize: '20px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0, 0.5)
+
+      // Description
+      const descText = this.scene.add.text(-300, y + 20, item.description, {
+        fontSize: '13px',
+        color: '#bdc3c7',
+      }).setOrigin(0, 0.5)
+
+      // Level
+      const levelText = this.scene.add.text(140, y, `Level: ${itemData.level}/${item.maxLevel}`, {
+        fontSize: '16px',
+        color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5)
+
+      // Price button
+      const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
+      const priceBg = this.scene.add.rectangle(260, y, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+      const priceText = this.scene.add.text(260, y, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
+        fontSize: '18px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5)
+
+      // Make clickable if can buy
+      if (canBuy) {
+        itemBg.setInteractive({ useHandCursor: true })
+          .on('pointerover', () => itemBg.setFillStyle(0x2ecc71, 1))
+          .on('pointerout', () => itemBg.setFillStyle(0x27ae60, 0.9))
+          .on('pointerdown', () => this.buyItem(item.id))
+
+        priceBg.setInteractive({ useHandCursor: true })
+          .on('pointerover', () => priceBg.setFillStyle(0x27ae60, 1))
+          .on('pointerout', () => priceBg.setFillStyle(0x2ecc71, 0.9))
+          .on('pointerdown', () => this.buyItem(item.id))
+      }
+
+      container.add([itemBg, itemText, descText, levelText, priceBg, priceText])
+    })
+
+    // Close button
+    const closeBtn = this.scene.add.rectangle(0, 260, 250, 55, 0xe74c3c, 0.9)
+    const closeTxt = this.scene.add.text(0, 260, 'Close (ESC)', {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5)
+
+    closeBtn.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
+      .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
+      .on('pointerdown', () => this.close())
+
+    container.add([title, moneyText, closeBtn, closeTxt])
+
+    this.ui = { overlay, container }
+  }
+
+  private buyItem(itemId: string) {
+    const price = this.shopManager.getPrice(itemId)
+
+    if (this.shopManager.canPurchase(itemId, this.player.money)) {
+      this.player.money -= price
+      this.shopManager.purchase(itemId)
+      this.player.applyShopBonuses(this.shopManager)
+
+      // Success feedback
+      this.scene.cameras.main.flash(100, 0, 255, 0)
+
+      // Refresh shop
+      this.close()
+      this.open()
+
+      // Send message
+      const item = SHOP_ITEMS.find(i => i.id === itemId)
+      if (item) {
+        this.emitMessage(`✅ Purchased ${item.name}!`, 'success')
+      }
+    }
+  }
+
+  close() {
+    if (!this.isOpen) return
+    this.isOpen = false
+
+    this.scene.physics.resume()
+
+    if (this.ui) {
+      this.ui.overlay.destroy()
+      this.ui.container.destroy()
+      this.ui = null
+    }
+  }
+
+  isShopOpen(): boolean {
+    return this.isOpen
+  }
+
+  private emitMessage(text: string, type: 'success' | 'warning' | 'danger') {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gameEvent', {
+        detail: { type: 'message', data: { text, type } }
+      }))
+    }
+  }
+}

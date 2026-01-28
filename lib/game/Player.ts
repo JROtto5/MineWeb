@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { WeaponSystem, WeaponType } from './Weapon'
 import { SkillTreeManager } from './SkillTree'
+import { ShopManager } from './ShopSystem'
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   public health = 100
@@ -18,6 +19,28 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   private currentWeapon = 0
   private weaponSystem: WeaponSystem
   public skillTree: SkillTreeManager
+  private shopManager: ShopManager | null = null
+
+  // Shop bonuses (cached for performance)
+  private shopDamageBonus = 0
+  private shopFireRateBonus = 0
+  private shopAmmoBonus = 0
+  private shopHealthBonus = 0
+  private shopSpeedBonus = 0
+  private shopCritBonus = 0
+  private shopMoneyBonus = 0
+  private shopXPBonus = 0
+
+  // Abilities
+  private hasDash = false
+  private hasShield = false
+  private hasTimeSlow = false
+  private shieldHits = 0
+  private timeSlowActive = false
+  private timeSlowEnd = 0
+  private dashCooldown = 0
+  private shieldCooldown = 0
+  private timeSlowCooldown = 0
 
   private weapons: WeaponType[] = [
     { name: 'Pistol', damage: 20, fireRate: 300, ammo: 30, maxAmmo: 30 },
@@ -97,6 +120,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   move(directionX: number, directionY: number) {
     // Update power-ups
     this.updatePowerUps()
+
+    // Update abilities
+    this.updateAbilities()
 
     // Normalize diagonal movement
     if (directionX !== 0 && directionY !== 0) {
@@ -243,15 +269,43 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   applySkillBonuses() {
     // Update max health
     const healthBonus = this.skillTree.getTotalBonus('health')
-    this.maxHealth = 100 + healthBonus
+    this.maxHealth = 100 + healthBonus + this.shopHealthBonus
 
     // Update speed
     this.recalculateSpeed()
   }
 
+  // SHOP SYSTEM INTEGRATION
+  applyShopBonuses(shopManager: ShopManager) {
+    this.shopManager = shopManager
+
+    // Cache bonuses for performance
+    this.shopDamageBonus = shopManager.getBonus('damage')
+    this.shopFireRateBonus = shopManager.getBonus('fireRate')
+    this.shopAmmoBonus = shopManager.getBonus('ammo')
+    this.shopHealthBonus = shopManager.getBonus('health')
+    this.shopSpeedBonus = shopManager.getBonus('speed')
+    this.shopCritBonus = shopManager.getBonus('critChance')
+    this.shopMoneyBonus = shopManager.getBonus('moneyBoost')
+    this.shopXPBonus = shopManager.getBonus('xpBoost')
+
+    // Abilities
+    this.hasDash = shopManager.hasAbility('dash')
+    this.hasShield = shopManager.hasAbility('shield')
+    this.hasTimeSlow = shopManager.hasAbility('timeSlow')
+
+    // Update stats
+    this.applySkillBonuses()
+
+    // Update weapon max ammo
+    this.weapons.forEach(weapon => {
+      weapon.maxAmmo += this.shopAmmoBonus
+    })
+  }
+
   private recalculateSpeed() {
-    const speedBonus = this.skillTree.getTotalBonus('speed')
-    this.baseSpeed = 200 * (1 + speedBonus)
+    const skillSpeedBonus = this.skillTree.getTotalBonus('speed')
+    this.baseSpeed = 200 * (1 + skillSpeedBonus + this.shopSpeedBonus)
 
     if (this.speedBoostActive) {
       this.speed = this.baseSpeed * 1.5
@@ -264,17 +318,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     let damage = this.weapons[this.currentWeapon].damage
 
     // Apply skill bonus
-    const damageBonus = this.skillTree.getTotalBonus('damage')
-    damage *= (1 + damageBonus)
+    const skillDamageBonus = this.skillTree.getTotalBonus('damage')
+    damage *= (1 + skillDamageBonus + this.shopDamageBonus)
 
     // Apply power-up bonus
     if (this.damageBoostActive) {
       damage *= 2
     }
 
-    // Critical hit chance
-    const critChance = this.skillTree.getTotalBonus('critChance')
-    if (Math.random() < critChance) {
+    // Shield protection visual
+    if (this.shieldHits > 0) {
+      // Shield is active
+    }
+
+    // Critical hit chance (skill + shop)
+    const skillCritChance = this.skillTree.getTotalBonus('critChance')
+    const totalCritChance = skillCritChance + this.shopCritBonus
+    if (Math.random() < totalCritChance) {
       damage *= 3 // Critical hit!
       this.emitCriticalHit()
     }
@@ -286,20 +346,25 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     let fireRate = this.weapons[this.currentWeapon].fireRate
 
     // Apply skill bonus
-    const fireRateBonus = this.skillTree.getTotalBonus('fireRate')
-    fireRate *= (1 - fireRateBonus)
+    const skillFireRateBonus = this.skillTree.getTotalBonus('fireRate')
+    fireRate *= (1 - skillFireRateBonus - this.shopFireRateBonus)
 
     // Apply rapid fire power-up
     if (this.rapidFireActive) {
       fireRate *= 0.5
     }
 
+    // Time slow ability
+    if (this.timeSlowActive) {
+      fireRate *= 0.5 // Fire twice as fast during time slow
+    }
+
     return fireRate
   }
 
   applyLuckBonus(amount: number): number {
-    const luckBonus = this.skillTree.getTotalBonus('luck')
-    return Math.floor(amount * (1 + luckBonus))
+    const skillLuckBonus = this.skillTree.getTotalBonus('luck')
+    return Math.floor(amount * (1 + skillLuckBonus))
   }
 
   private emitCriticalHit() {
@@ -365,9 +430,19 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene.cameras.main.shake(50, 0.002)
   }
 
-  // Override takeDamage for invincibility
+  // Override takeDamage for invincibility and shield
   takeDamage(amount: number) {
     if (this.invincibilityActive) return
+
+    // Shield blocks damage
+    if (this.shieldHits > 0) {
+      this.shieldHits--
+      this.scene.cameras.main.flash(100, 100, 200, 255)
+      if (this.shieldHits === 0) {
+        this.emitMessage('🛡️ Shield depleted!', 'warning')
+      }
+      return
+    }
 
     this.health -= amount
     if (this.health < 0) this.health = 0
@@ -385,10 +460,109 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.scene.cameras.main.shake(200, 0.01)
   }
 
+  // ABILITY METHODS
+  canDash(): boolean {
+    return this.hasDash && this.scene.time.now >= this.dashCooldown
+  }
+
+  performDash() {
+    if (!this.canDash()) return
+
+    this.dashCooldown = this.scene.time.now + 3000 // 3 second cooldown
+
+    // Get cursor direction
+    const pointer = this.scene.input.activePointer
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, pointer.worldX, pointer.worldY)
+
+    // Dash in that direction
+    const dashDistance = 300
+    const dashX = this.x + Math.cos(angle) * dashDistance
+    const dashY = this.y + Math.sin(angle) * dashDistance
+
+    // Tween for smooth dash
+    this.scene.tweens.add({
+      targets: this,
+      x: dashX,
+      y: dashY,
+      duration: 150,
+      ease: 'Cubic.easeOut',
+    })
+
+    // Invincibility during dash
+    this.activateInvincibility(200)
+
+    this.emitMessage('💨 DASH!', 'success')
+  }
+
+  canActivateShield(): boolean {
+    return this.hasShield && this.shieldHits === 0 && this.scene.time.now >= this.shieldCooldown
+  }
+
+  activateShield() {
+    if (!this.canActivateShield()) return
+
+    this.shieldHits = 5
+    this.shieldCooldown = this.scene.time.now + 15000 // 15 second cooldown
+
+    // Visual feedback
+    this.setTint(0x00ffff)
+    this.scene.time.delayedCall(200, () => this.clearTint())
+
+    this.emitMessage('🛡️ Shield activated! (5 hits)', 'success')
+  }
+
+  canActivateTimeSlow(): boolean {
+    return this.hasTimeSlow && !this.timeSlowActive && this.scene.time.now >= this.timeSlowCooldown
+  }
+
+  activateTimeSlow() {
+    if (!this.canActivateTimeSlow()) return
+
+    this.timeSlowActive = true
+    this.timeSlowEnd = this.scene.time.now + 5000 // 5 seconds
+    this.timeSlowCooldown = this.scene.time.now + 20000 // 20 second cooldown
+
+    // Slow down enemies (handled in GameScene)
+    this.scene.time.timeScale = 0.5
+
+    this.emitMessage('⏱️ TIME SLOW ACTIVATED!', 'warning')
+  }
+
+  updateAbilities() {
+    // Check time slow expiration
+    if (this.timeSlowActive && this.scene.time.now >= this.timeSlowEnd) {
+      this.timeSlowActive = false
+      this.scene.time.timeScale = 1.0
+      this.emitMessage('⏱️ Time slow ended', 'warning')
+    }
+  }
+
+  isTimeSlowActive(): boolean {
+    return this.timeSlowActive
+  }
+
+  getShieldHits(): number {
+    return this.shieldHits
+  }
+
+  private emitMessage(text: string, type: 'success' | 'warning' | 'danger') {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gameEvent', {
+        detail: {
+          type: 'message',
+          data: { text, type }
+        }
+      }))
+    }
+  }
+
   // Override addXP for skill points
   addXP(amount: number) {
     // Apply luck bonus
     amount = this.applyLuckBonus(amount)
+
+    // Apply shop XP bonus
+    amount = Math.floor(amount * (1 + this.shopXPBonus))
 
     this.xp += amount
 
@@ -416,6 +590,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   addMoney(amount: number) {
     if (amount > 0) {
       amount = this.applyLuckBonus(amount)
+      // Apply shop money bonus
+      amount = Math.floor(amount * (1 + this.shopMoneyBonus))
     }
     this.money += amount
   }

@@ -7,6 +7,7 @@ import { CasinoUI } from './CasinoUI'
 import { PowerUpManager, PowerUpType } from './PowerUps'
 import { ComboSystem, StageManager, STAGES } from './StageSystem'
 import { SkillTreeManager, SKILLS } from './SkillTree'
+import { ShopManager, ShopUI } from './ShopSystem'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
@@ -17,6 +18,8 @@ export default class GameSceneV3 extends Phaser.Scene {
   private powerUpManager!: PowerUpManager
   private comboSystem!: ComboSystem
   private stageManager!: StageManager
+  private shopManager!: ShopManager
+  private shopUI!: ShopUI
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: any
@@ -52,6 +55,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.weaponSystem = new WeaponSystem(this)
     this.casinoManager = new CasinoManager(this)
     this.powerUpManager = new PowerUpManager(this)
+    this.shopManager = new ShopManager()
 
     // Set world bounds
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight)
@@ -62,8 +66,14 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create player
     this.player = new Player(this, this.worldWidth / 2, this.worldHeight / 2, this.weaponSystem)
 
+    // Apply initial shop bonuses
+    this.player.applyShopBonuses(this.shopManager)
+
     // Casino UI
     this.casinoUI = new CasinoUI(this, this.casinoManager, this.player)
+
+    // Shop UI
+    this.shopUI = new ShopUI(this, this.shopManager, this.player)
 
     // Create enemies group
     this.enemies = this.add.group()
@@ -222,6 +232,9 @@ export default class GameSceneV3 extends Phaser.Scene {
       R: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R),
       E: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E),
       T: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.T),
+      Q: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+      F: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F),
+      SPACE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       ONE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       TWO: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
       THREE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
@@ -229,7 +242,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Shooting
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown() && !this.skillTreeUI) {
+      if (pointer.leftButtonDown() && !this.skillTreeUI && !this.shopUI.isShopOpen()) {
         this.player.shoot(pointer.worldX, pointer.worldY)
       }
     })
@@ -244,6 +257,29 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Skill tree (T key)
     this.input.keyboard!.on('keydown-T', () => this.toggleSkillTree())
+
+    // Shop (S key) - FIX: Don't use S key conflict with movement
+    // Use B key for "Buy" instead
+    this.input.keyboard!.on('keydown-B', () => this.shopUI.toggle())
+
+    // Abilities
+    this.input.keyboard!.on('keydown-SPACE', () => {
+      if (this.player.canDash()) {
+        this.player.performDash()
+      }
+    })
+
+    this.input.keyboard!.on('keydown-Q', () => {
+      if (this.player.canActivateShield()) {
+        this.player.activateShield()
+      }
+    })
+
+    this.input.keyboard!.on('keydown-F', () => {
+      if (this.player.canActivateTimeSlow()) {
+        this.player.activateTimeSlow()
+      }
+    })
   }
 
   private setupCollisions() {
@@ -625,7 +661,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     const cam = this.cameras.main
 
-    // Overlay - FIX: Use proper positioning without scrollFactor issues
+    // Overlay - FIX V4: Don't make overlay interactive - it blocks clicks!
     const overlay = this.add.rectangle(
       cam.width / 2,
       cam.height / 2,
@@ -633,7 +669,8 @@ export default class GameSceneV3 extends Phaser.Scene {
       cam.height * 2,
       0x000000,
       0.9
-    ).setScrollFactor(0).setDepth(9000).setInteractive()
+    ).setScrollFactor(0).setDepth(9000)
+    // Removed .setInteractive() - this was blocking skill button clicks!
 
     const container = this.add.container(
       cam.width / 2,
