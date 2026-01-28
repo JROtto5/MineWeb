@@ -798,41 +798,57 @@ export default class GameSceneV3 extends Phaser.Scene {
       const canUpgrade = this.player.skillTree.canUpgradeSkill(skill.id)
 
       // Background - ABSOLUTE position!
-      const skillBg = this.add.rectangle(centerX, y, 520, 48, canUpgrade ? 0x27ae60 : 0x34495e, canUpgrade ? 0.9 : 0.6)
+      const skillBg = this.add.rectangle(centerX - 30, y, 400, 48, 0x2c3e50, 0.8)
         .setScrollFactor(0)
-        .setDepth(canUpgrade ? 9003 : 9001) // Higher depth if clickable!
+        .setDepth(9001)
 
-      // FIX V7: CRITICAL - Disable text interactivity so it doesn't block clicks!
-      const skillText = this.add.text(centerX - 240, y, `${skill.icon} ${skill.name}`, {
+      // FIX V11: CRITICAL - Disable text interactivity so it doesn't block clicks!
+      const skillText = this.add.text(centerX - 220, y, `${skill.icon} ${skill.name}`, {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
       skillText.disableInteractive() // Prevent text from intercepting events
 
-      const levelText = this.add.text(centerX, y, `${level}/${skill.maxLevel}`, {
-        fontSize: '18px',
-        color: level === skill.maxLevel ? '#f1c40f' : '#ffffff',
+      const levelText = this.add.text(centerX - 70, y, `Lv ${level}/${skill.maxLevel}`, {
+        fontSize: '16px',
+        color: level === skill.maxLevel ? '#f1c40f' : '#95a5a6',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
       levelText.disableInteractive() // Prevent text from intercepting events
 
-      const descText = this.add.text(centerX + 70, y, skill.description, {
-        fontSize: '13px',
-        color: '#ecf0f1',
+      const descText = this.add.text(centerX - 220, y + 18, skill.description, {
+        fontSize: '12px',
+        color: '#bdc3c7',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
       descText.disableInteractive() // Prevent text from intercepting events
 
-      // Make clickable AFTER positioning and depth!
+      // FIX V11: Add visible UPGRADE button like Casino/Shop!
+      const buttonColor = canUpgrade ? 0x2ecc71 : (level === skill.maxLevel ? 0x7f8c8d : 0x95a5a6)
+      const upgradeBtn = this.add.rectangle(centerX + 200, y, 100, 42, buttonColor, canUpgrade ? 0.9 : 0.5)
+        .setScrollFactor(0)
+        .setDepth(9003)
+
+      const buttonText = canUpgrade ? '⚡ UPGRADE' : (level === skill.maxLevel ? 'MAX' : 'LOCKED')
+      const upgradeLabel = this.add.text(centerX + 200, y, buttonText, {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
+      upgradeLabel.disableInteractive()
+
+      uiElements.push(skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
+
+      // Make BUTTON clickable immediately!
       if (canUpgrade) {
-        skillBg.setInteractive({ useHandCursor: true })
+        upgradeBtn.setInteractive({ useHandCursor: true })
           .on('pointerover', () => {
-            skillBg.setFillStyle(0x2ecc71, 1)
+            upgradeBtn.setFillStyle(0x27ae60, 1)
             this.cameras.main.flash(50, 0, 255, 0)
           })
-          .on('pointerout', () => skillBg.setFillStyle(0x27ae60, 0.9))
+          .on('pointerout', () => upgradeBtn.setFillStyle(0x2ecc71, 0.9))
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-            event.stopPropagation() // FIX V7: Stop event from bubbling
+            event.stopPropagation()
             if (this.player.skillTree.upgradeSkill(skill.id)) {
               this.player.skillPoints--
               this.player.applySkillBonuses()
@@ -843,8 +859,6 @@ export default class GameSceneV3 extends Phaser.Scene {
             }
           })
       }
-
-      uiElements.push(skillBg, skillText, levelText, descText)
     })
 
     // Close button - ABSOLUTE position!
