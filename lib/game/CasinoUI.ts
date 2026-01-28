@@ -27,7 +27,7 @@ export class CasinoUI {
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
 
-    // Dark overlay
+    // Dark overlay - FIX V7: Make interactive to block clicks!
     this.overlay = this.scene.add.rectangle(
       screenWidth / 2,
       screenHeight / 2,
@@ -36,6 +36,13 @@ export class CasinoUI {
       0x000000,
       0.8
     ).setScrollFactor(0).setDepth(1000)
+
+    // CRITICAL: Make overlay interactive to consume all clicks
+    this.overlay.setInteractive()
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        // Stop event from reaching game world below
+        event.stopPropagation()
+      })
 
     // Create main container
     this.container = this.scene.add.container(
@@ -52,7 +59,7 @@ export class CasinoUI {
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
 
-    // Title - ABSOLUTE position!
+    // Title - ABSOLUTE position! FIX V7: Disable text interactivity
     const title = this.scene.add.text(screenWidth / 2, screenHeight / 2 - 200, '🎰 CASINO 🎰', {
       fontSize: '48px',
       color: '#f39c12',
@@ -60,12 +67,14 @@ export class CasinoUI {
       stroke: '#000000',
       strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    title.disableInteractive()
 
-    // Money display
+    // Money display - FIX V7: Disable text interactivity
     const moneyText = this.scene.add.text(screenWidth / 2, screenHeight / 2 - 140, `Your Money: $${this.player.money}`, {
       fontSize: '24px',
       color: '#2ecc71',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    moneyText.disableInteractive()
 
     // Buttons - createButton now returns {bg, label}
     const buttonY = -50
@@ -94,11 +103,13 @@ export class CasinoUI {
       color: '#f39c12',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    title.disableInteractive() // FIX V7
 
     const betText = this.scene.add.text(0, -140, 'Bet: $50 | Match 3 symbols to win!', {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5)
+    betText.disableInteractive() // FIX V7
 
     // Reels
     const reelTexts: Phaser.GameObjects.Text[] = []
@@ -106,6 +117,7 @@ export class CasinoUI {
       const reel = this.scene.add.text(-100 + i * 100, -50, '❓', {
         fontSize: '64px',
       }).setOrigin(0.5)
+      reel.disableInteractive() // FIX V7
       reelTexts.push(reel)
     }
 
@@ -114,6 +126,7 @@ export class CasinoUI {
       color: '#f1c40f',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    resultText.disableInteractive() // FIX V7
 
     const spinBtn = this.createButton(0, 150, '🎰 SPIN ($50)', () => {
       if (this.player.money < 50) {
@@ -171,27 +184,32 @@ export class CasinoUI {
       color: '#f39c12',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    title.disableInteractive() // FIX V7
 
     const betText = this.scene.add.text(0, -140, 'Bet: $100 | Get closer to 21 than dealer!', {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5)
+    betText.disableInteractive() // FIX V7
 
     const playerHandText = this.scene.add.text(0, -50, '', {
       fontSize: '24px',
       color: '#3498db',
     }).setOrigin(0.5)
+    playerHandText.disableInteractive() // FIX V7
 
     const dealerHandText = this.scene.add.text(0, 0, '', {
       fontSize: '24px',
       color: '#e74c3c',
     }).setOrigin(0.5)
+    dealerHandText.disableInteractive() // FIX V7
 
     const resultText = this.scene.add.text(0, 50, '', {
       fontSize: '28px',
       color: '#f1c40f',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    resultText.disableInteractive() // FIX V7
 
     const playBtn = this.createButton(0, 140, '🃏 PLAY ($100)', () => {
       if (this.player.money < 100) {
@@ -233,22 +251,26 @@ export class CasinoUI {
       color: '#f39c12',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    title.disableInteractive() // FIX V7
 
     const betText = this.scene.add.text(0, -140, 'Bet: $75 | Choose Red or Black!', {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5)
+    betText.disableInteractive() // FIX V7
 
     const resultText = this.scene.add.text(0, -50, '', {
       fontSize: '32px',
       color: '#f1c40f',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    resultText.disableInteractive() // FIX V7
 
     const outcomeText = this.scene.add.text(0, 20, '', {
       fontSize: '24px',
       color: '#ffffff',
     }).setOrigin(0.5)
+    outcomeText.disableInteractive() // FIX V7
 
     const redBtn = this.createButton(-120, 100, '🔴 RED', () => {
       if (this.player.money < 75) {
@@ -303,25 +325,30 @@ export class CasinoUI {
       color: '#f39c12',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    title.disableInteractive() // FIX V7
 
     const infoText = this.scene.add.text(0, -140, 'Cost: $100 | Rare rewards inside!', {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5)
+    infoText.disableInteractive() // FIX V7
 
     const rewardText = this.scene.add.text(0, -50, '', {
       fontSize: '32px',
     }).setOrigin(0.5)
+    rewardText.disableInteractive() // FIX V7
 
     const rarityText = this.scene.add.text(0, 20, '', {
       fontSize: '24px',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    rarityText.disableInteractive() // FIX V7
 
     const valueText = this.scene.add.text(0, 60, '', {
       fontSize: '20px',
       color: '#2ecc71',
     }).setOrigin(0.5)
+    valueText.disableInteractive() // FIX V7
 
     const openBtn = this.createButton(0, 140, '📦 OPEN ($100)', () => {
       if (this.player.money < 100) {
@@ -380,13 +407,15 @@ export class CasinoUI {
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1006)
+    label.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
     bg.setInteractive({ useHandCursor: true })
       .on('pointerover', () => {
         bg.setFillStyle(color, 0.8)
       })
       .on('pointerout', () => bg.setFillStyle(color, 1))
-      .on('pointerdown', () => {
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation() // FIX V7: Stop event from bubbling
         this.scene.cameras.main.flash(100, 0, 255, 0)
         onClick()
       })

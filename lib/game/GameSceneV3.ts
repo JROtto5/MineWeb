@@ -697,7 +697,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    // FIX V6: Overlay at LOWER depth so it doesn't block anything!
+    // FIX V7: Overlay MUST be interactive to block clicks to world!
     const overlay = this.add.rectangle(
       centerX,
       centerY,
@@ -706,6 +706,13 @@ export default class GameSceneV3 extends Phaser.Scene {
       0x000000,
       0.9
     ).setScrollFactor(0).setDepth(8000) // LOWER depth!
+
+    // CRITICAL: Make overlay interactive to consume all clicks
+    overlay.setInteractive()
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        // Stop event from reaching game world below
+        event.stopPropagation()
+      })
 
     // Store all UI elements for cleanup
     const uiElements: any[] = [overlay]
@@ -718,12 +725,14 @@ export default class GameSceneV3 extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 4,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
+    title.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
     const pointsText = this.add.text(centerX, centerY - 200, `Skill Points: ${this.player.skillPoints}`, {
       fontSize: '24px',
       color: '#2ecc71',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
+    pointsText.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
     uiElements.push(title, pointsText)
 
@@ -744,22 +753,26 @@ export default class GameSceneV3 extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(canUpgrade ? 9003 : 9001) // Higher depth if clickable!
 
+      // FIX V7: CRITICAL - Disable text interactivity so it doesn't block clicks!
       const skillText = this.add.text(centerX - 240, y, `${skill.icon} ${skill.name}`, {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
+      skillText.disableInteractive() // Prevent text from intercepting events
 
       const levelText = this.add.text(centerX, y, `${level}/${skill.maxLevel}`, {
         fontSize: '18px',
         color: level === skill.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
+      levelText.disableInteractive() // Prevent text from intercepting events
 
       const descText = this.add.text(centerX + 70, y, skill.description, {
         fontSize: '13px',
         color: '#ecf0f1',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
+      descText.disableInteractive() // Prevent text from intercepting events
 
       // Make clickable AFTER positioning and depth!
       if (canUpgrade) {
@@ -769,7 +782,8 @@ export default class GameSceneV3 extends Phaser.Scene {
             this.cameras.main.flash(50, 0, 255, 0)
           })
           .on('pointerout', () => skillBg.setFillStyle(0x27ae60, 0.9))
-          .on('pointerdown', () => {
+          .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+            event.stopPropagation() // FIX V7: Stop event from bubbling
             if (this.player.skillTree.upgradeSkill(skill.id)) {
               this.player.skillPoints--
               this.player.applySkillBonuses()
@@ -794,11 +808,15 @@ export default class GameSceneV3 extends Phaser.Scene {
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
+    closeTxt.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
     closeBtn.setInteractive({ useHandCursor: true })
       .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
       .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
-      .on('pointerdown', () => this.closeSkillTree())
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation() // FIX V7: Stop event from bubbling
+        this.closeSkillTree()
+      })
 
     uiElements.push(closeBtn, closeTxt)
 
@@ -809,11 +827,14 @@ export default class GameSceneV3 extends Phaser.Scene {
   private closeSkillTree() {
     if (!this.skillTreeUI) return
 
-    this.physics.resume()
-
     // FIX V6: Destroy all independent elements
     this.skillTreeUI.elements.forEach((el: any) => el.destroy())
     this.skillTreeUI = null
+
+    // FIX V7: Defer physics resume to avoid race conditions
+    this.time.delayedCall(50, () => {
+      this.physics.resume()
+    })
   }
 
   private updateUI() {

@@ -248,7 +248,7 @@ export class ShopUI {
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
 
-    // Dark overlay
+    // Dark overlay - FIX V7: Make interactive to block clicks!
     const overlay = this.scene.add.rectangle(
       screenWidth / 2,
       screenHeight / 2,
@@ -258,12 +258,19 @@ export class ShopUI {
       0.85
     ).setScrollFactor(0).setDepth(10000)
 
+    // CRITICAL: Make overlay interactive to consume all clicks
+    overlay.setInteractive()
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        // Stop event from reaching game world below
+        event.stopPropagation()
+      })
+
     const container = this.scene.add.container(
       screenWidth / 2,
       screenHeight / 2
     ).setScrollFactor(0).setDepth(10001)
 
-    // Title
+    // Title - FIX V7: Disable text interactivity
     const title = this.scene.add.text(0, -280, '🏪 WEAPON SHOP 🏪', {
       fontSize: '48px',
       color: '#f39c12',
@@ -271,13 +278,15 @@ export class ShopUI {
       stroke: '#000000',
       strokeThickness: 5,
     }).setOrigin(0.5)
+    title.disableInteractive()
 
-    // Money display
+    // Money display - FIX V7: Disable text interactivity
     const moneyText = this.scene.add.text(0, -230, `💰 Money: $${this.player.money}`, {
       fontSize: '24px',
       color: '#2ecc71',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    moneyText.disableInteractive()
 
     // Category tabs - FIX V5: Create tabs OUTSIDE container for proper click handling!
     const categories = [
@@ -303,6 +312,7 @@ export class ShopUI {
       }).setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(10003) // Above background!
+      tabText.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
       // Make interactive AFTER setting position and depth
       tabBg.setInteractive({ useHandCursor: true })
@@ -316,7 +326,8 @@ export class ShopUI {
             tabBg.setFillStyle(0x34495e, 1)
           }
         })
-        .on('pointerdown', () => {
+        .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+          event.stopPropagation() // FIX V7: Stop event from bubbling
           this.currentCategory = cat.id as any
           this.close()
           this.open() // Refresh
@@ -344,25 +355,28 @@ export class ShopUI {
         .setScrollFactor(0)
         .setDepth(canBuy ? 10005 : 10003) // MUCH higher if clickable!
 
-      // Icon and name
+      // Icon and name - FIX V7: Disable text interactivity
       const itemText = this.scene.add.text(screenWidth / 2 - 300, absY, `${item.icon} ${item.name}`, {
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10006)
+      itemText.disableInteractive()
 
-      // Description
+      // Description - FIX V7: Disable text interactivity
       const descText = this.scene.add.text(screenWidth / 2 - 300, absY + 20, item.description, {
         fontSize: '13px',
         color: '#bdc3c7',
       }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10006)
+      descText.disableInteractive()
 
-      // Level
+      // Level - FIX V7: Disable text interactivity
       const levelText = this.scene.add.text(screenWidth / 2 + 140, absY, `Level: ${itemData.level}/${item.maxLevel}`, {
         fontSize: '16px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(10006)
+      levelText.disableInteractive()
 
       // Price button - ABSOLUTE positioning!
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
@@ -375,6 +389,7 @@ export class ShopUI {
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(10007)
+      priceText.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
       // Make clickable AFTER positioning and depth!
       if (canBuy) {
@@ -384,14 +399,20 @@ export class ShopUI {
             this.scene.cameras.main.flash(50, 0, 255, 0)
           })
           .on('pointerout', () => itemBg.setFillStyle(0x27ae60, 0.9))
-          .on('pointerdown', () => this.buyItem(item.id))
+          .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+            event.stopPropagation() // FIX V7: Stop event from bubbling
+            this.buyItem(item.id)
+          })
 
         priceBg.setInteractive({ useHandCursor: true })
           .on('pointerover', () => {
             priceBg.setFillStyle(0x27ae60, 1)
           })
           .on('pointerout', () => priceBg.setFillStyle(0x2ecc71, 0.9))
-          .on('pointerdown', () => this.buyItem(item.id))
+          .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+            event.stopPropagation() // FIX V7: Stop event from bubbling
+            this.buyItem(item.id)
+          })
       }
 
       container.add([itemBg, itemText, descText, levelText, priceBg, priceText])
@@ -404,11 +425,15 @@ export class ShopUI {
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5)
+    closeTxt.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
     closeBtn.setInteractive({ useHandCursor: true })
       .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
       .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
-      .on('pointerdown', () => this.close())
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation() // FIX V7: Stop event from bubbling
+        this.close()
+      })
 
     container.add([title, moneyText, closeBtn, closeTxt])
 
