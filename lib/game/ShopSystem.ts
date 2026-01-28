@@ -625,66 +625,136 @@ export class ShopUI {
       screenWidth * 2,
       screenHeight * 2,
       0x000000,
-      0.85
-    ).setScrollFactor(0).setDepth(10000)
+      0.7 // Reduced opacity for less obstruction
+    ).setScrollFactor(0).setDepth(10000).setAlpha(0)
 
-    this.uiElements = [this.overlay]
+    // Modern UI: Add main panel background with depth
+    const panelWidth = Math.min(900, screenWidth * 0.9)
+    const panelHeight = Math.min(700, screenHeight * 0.85)
 
-    // FIX V11: Use ABSOLUTE positioning like skill tree!
+    // Shadow effect (multiple offset rectangles)
+    const shadow1 = this.scene.add.rectangle(centerX + 8, centerY + 8, panelWidth, panelHeight, 0x000000, 0.3)
+      .setScrollFactor(0).setDepth(10001).setAlpha(0)
+    const shadow2 = this.scene.add.rectangle(centerX + 4, centerY + 4, panelWidth, panelHeight, 0x000000, 0.2)
+      .setScrollFactor(0).setDepth(10001).setAlpha(0)
 
-    // Title
-    const title = this.scene.add.text(centerX, centerY - 280, '🏪 WEAPON SHOP 🏪', {
-      fontSize: '48px',
+    // Main panel
+    const mainPanel = this.scene.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x1a1a2e, 0.95)
+      .setScrollFactor(0).setDepth(10001)
+      .setStrokeStyle(3, 0xf39c12, 1)
+      .setAlpha(0)
+
+    // Smooth fade-in animation
+    this.scene.tweens.add({
+      targets: [this.overlay, shadow1, shadow2, mainPanel],
+      alpha: 1,
+      duration: 200,
+      ease: 'Power2'
+    })
+
+    this.uiElements = [this.overlay, shadow1, shadow2, mainPanel]
+
+    // Title with better positioning
+    const title = this.scene.add.text(centerX, centerY - (panelHeight / 2) + 50, '🏪 WEAPON SHOP 🏪', {
+      fontSize: '42px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 5,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002)
+      strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002).setAlpha(0)
     title.disableInteractive()
+
+    this.scene.tweens.add({
+      targets: title,
+      alpha: 1,
+      y: title.y - 10,
+      duration: 300,
+      ease: 'Back.easeOut'
+    })
+
     this.uiElements.push(title)
 
-    // Money display
-    const moneyText = this.scene.add.text(centerX, centerY - 230, `💰 Money: $${this.player.money}`, {
-      fontSize: '24px',
-      color: '#2ecc71',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002)
-    moneyText.disableInteractive()
-    this.uiElements.push(moneyText)
+    // Money display with animated background
+    const moneyBg = this.scene.add.rectangle(centerX, centerY - (panelHeight / 2) + 110, 250, 40, 0x27ae60, 0.9)
+      .setScrollFactor(0).setDepth(10002)
+      .setStrokeStyle(2, 0x2ecc71, 1)
+      .setAlpha(0)
 
-    // Category tabs - ABSOLUTE positions!
+    const moneyText = this.scene.add.text(centerX, centerY - (panelHeight / 2) + 110, `💰 Money: $${this.player.money}`, {
+      fontSize: '22px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10003).setAlpha(0)
+    moneyText.disableInteractive()
+
+    this.scene.tweens.add({
+      targets: [moneyBg, moneyText],
+      alpha: 1,
+      duration: 300,
+      delay: 100,
+      ease: 'Power2'
+    })
+
+    this.uiElements.push(moneyBg, moneyText)
+
+    // Category tabs - Modern pill-style design
     const categories = [
       { id: 'weapon', name: 'WEAPONS', icon: '💥' },
       { id: 'stat', name: 'STATS', icon: '⚡' },
       { id: 'ability', name: 'ABILITIES', icon: '🌟' },
     ]
 
-    const tabsY = centerY - 180
+    const tabsY = centerY - (panelHeight / 2) + 170
 
     categories.forEach((cat, index) => {
       const tabX = centerX + (-200 + index * 200)
       const isActive = cat.id === this.currentCategory
 
-      const tabBg = this.scene.add.rectangle(tabX, tabsY, 180, 50, isActive ? 0xf39c12 : 0x34495e, 1)
+      // Modern pill-style tabs with glow effect
+      const tabBg = this.scene.add.rectangle(tabX, tabsY, 180, 45, isActive ? 0xf39c12 : 0x2c3e50, 0.9)
         .setScrollFactor(0).setDepth(10003)
-      
+        .setStrokeStyle(2, isActive ? 0xf1c40f : 0x34495e, 1)
+        .setAlpha(0)
+
       const tabText = this.scene.add.text(tabX, tabsY, `${cat.icon} ${cat.name}`, {
-        fontSize: '16px',
-        color: '#ffffff',
+        fontSize: '15px',
+        color: isActive ? '#ffffff' : '#bdc3c7',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
       tabText.disableInteractive()
+
+      // Slide-in animation
+      this.scene.tweens.add({
+        targets: [tabBg, tabText],
+        alpha: 1,
+        y: tabsY + 5,
+        duration: 250,
+        delay: 150 + (index * 50),
+        ease: 'Back.easeOut'
+      })
 
       // Make interactive IMMEDIATELY
       tabBg.setInteractive({ useHandCursor: true })
         .on('pointerover', () => {
           if (!isActive) {
-            tabBg.setFillStyle(0x2c3e50, 1)
+            tabBg.setFillStyle(0x34495e, 1)
+            this.scene.tweens.add({
+              targets: tabBg,
+              scaleX: 1.05,
+              scaleY: 1.05,
+              duration: 150
+            })
           }
         })
         .on('pointerout', () => {
           if (!isActive) {
-            tabBg.setFillStyle(0x34495e, 1)
+            tabBg.setFillStyle(0x2c3e50, 0.9)
+            this.scene.tweens.add({
+              targets: tabBg,
+              scaleX: 1,
+              scaleY: 1,
+              duration: 150
+            })
           }
         })
         .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
@@ -697,40 +767,98 @@ export class ShopUI {
       this.uiElements.push(tabBg, tabText)
     })
 
-    // Items list - SCROLLABLE! (COMPACT LAYOUT)
+    // Close button (X in corner)
+    const closeBtnX = centerX + (panelWidth / 2) - 40
+    const closeBtnY = centerY - (panelHeight / 2) + 40
+    const closeBtn = this.scene.add.rectangle(closeBtnX, closeBtnY, 50, 50, 0xe74c3c, 0.9)
+      .setScrollFactor(0).setDepth(10003)
+      .setStrokeStyle(2, 0xc0392b, 1)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => {
+        closeBtn.setFillStyle(0xc0392b, 1)
+        this.scene.tweens.add({
+          targets: closeBtn,
+          angle: 90,
+          duration: 200
+        })
+      })
+      .on('pointerout', () => {
+        closeBtn.setFillStyle(0xe74c3c, 0.9)
+        this.scene.tweens.add({
+          targets: closeBtn,
+          angle: 0,
+          duration: 200
+        })
+      })
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.close()
+      })
+
+    const closeBtnText = this.scene.add.text(closeBtnX, closeBtnY, '✕', {
+      fontSize: '32px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
+    closeBtnText.disableInteractive()
+
+    this.scene.tweens.add({
+      targets: [closeBtn, closeBtnText],
+      alpha: 1,
+      duration: 250,
+      delay: 200,
+      ease: 'Power2'
+    })
+
+    this.uiElements.push(closeBtn, closeBtnText)
+
+    // Items list - SCROLLABLE! (MODERN CARD LAYOUT)
     const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
-    const startY = centerY - 120
-    const itemHeight = 55 // REDUCED from 70 for compact display
+    const startY = centerY - (panelHeight / 2) + 240
+    const itemHeight = 60 // Card-style spacing
     this.scrollOffset = 0
     this.scrollableItems = []
 
-    // Add scroll hint
-    const scrollHint = this.scene.add.text(centerX, centerY + 240, '🖱️ Scroll with Mouse Wheel', {
-      fontSize: '16px',
-      color: '#95a5a6',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002)
+    // Add scroll hint with better positioning
+    const scrollHint = this.scene.add.text(centerX, centerY + (panelHeight / 2) - 30, '🖱️ Scroll with Mouse Wheel', {
+      fontSize: '14px',
+      color: '#7f8c8d',
+      fontStyle: 'italic',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002).setAlpha(0)
     scrollHint.disableInteractive()
+
+    this.scene.tweens.add({
+      targets: scrollHint,
+      alpha: 0.7,
+      duration: 500,
+      delay: 400,
+      ease: 'Power2',
+      yoyo: true,
+      repeat: -1
+    })
+
     this.uiElements.push(scrollHint)
 
-    // Mouse wheel scroll for shop
+    // Mouse wheel scroll for shop with smooth scrolling
     this.scene.input.on('wheel', (pointer: any, gameObjects: any[], deltaX: number, deltaY: number) => {
       if (this.isOpen) {
-        this.scrollOffset += deltaY * 0.3
-        const maxScroll = Math.max(0, items.length * itemHeight - 350)
+        this.scrollOffset += deltaY * 0.25
+        const maxScroll = Math.max(0, items.length * itemHeight - (panelHeight - 350))
         this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, maxScroll)
 
-        // Visibility clipping bounds
-        const visibleTop = centerY - 150
-        const visibleBottom = centerY + 200
+        // Visibility clipping bounds relative to panel
+        const visibleTop = centerY - (panelHeight / 2) + 220
+        const visibleBottom = centerY + (panelHeight / 2) - 80
 
         this.scrollableItems.forEach(el => {
-          const idx = this.scrollableItems.indexOf(el) / 5 // 5 elements per item
+          const idx = this.scrollableItems.indexOf(el) / 8 // 8 elements per item (shadow, bg, text, desc, levelBg, levelText, priceBg, priceText)
           const baseY = startY + Math.floor(idx) * itemHeight
           const newY = baseY - this.scrollOffset
           el.setY(newY)
 
-          // Hide elements outside visible bounds to prevent overlap
-          const isVisible = newY >= visibleTop - 35 && newY <= visibleBottom + 35
+          // Smooth fade for items outside visible bounds
+          const isVisible = newY >= visibleTop - 40 && newY <= visibleBottom + 40
           el.setVisible(isVisible)
         })
       }
@@ -743,59 +871,114 @@ export class ShopUI {
       const canAfford = this.player.money >= itemData.price
       const canBuy = itemData.canUpgrade && canAfford
 
-      // Background
-      const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
-      const itemBg = this.scene.add.rectangle(centerX, absY, 650, 65, bgColor, 0.9)
+      // Modern card with depth - shadow layer
+      const cardShadow = this.scene.add.rectangle(centerX + 2, absY + 2, 700, 52, 0x000000, 0.3)
+        .setScrollFactor(0).setDepth(10003).setAlpha(0)
+
+      // Card background with gradient effect
+      const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x2c3e50 : 0x7f8c8d)
+      const itemBg = this.scene.add.rectangle(centerX, absY, 700, 52, bgColor, 0.95)
         .setScrollFactor(0).setDepth(10003)
+        .setStrokeStyle(2, canBuy ? 0x2ecc71 : 0x34495e, 0.8)
+        .setAlpha(0)
 
-      // Icon and name (REDUCED FONT SIZE)
-      const itemText = this.scene.add.text(centerX - 300, absY - 8, `${item.icon} ${item.name}`, {
-        fontSize: '16px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004)
-      itemText.disableInteractive()
+      // Fade in animation for cards
+      this.scene.tweens.add({
+        targets: [cardShadow, itemBg],
+        alpha: 1,
+        duration: 200,
+        delay: 300 + (index * 30),
+        ease: 'Power2'
+      })
 
-      // Description (REDUCED FONT SIZE)
-      const descText = this.scene.add.text(centerX - 300, absY + 10, item.description, {
-        fontSize: '11px',
-        color: '#bdc3c7',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004)
-      descText.disableInteractive()
-
-      // Level (REDUCED FONT SIZE)
-      const levelText = this.scene.add.text(centerX + 140, absY, `Lv ${itemData.level}/${item.maxLevel}`, {
-        fontSize: '13px',
-        color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
-        fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
-      levelText.disableInteractive()
-
-      // Price button (SMALLER)
-      const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
-      const priceBg = this.scene.add.rectangle(centerX + 260, absY, 100, 45, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
-        .setScrollFactor(0).setDepth(10003)
-
-      const priceText = this.scene.add.text(centerX + 260, absY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
+      // Icon and name with better spacing
+      const itemText = this.scene.add.text(centerX - 330, absY - 8, `${item.icon} ${item.name}`, {
         fontSize: '15px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
+      itemText.disableInteractive()
+
+      // Description with better color
+      const descText = this.scene.add.text(centerX - 330, absY + 9, item.description, {
+        fontSize: '11px',
+        color: '#95a5a6',
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
+      descText.disableInteractive()
+
+      // Level indicator with pill background
+      const levelBg = this.scene.add.rectangle(centerX + 150, absY, 70, 24, 0x34495e, 0.8)
+        .setScrollFactor(0).setDepth(10003).setAlpha(0)
+        .setStrokeStyle(1, itemData.level === item.maxLevel ? 0xf1c40f : 0x7f8c8d, 1)
+
+      const levelText = this.scene.add.text(centerX + 150, absY, `${itemData.level}/${item.maxLevel}`, {
+        fontSize: '12px',
+        color: itemData.level === item.maxLevel ? '#f1c40f' : '#ecf0f1',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
+      levelText.disableInteractive()
+
+      // Price button with modern pill style
+      const priceColor = canAfford ? 0x27ae60 : 0xe74c3c
+      const priceBg = this.scene.add.rectangle(centerX + 270, absY, 110, 38, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+        .setScrollFactor(0).setDepth(10003)
+        .setStrokeStyle(2, canAfford ? 0x2ecc71 : 0xc0392b, 1)
+        .setAlpha(0)
+
+      const priceText = this.scene.add.text(centerX + 270, absY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004).setAlpha(0)
       priceText.disableInteractive()
 
-      this.uiElements.push(itemBg, itemText, descText, levelText, priceBg, priceText)
-      this.scrollableItems.push(itemBg, itemText, descText, levelText, priceBg, priceText)
+      // Fade in text elements
+      this.scene.tweens.add({
+        targets: [itemText, descText, levelBg, levelText, priceBg, priceText],
+        alpha: 1,
+        duration: 200,
+        delay: 320 + (index * 30),
+        ease: 'Power2'
+      })
 
-      // Make clickable IMMEDIATELY
+      this.uiElements.push(cardShadow, itemBg, itemText, descText, levelBg, levelText, priceBg, priceText)
+      this.scrollableItems.push(cardShadow, itemBg, itemText, descText, levelBg, levelText, priceBg, priceText)
+
+      // Make clickable with modern hover effects
       if (canBuy) {
         itemBg.setInteractive({ useHandCursor: true })
           .on('pointerover', () => {
             itemBg.setFillStyle(0x2ecc71, 1)
+            this.scene.tweens.add({
+              targets: itemBg,
+              scaleX: 1.02,
+              scaleY: 1.08,
+              duration: 150,
+              ease: 'Power2'
+            })
             this.scene.cameras.main.flash(50, 0, 255, 0)
           })
-          .on('pointerout', () => itemBg.setFillStyle(0x27ae60, 0.9))
+          .on('pointerout', () => {
+            itemBg.setFillStyle(0x27ae60, 0.95)
+            this.scene.tweens.add({
+              targets: itemBg,
+              scaleX: 1,
+              scaleY: 1,
+              duration: 150,
+              ease: 'Power2'
+            })
+          })
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
             event.stopPropagation()
+            // Pulse animation on purchase
+            this.scene.tweens.add({
+              targets: itemBg,
+              scaleX: 0.95,
+              scaleY: 0.95,
+              duration: 100,
+              yoyo: true,
+              ease: 'Power2'
+            })
             this.buyItem(item.id)
           })
 
@@ -810,27 +993,6 @@ export class ShopUI {
           })
       }
     })
-
-    // Close button
-    const closeBtn = this.scene.add.rectangle(centerX, centerY + 260, 250, 55, 0xe74c3c, 0.9)
-      .setScrollFactor(0).setDepth(10003)
-    const closeTxt = this.scene.add.text(centerX, centerY + 260, 'Close (ESC)', {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
-    closeTxt.disableInteractive()
-
-    this.uiElements.push(closeBtn, closeTxt)
-
-    // Make close button interactive IMMEDIATELY
-    closeBtn.setInteractive({ useHandCursor: true })
-      .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
-      .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
-      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        event.stopPropagation()
-        this.close()
-      })
   }
   private buyItem(itemId: string) {
     const price = this.shopManager.getPrice(itemId)

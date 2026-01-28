@@ -378,10 +378,11 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private createEnemyTracker() {
-    // FIXED: Move to top-center for maximum visibility without overlap
+    // QOL: Position above ability hotbar at bottom of screen
     const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
     const trackerX = screenWidth / 2
-    const trackerY = 80
+    const trackerY = screenHeight - 210 // Above the hotbar (100) + tracker height (90) + gap (20)
 
     // Background panel
     const bg = this.add.rectangle(trackerX, trackerY, 280, 90, 0x000000, 0.8)
@@ -1396,80 +1397,173 @@ export default class GameSceneV3 extends Phaser.Scene {
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    // FIX V11: Overlay should NOT be interactive - it blocks button clicks!
-    // The buttons at depth 9003/9004 are above overlay at depth 8000
+    // Modern UI: Dark overlay with reduced opacity
     const overlay = this.add.rectangle(
       centerX,
       centerY,
       screenWidth * 2,
       screenHeight * 2,
       0x000000,
-      0.9
-    ).setScrollFactor(0).setDepth(8000) // LOWER depth!
+      0.7 // Reduced opacity
+    ).setScrollFactor(0).setDepth(8000).setAlpha(0)
 
-    // FIX V11: DON'T make overlay interactive - let buttons handle clicks!
-    // overlay.setInteractive()
-    //   .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-    //     // Stop event from reaching game world below
-    //     event.stopPropagation()
-    //   })
+    // Modern panel with depth
+    const panelWidth = Math.min(800, screenWidth * 0.85)
+    const panelHeight = Math.min(650, screenHeight * 0.8)
+
+    // Shadow layers
+    const shadow1 = this.add.rectangle(centerX + 8, centerY + 8, panelWidth, panelHeight, 0x000000, 0.3)
+      .setScrollFactor(0).setDepth(8001).setAlpha(0)
+    const shadow2 = this.add.rectangle(centerX + 4, centerY + 4, panelWidth, panelHeight, 0x000000, 0.2)
+      .setScrollFactor(0).setDepth(8001).setAlpha(0)
+
+    // Main panel with border
+    const mainPanel = this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x1a1a2e, 0.95)
+      .setScrollFactor(0).setDepth(8001)
+      .setStrokeStyle(3, 0x9b59b6, 1) // Purple border for skill tree
+      .setAlpha(0)
+
+    // Smooth fade-in animation
+    this.tweens.add({
+      targets: [overlay, shadow1, shadow2, mainPanel],
+      alpha: 1,
+      duration: 200,
+      ease: 'Power2'
+    })
 
     // Store all UI elements for cleanup
-    const uiElements: any[] = [overlay]
+    const uiElements: any[] = [overlay, shadow1, shadow2, mainPanel]
 
-    // FIX V6: Create ALL elements with ABSOLUTE positioning (no container!)
-    const title = this.add.text(centerX, centerY - 250, '⚡ SKILL TREE ⚡', {
-      fontSize: '42px',
-      color: '#f39c12',
+    // Title with animation
+    const title = this.add.text(centerX, centerY - (panelHeight / 2) + 50, '⚡ SKILL TREE ⚡', {
+      fontSize: '38px',
+      color: '#9b59b6',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
-    title.disableInteractive() // FIX V7: Prevent text from blocking clicks
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002).setAlpha(0)
+    title.disableInteractive()
 
-    const pointsText = this.add.text(centerX, centerY - 200, `Skill Points: ${this.player.skillPoints}`, {
-      fontSize: '24px',
-      color: '#2ecc71',
+    this.tweens.add({
+      targets: title,
+      alpha: 1,
+      y: title.y - 10,
+      duration: 300,
+      ease: 'Back.easeOut'
+    })
+
+    // Points display with background
+    const pointsBg = this.add.rectangle(centerX, centerY - (panelHeight / 2) + 110, 220, 38, 0xf39c12, 0.9)
+      .setScrollFactor(0).setDepth(9001)
+      .setStrokeStyle(2, 0xf1c40f, 1)
+      .setAlpha(0)
+
+    const pointsText = this.add.text(centerX, centerY - (panelHeight / 2) + 110, `⚡ Points: ${this.player.skillPoints}`, {
+      fontSize: '20px',
+      color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
-    pointsText.disableInteractive() // FIX V7: Prevent text from blocking clicks
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002).setAlpha(0)
+    pointsText.disableInteractive()
 
-    uiElements.push(title, pointsText)
+    this.tweens.add({
+      targets: [pointsBg, pointsText],
+      alpha: 1,
+      duration: 300,
+      delay: 100,
+      ease: 'Power2'
+    })
 
-    // Skills grid - SCROLLABLE! (COMPACT)
+    // Close button
+    const closeBtnX = centerX + (panelWidth / 2) - 40
+    const closeBtnY = centerY - (panelHeight / 2) + 40
+    const closeBtn = this.add.rectangle(closeBtnX, closeBtnY, 50, 50, 0xe74c3c, 0.9)
+      .setScrollFactor(0).setDepth(9003)
+      .setStrokeStyle(2, 0xc0392b, 1)
+      .setAlpha(0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerover', () => {
+        closeBtn.setFillStyle(0xc0392b, 1)
+        this.tweens.add({
+          targets: closeBtn,
+          angle: 90,
+          duration: 200
+        })
+      })
+      .on('pointerout', () => {
+        closeBtn.setFillStyle(0xe74c3c, 0.9)
+        this.tweens.add({
+          targets: closeBtn,
+          angle: 0,
+          duration: 200
+        })
+      })
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.closeSkillTree()
+      })
+
+    const closeBtnText = this.add.text(closeBtnX, closeBtnY, '✕', {
+      fontSize: '32px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
+    closeBtnText.disableInteractive()
+
+    this.tweens.add({
+      targets: [closeBtn, closeBtnText],
+      alpha: 1,
+      duration: 250,
+      delay: 200,
+      ease: 'Power2'
+    })
+
+    uiElements.push(title, pointsBg, pointsText, closeBtn, closeBtnText)
+
+    // Skills grid - SCROLLABLE with modern cards
     const skills = this.player.skillTree.getAllSkills()
-    const startY = centerY - 140
-    const gap = 48 // REDUCED from 55 for compact display
+    const startY = centerY - (panelHeight / 2) + 170
+    const gap = 52 // Card spacing
     this.skillTreeScrollOffset = 0
     this.skillTreeSkillElements = []
 
-    // Add scroll hint
-    const scrollHint = this.add.text(centerX, centerY + 180, '🖱️ Scroll with Mouse Wheel', {
-      fontSize: '16px',
-      color: '#95a5a6',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
+    // Scroll hint with animation
+    const scrollHint = this.add.text(centerX, centerY + (panelHeight / 2) - 25, '🖱️ Scroll with Mouse Wheel', {
+      fontSize: '13px',
+      color: '#7f8c8d',
+      fontStyle: 'italic',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002).setAlpha(0)
     scrollHint.disableInteractive()
+
+    this.tweens.add({
+      targets: scrollHint,
+      alpha: 0.7,
+      duration: 500,
+      delay: 400,
+      ease: 'Power2',
+      yoyo: true,
+      repeat: -1
+    })
+
     uiElements.push(scrollHint)
 
-    // Mouse wheel scroll
+    // Mouse wheel scroll with smooth scrolling
     this.input.on('wheel', (pointer: any, gameObjects: any[], deltaX: number, deltaY: number) => {
       if (this.skillTreeUI) {
-        this.skillTreeScrollOffset += deltaY * 0.3
-        // Clamp scroll: can't go above 0, max is (skills.length * gap) - viewable area
-        const maxScroll = Math.max(0, skills.length * gap - 400)
+        this.skillTreeScrollOffset += deltaY * 0.25
+        const maxScroll = Math.max(0, skills.length * gap - (panelHeight - 320))
         this.skillTreeScrollOffset = Phaser.Math.Clamp(this.skillTreeScrollOffset, 0, maxScroll)
 
-        // Update all skill element positions with visibility clipping
-        const visibleTop = centerY - 150
-        const visibleBottom = centerY + 200
+        // Update element positions with visibility clipping
+        const visibleTop = centerY - (panelHeight / 2) + 150
+        const visibleBottom = centerY + (panelHeight / 2) - 70
 
         this.skillTreeSkillElements.forEach((el, idx) => {
-          const baseY = startY + Math.floor(idx / 6) * gap
+          const baseY = startY + Math.floor(idx / 7) * gap // 7 elements per skill (shadow, bg, text, level, desc, btn, label)
           const newY = baseY - this.skillTreeScrollOffset
           el.setY(newY)
 
-          // Hide elements outside visible bounds to prevent overlap
-          const isVisible = newY >= visibleTop - 30 && newY <= visibleBottom + 30
+          // Smooth visibility clipping
+          const isVisible = newY >= visibleTop - 35 && newY <= visibleBottom + 35
           el.setVisible(isVisible)
         })
       }
@@ -1480,99 +1574,126 @@ export default class GameSceneV3 extends Phaser.Scene {
       const level = skillData.level
 
       const y = startY + index * gap
-      // FIX V11++: Check if player has points AND skill can be upgraded!
       const hasPoints = this.player.skillPoints > 0
       const notMaxed = level < skill.maxLevel
       const canUpgrade = hasPoints && notMaxed
 
-      // Background - ABSOLUTE position!
-      const skillBg = this.add.rectangle(centerX - 30, y, 400, 42, 0x2c3e50, 0.8)
-        .setScrollFactor(0)
-        .setDepth(9001)
+      // Modern card with shadow
+      const cardShadow = this.add.rectangle(centerX, y + 2, 680, 46, 0x000000, 0.3)
+        .setScrollFactor(0).setDepth(9001).setAlpha(0)
 
-      // COMPACT: Reduced font sizes
-      const skillText = this.add.text(centerX - 220, y - 6, `${skill.icon} ${skill.name}`, {
-        fontSize: '15px',
+      // Card background with gradient effect
+      const bgColor = canUpgrade ? 0x8e44ad : 0x2c3e50
+      const skillBg = this.add.rectangle(centerX, y, 680, 46, bgColor, 0.95)
+        .setScrollFactor(0).setDepth(9001)
+        .setStrokeStyle(2, canUpgrade ? 0x9b59b6 : 0x34495e, 0.8)
+        .setAlpha(0)
+
+      // Fade in animation
+      this.tweens.add({
+        targets: [cardShadow, skillBg],
+        alpha: 1,
+        duration: 200,
+        delay: 300 + (index * 25),
+        ease: 'Power2'
+      })
+
+      // Icon and name
+      const skillText = this.add.text(centerX - 320, y - 7, `${skill.icon} ${skill.name}`, {
+        fontSize: '14px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
       skillText.disableInteractive()
 
-      const levelText = this.add.text(centerX - 70, y - 6, `Lv ${level}/${skill.maxLevel}`, {
-        fontSize: '13px',
-        color: level === skill.maxLevel ? '#f1c40f' : '#95a5a6',
+      // Level pill
+      const levelText = this.add.text(centerX - 70, y - 7, `${level}/${skill.maxLevel}`, {
+        fontSize: '12px',
+        color: level === skill.maxLevel ? '#f1c40f' : '#ecf0f1',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
       levelText.disableInteractive()
 
-      const descText = this.add.text(centerX - 220, y + 10, skill.description, {
+      // Description
+      const descText = this.add.text(centerX - 320, y + 8, skill.description, {
         fontSize: '10px',
-        color: '#bdc3c7',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
+        color: '#95a5a6',
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
       descText.disableInteractive()
 
-      // Upgrade button (COMPACT)
-      const buttonColor = canUpgrade ? 0x2ecc71 : (level === skill.maxLevel ? 0x7f8c8d : 0x95a5a6)
-      const upgradeBtn = this.add.rectangle(centerX + 200, y, 90, 36, buttonColor, canUpgrade ? 0.9 : 0.5)
-        .setScrollFactor(0)
-        .setDepth(9003)
+      // Upgrade button with modern style
+      const buttonColor = canUpgrade ? 0x27ae60 : (level === skill.maxLevel ? 0x7f8c8d : 0x95a5a6)
+      const upgradeBtn = this.add.rectangle(centerX + 280, y, 100, 34, buttonColor, canUpgrade ? 0.9 : 0.5)
+        .setScrollFactor(0).setDepth(9003)
+        .setStrokeStyle(2, canUpgrade ? 0x2ecc71 : 0x7f8c8d, 1)
+        .setAlpha(0)
 
-      const buttonText = canUpgrade ? '⚡ UP' : (level === skill.maxLevel ? 'MAX' : 'LOCK')
-      const upgradeLabel = this.add.text(centerX + 200, y, buttonText, {
-        fontSize: '12px',
+      const buttonText = canUpgrade ? '⚡ UPGRADE' : (level === skill.maxLevel ? 'MAXED' : 'LOCKED')
+      const upgradeLabel = this.add.text(centerX + 280, y, buttonText, {
+        fontSize: '11px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(9004).setAlpha(0)
       upgradeLabel.disableInteractive()
 
-      uiElements.push(skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
-      this.skillTreeSkillElements.push(skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
+      // Fade in text and button
+      this.tweens.add({
+        targets: [skillText, levelText, descText, upgradeBtn, upgradeLabel],
+        alpha: 1,
+        duration: 200,
+        delay: 320 + (index * 25),
+        ease: 'Power2'
+      })
 
-      // Make BUTTON clickable immediately!
+      uiElements.push(cardShadow, skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
+      this.skillTreeSkillElements.push(cardShadow, skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
+
+      // Modern hover effects for clickable buttons
       if (canUpgrade) {
         upgradeBtn.setInteractive({ useHandCursor: true })
           .on('pointerover', () => {
-            upgradeBtn.setFillStyle(0x27ae60, 1)
-            this.cameras.main.flash(50, 0, 255, 0)
+            upgradeBtn.setFillStyle(0x2ecc71, 1)
+            this.tweens.add({
+              targets: upgradeBtn,
+              scaleX: 1.05,
+              scaleY: 1.1,
+              duration: 150,
+              ease: 'Power2'
+            })
+            this.cameras.main.flash(40, 0, 255, 0)
           })
-          .on('pointerout', () => upgradeBtn.setFillStyle(0x2ecc71, 0.9))
+          .on('pointerout', () => {
+            upgradeBtn.setFillStyle(0x27ae60, 0.9)
+            this.tweens.add({
+              targets: upgradeBtn,
+              scaleX: 1,
+              scaleY: 1,
+              duration: 150,
+              ease: 'Power2'
+            })
+          })
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
             event.stopPropagation()
-            // FIX V11++: Try to upgrade (handles skill point deduction internally)
+            // Pulse animation on upgrade
+            this.tweens.add({
+              targets: [upgradeBtn, skillBg],
+              scaleX: 0.95,
+              scaleY: 0.95,
+              duration: 100,
+              yoyo: true,
+              ease: 'Power2'
+            })
+            // Try to upgrade
             if (this.player.skillTree.upgradeSkill(skill.id)) {
-              // Sync player skillPoints with skillTree
               this.player.skillPoints = this.player.skillTree.getSkillPoints()
               this.player.applySkillBonuses()
-              // REDUCED POPUPS: Removed showBigPopup, only flash
-              this.cameras.main.flash(150, 50, 255, 50)
+              this.cameras.main.flash(150, 100, 200, 255)
               this.closeSkillTree()
               this.openSkillTree() // Refresh
             }
           })
       }
     })
-
-    // Close button - ABSOLUTE position!
-    const closeBtn = this.add.rectangle(centerX, centerY + 220, 220, 50, 0xe74c3c, 0.9)
-      .setScrollFactor(0)
-      .setDepth(9003)
-
-    const closeTxt = this.add.text(centerX, centerY + 220, 'Close (T)', {
-      fontSize: '22px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
-    closeTxt.disableInteractive() // FIX V7: Prevent text from blocking clicks
-
-    closeBtn.setInteractive({ useHandCursor: true })
-      .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
-      .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
-      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        event.stopPropagation() // FIX V7: Stop event from bubbling
-        this.closeSkillTree()
-      })
-
-    uiElements.push(closeBtn, closeTxt)
 
     // Store ALL elements for cleanup (no container!)
     this.skillTreeUI = { elements: uiElements }
