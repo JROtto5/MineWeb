@@ -6,8 +6,8 @@ export class CasinoUI {
   private scene: Phaser.Scene
   private casinoManager: CasinoManager
   private player: Player
-  private _isOpen = false // FIX V8: Use private with underscore
-  private container!: Phaser.GameObjects.Container
+  private _isOpen = false
+  private uiElements: any[] = [] // FIX V11: Store elements like skill tree!
   private overlay!: Phaser.GameObjects.Rectangle
 
   constructor(scene: Phaser.Scene, casinoManager: CasinoManager, player: Player) {
@@ -16,7 +16,6 @@ export class CasinoUI {
     this.player = player
   }
 
-  // FIX V8: Add getter so GameScene can check if casino is open
   get isOpen(): boolean {
     return this._isOpen
   }
@@ -25,125 +24,105 @@ export class CasinoUI {
     if (this._isOpen) return
     this._isOpen = true
 
-    // Pause game
     this.scene.physics.pause()
 
-    // FIX V5: Use screen dimensions for proper positioning!
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
 
-    // Dark overlay - FIX V7: Make interactive to block clicks!
+    // Dark overlay - NO interactive!
     this.overlay = this.scene.add.rectangle(
-      screenWidth / 2,
-      screenHeight / 2,
+      centerX,
+      centerY,
       screenWidth * 2,
       screenHeight * 2,
       0x000000,
       0.8
     ).setScrollFactor(0).setDepth(1000)
 
-    // FIX V10: Don't make overlay interactive - let container handle clicks!
-    // The container (depth 1001) is above overlay (depth 1000), so it will catch clicks first
-    // this.overlay.setInteractive()
-    //   .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-    //     // Stop event from reaching game world below
-    //     event.stopPropagation()
-    //   })
-
-    // Create main container
-    this.container = this.scene.add.container(
-      screenWidth / 2,
-      screenHeight / 2
-    ).setScrollFactor(0).setDepth(1001)
-
     this.showMainMenu()
   }
 
   private showMainMenu() {
-    this.clearContainer()
+    this.clearElements()
 
-    // FIX V8: Use RELATIVE positioning for elements in container!
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
 
-    // Title - RELATIVE position in container!
-    const title = this.scene.add.text(0, -200, '🎰 CASINO 🎰', {
+    // FIX V11: Use ABSOLUTE positioning like skill tree!
+
+    // Title
+    const title = this.scene.add.text(centerX, centerY - 200, '🎰 CASINO 🎰', {
       fontSize: '48px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     title.disableInteractive()
 
-    // Money display - RELATIVE position in container!
-    const moneyText = this.scene.add.text(0, -140, `Your Money: $${this.player.money}`, {
+    // Money display
+    const moneyText = this.scene.add.text(centerX, centerY - 140, `Your Money: $${this.player.money}`, {
       fontSize: '24px',
       color: '#2ecc71',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     moneyText.disableInteractive()
 
-    // Buttons - FIX V9: Create, add to container, THEN make interactive!
-    const buttonY = -50
+    // Buttons - ABSOLUTE positions!
+    const buttonY = centerY - 50
     const buttonGap = 70
 
-    const slotBtn = this.createButton(0, buttonY, '🎰 Slot Machine', () => this.openSlotMachine())
-    const blackjackBtn = this.createButton(0, buttonY + buttonGap, '🃏 Blackjack', () => this.openBlackjack())
-    const rouletteBtn = this.createButton(0, buttonY + buttonGap * 2, '🎲 Roulette', () => this.openRoulette())
-    const lootboxBtn = this.createButton(0, buttonY + buttonGap * 3, '📦 Loot Box ($100)', () => this.openLootBox())
-    const closeBtn = this.createButton(0, buttonY + buttonGap * 4 + 20, 'Close', () => this.close(), 0xe74c3c)
+    const { bg: slotBg, label: slotLabel } = this.createButton(centerX, buttonY, '🎰 Slot Machine', () => this.openSlotMachine())
+    const { bg: bjBg, label: bjLabel } = this.createButton(centerX, buttonY + buttonGap, '🃏 Blackjack', () => this.openBlackjack())
+    const { bg: rouletteBg, label: rouletteLabel } = this.createButton(centerX, buttonY + buttonGap * 2, '🎲 Roulette', () => this.openRoulette())
+    const { bg: lootBg, label: lootLabel } = this.createButton(centerX, buttonY + buttonGap * 3, '📦 Loot Box ($100)', () => this.openLootBox())
+    const { bg: closeBg, label: closeLabel } = this.createButton(centerX, buttonY + buttonGap * 4 + 20, 'Close', () => this.close(), 0xe74c3c)
 
-    // Add to container FIRST
-    this.container.add([title, moneyText,
-      slotBtn.bg, slotBtn.label,
-      blackjackBtn.bg, blackjackBtn.label,
-      rouletteBtn.bg, rouletteBtn.label,
-      lootboxBtn.bg, lootboxBtn.label,
-      closeBtn.bg, closeBtn.label
-    ])
-
-    // FIX V9: Make interactive AFTER adding to container!
-    slotBtn.makeInteractive()
-    blackjackBtn.makeInteractive()
-    rouletteBtn.makeInteractive()
-    lootboxBtn.makeInteractive()
-    closeBtn.makeInteractive()
+    this.uiElements = [title, moneyText, slotBg, slotLabel, bjBg, bjLabel, rouletteBg, rouletteLabel, lootBg, lootLabel, closeBg, closeLabel]
   }
 
   private openSlotMachine() {
-    this.clearContainer()
+    this.clearElements()
 
-    const title = this.scene.add.text(0, -200, '🎰 SLOT MACHINE 🎰', {
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const title = this.scene.add.text(centerX, centerY - 200, '🎰 SLOT MACHINE 🎰', {
       fontSize: '36px',
       color: '#f39c12',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    title.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    title.disableInteractive()
 
-    const betText = this.scene.add.text(0, -140, 'Bet: $50 | Match 3 symbols to win!', {
+    const betText = this.scene.add.text(centerX, centerY - 140, 'Bet: $50 | Match 3 symbols to win!', {
       fontSize: '18px',
       color: '#ffffff',
-    }).setOrigin(0.5)
-    betText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    betText.disableInteractive()
 
     // Reels
     const reelTexts: Phaser.GameObjects.Text[] = []
     for (let i = 0; i < 3; i++) {
-      const reel = this.scene.add.text(-100 + i * 100, -50, '❓', {
+      const reel = this.scene.add.text(centerX - 100 + i * 100, centerY - 50, '❓', {
         fontSize: '64px',
-      }).setOrigin(0.5)
-      reel.disableInteractive() // FIX V7
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+      reel.disableInteractive()
       reelTexts.push(reel)
     }
 
-    const resultText = this.scene.add.text(0, 50, '', {
+    const resultText = this.scene.add.text(centerX, centerY + 50, '', {
       fontSize: '24px',
       color: '#f1c40f',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    resultText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    resultText.disableInteractive()
 
-    const spinBtn = this.createButton(0, 150, '🎰 SPIN ($50)', () => {
+    const { bg: spinBg, label: spinLabel } = this.createButton(centerX, centerY + 150, '🎰 SPIN ($50)', () => {
       if (this.player.money < 50) {
         resultText.setText('Not enough money!')
         resultText.setColor('#e74c3c')
@@ -186,52 +165,52 @@ export class CasinoUI {
       })
     })
 
-    const backBtn = this.createButton(0, 220, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 220, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    // FIX V9: Add to container FIRST
-    this.container.add([title, betText, ...reelTexts, resultText, spinBtn.bg, spinBtn.label, backBtn.bg, backBtn.label])
-
-    // FIX V9: Make interactive AFTER adding to container!
-    spinBtn.makeInteractive()
-    backBtn.makeInteractive()
+    this.uiElements = [title, betText, ...reelTexts, resultText, spinBg, spinLabel, backBg, backLabel]
   }
 
   private openBlackjack() {
-    this.clearContainer()
+    this.clearElements()
 
-    const title = this.scene.add.text(0, -200, '🃏 BLACKJACK 🃏', {
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const title = this.scene.add.text(centerX, centerY - 200, '🃏 BLACKJACK 🃏', {
       fontSize: '36px',
       color: '#f39c12',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    title.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    title.disableInteractive()
 
-    const betText = this.scene.add.text(0, -140, 'Bet: $100 | Get closer to 21 than dealer!', {
+    const betText = this.scene.add.text(centerX, centerY - 140, 'Bet: $100 | Get closer to 21 than dealer!', {
       fontSize: '18px',
       color: '#ffffff',
-    }).setOrigin(0.5)
-    betText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    betText.disableInteractive()
 
-    const playerHandText = this.scene.add.text(0, -50, '', {
+    const playerHandText = this.scene.add.text(centerX, centerY - 50, '', {
       fontSize: '24px',
       color: '#3498db',
-    }).setOrigin(0.5)
-    playerHandText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    playerHandText.disableInteractive()
 
-    const dealerHandText = this.scene.add.text(0, 0, '', {
+    const dealerHandText = this.scene.add.text(centerX, centerY, '', {
       fontSize: '24px',
       color: '#e74c3c',
-    }).setOrigin(0.5)
-    dealerHandText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    dealerHandText.disableInteractive()
 
-    const resultText = this.scene.add.text(0, 50, '', {
+    const resultText = this.scene.add.text(centerX, centerY + 50, '', {
       fontSize: '28px',
       color: '#f1c40f',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    resultText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    resultText.disableInteractive()
 
-    const playBtn = this.createButton(0, 140, '🃏 PLAY ($100)', () => {
+    const { bg: playBg, label: playLabel } = this.createButton(centerX, centerY + 140, '🃏 PLAY ($100)', () => {
       if (this.player.money < 100) {
         resultText.setText('Not enough money!')
         resultText.setColor('#e74c3c')
@@ -258,46 +237,46 @@ export class CasinoUI {
       betText.setText(`Your Money: $${this.player.money}`)
     })
 
-    const backBtn = this.createButton(0, 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    // FIX V9: Add to container FIRST
-    this.container.add([title, betText, playerHandText, dealerHandText, resultText, playBtn.bg, playBtn.label, backBtn.bg, backBtn.label])
-
-    // FIX V9: Make interactive AFTER adding to container!
-    playBtn.makeInteractive()
-    backBtn.makeInteractive()
+    this.uiElements = [title, betText, playerHandText, dealerHandText, resultText, playBg, playLabel, backBg, backLabel]
   }
 
   private openRoulette() {
-    this.clearContainer()
+    this.clearElements()
 
-    const title = this.scene.add.text(0, -200, '🎲 ROULETTE 🎲', {
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const title = this.scene.add.text(centerX, centerY - 200, '🎲 ROULETTE 🎲', {
       fontSize: '36px',
       color: '#f39c12',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    title.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    title.disableInteractive()
 
-    const betText = this.scene.add.text(0, -140, 'Bet: $75 | Choose Red or Black!', {
+    const betText = this.scene.add.text(centerX, centerY - 140, 'Bet: $75 | Choose Red or Black!', {
       fontSize: '18px',
       color: '#ffffff',
-    }).setOrigin(0.5)
-    betText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    betText.disableInteractive()
 
-    const resultText = this.scene.add.text(0, -50, '', {
+    const resultText = this.scene.add.text(centerX, centerY - 50, '', {
       fontSize: '32px',
       color: '#f1c40f',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    resultText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    resultText.disableInteractive()
 
-    const outcomeText = this.scene.add.text(0, 20, '', {
+    const outcomeText = this.scene.add.text(centerX, centerY + 20, '', {
       fontSize: '24px',
       color: '#ffffff',
-    }).setOrigin(0.5)
-    outcomeText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    outcomeText.disableInteractive()
 
-    const redBtn = this.createButton(-120, 100, '🔴 RED', () => {
+    const { bg: redBg, label: redLabel } = this.createButton(centerX - 120, centerY + 100, '🔴 RED', () => {
       if (this.player.money < 75) {
         resultText.setText('Not enough money!')
         return
@@ -317,7 +296,7 @@ export class CasinoUI {
       betText.setText(`Your Money: $${this.player.money}`)
     }, 0xe74c3c)
 
-    const blackBtn = this.createButton(120, 100, '⚫ BLACK', () => {
+    const { bg: blackBg, label: blackLabel } = this.createButton(centerX + 120, centerY + 100, '⚫ BLACK', () => {
       if (this.player.money < 75) {
         resultText.setText('Not enough money!')
         return
@@ -337,51 +316,50 @@ export class CasinoUI {
       betText.setText(`Your Money: $${this.player.money}`)
     }, 0x000000)
 
-    const backBtn = this.createButton(0, 180, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 180, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    // FIX V9: Add to container FIRST
-    this.container.add([title, betText, resultText, outcomeText, redBtn.bg, redBtn.label, blackBtn.bg, blackBtn.label, backBtn.bg, backBtn.label])
-
-    // FIX V9: Make interactive AFTER adding to container!
-    redBtn.makeInteractive()
-    blackBtn.makeInteractive()
-    backBtn.makeInteractive()
+    this.uiElements = [title, betText, resultText, outcomeText, redBg, redLabel, blackBg, blackLabel, backBg, backLabel]
   }
 
   private openLootBox() {
-    this.clearContainer()
+    this.clearElements()
 
-    const title = this.scene.add.text(0, -200, '📦 MYSTERY LOOT BOX 📦', {
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const title = this.scene.add.text(centerX, centerY - 200, '📦 MYSTERY LOOT BOX 📦', {
       fontSize: '36px',
       color: '#f39c12',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    title.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    title.disableInteractive()
 
-    const infoText = this.scene.add.text(0, -140, 'Cost: $100 | Rare rewards inside!', {
+    const infoText = this.scene.add.text(centerX, centerY - 140, 'Cost: $100 | Rare rewards inside!', {
       fontSize: '18px',
       color: '#ffffff',
-    }).setOrigin(0.5)
-    infoText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    infoText.disableInteractive()
 
-    const rewardText = this.scene.add.text(0, -50, '', {
+    const rewardText = this.scene.add.text(centerX, centerY - 50, '', {
       fontSize: '32px',
-    }).setOrigin(0.5)
-    rewardText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    rewardText.disableInteractive()
 
-    const rarityText = this.scene.add.text(0, 20, '', {
+    const rarityText = this.scene.add.text(centerX, centerY + 20, '', {
       fontSize: '24px',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    rarityText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    rarityText.disableInteractive()
 
-    const valueText = this.scene.add.text(0, 60, '', {
+    const valueText = this.scene.add.text(centerX, centerY + 60, '', {
       fontSize: '20px',
       color: '#2ecc71',
-    }).setOrigin(0.5)
-    valueText.disableInteractive() // FIX V7
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    valueText.disableInteractive()
 
-    const openBtn = this.createButton(0, 140, '📦 OPEN ($100)', () => {
+    const { bg: openBg, label: openLabel } = this.createButton(centerX, centerY + 140, '📦 OPEN ($100)', () => {
       if (this.player.money < 100) {
         rarityText.setText('Not enough money!')
         rarityText.setColor('#e74c3c')
@@ -410,55 +388,48 @@ export class CasinoUI {
       infoText.setText(`Your Money: $${this.player.money}`)
     })
 
-    const backBtn = this.createButton(0, 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    // FIX V9: Add to container FIRST
-    this.container.add([title, infoText, rewardText, rarityText, valueText, openBtn.bg, openBtn.label, backBtn.bg, backBtn.label])
-
-    // FIX V9: Make interactive AFTER adding to container!
-    openBtn.makeInteractive()
-    backBtn.makeInteractive()
+    this.uiElements = [title, infoText, rewardText, rarityText, valueText, openBg, openLabel, backBg, backLabel]
   }
 
-  // FIX V10: Create buttons WITHOUT depth (container handles it!)
+  // FIX V11: Create buttons with ABSOLUTE positioning and make interactive immediately!
   private createButton(
     x: number,
     y: number,
     text: string,
     onClick: () => void,
     color: number = 0x3498db
-  ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text, makeInteractive: () => void } {
-    // Use RELATIVE position since these will be added to centered container
+  ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text } {
+    // ABSOLUTE position!
     const bg = this.scene.add.rectangle(x, y, 280, 50, color)
+      .setScrollFactor(0).setDepth(1003) // Higher depth for buttons!
 
     const label = this.scene.add.text(x, y, text, {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    label.disableInteractive() // FIX V10: Prevent text from blocking clicks!
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1004) // Text above button!
+    label.disableInteractive()
 
-    // FIX V9: Return function to make interactive AFTER adding to container!
-    const makeInteractive = () => {
-      bg.setInteractive({ useHandCursor: true })
-        .on('pointerover', () => {
-          bg.setFillStyle(color, 0.8)
-        })
-        .on('pointerout', () => bg.setFillStyle(color, 1))
-        .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-          event.stopPropagation()
-          this.scene.cameras.main.flash(100, 0, 255, 0)
-          onClick()
-        })
-    }
+    // FIX V11: Make interactive IMMEDIATELY like skill tree!
+    bg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => {
+        bg.setFillStyle(color, 0.8)
+      })
+      .on('pointerout', () => bg.setFillStyle(color, 1))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.scene.cameras.main.flash(100, 0, 255, 0)
+        onClick()
+      })
 
-    return { bg, label, makeInteractive }
+    return { bg, label }
   }
 
-  private clearContainer() {
-    if (this.container) {
-      this.container.removeAll(true)
-    }
+  private clearElements() {
+    this.uiElements.forEach(el => el.destroy())
+    this.uiElements = []
   }
 
   close() {
@@ -467,9 +438,7 @@ export class CasinoUI {
     this._isOpen = false
     this.scene.physics.resume()
 
-    if (this.container) {
-      this.container.destroy()
-    }
+    this.clearElements()
 
     if (this.overlay) {
       this.overlay.destroy()
