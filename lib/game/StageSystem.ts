@@ -19,8 +19,8 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 1,
     name: 'BACKSTREETS',
-    enemyCount: 50, // V5: DOUBLED AGAIN! (was 25, originally 10) 🔥🔥🔥
-    enemyTypes: [EnemyType.GRUNT],
+    enemyCount: 50, // V6: More enemies + VARIETY!
+    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT], // V6: Added Scouts for variety!
     bossEnabled: false,
     moneyReward: 200,
     xpReward: 100,
@@ -30,8 +30,8 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 2,
     name: 'WAREHOUSE DISTRICT',
-    enemyCount: 60, // V5: DOUBLED! (was 30)
-    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT],
+    enemyCount: 60, // V6: Even more variety!
+    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK], // V6: Added Tanks early!
     bossEnabled: true,
     moneyReward: 400,
     xpReward: 200,

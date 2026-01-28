@@ -49,22 +49,25 @@ export class CasinoUI {
   private showMainMenu() {
     this.clearContainer()
 
-    // Title
-    const title = this.scene.add.text(0, -200, '🎰 CASINO 🎰', {
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+
+    // Title - ABSOLUTE position!
+    const title = this.scene.add.text(screenWidth / 2, screenHeight / 2 - 200, '🎰 CASINO 🎰', {
       fontSize: '48px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
 
     // Money display
-    const moneyText = this.scene.add.text(0, -140, `Your Money: $${this.player.money}`, {
+    const moneyText = this.scene.add.text(screenWidth / 2, screenHeight / 2 - 140, `Your Money: $${this.player.money}`, {
       fontSize: '24px',
       color: '#2ecc71',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
 
-    // Buttons
+    // Buttons - createButton now returns {bg, label}
     const buttonY = -50
     const buttonGap = 70
 
@@ -74,7 +77,13 @@ export class CasinoUI {
     const lootboxBtn = this.createButton(0, buttonY + buttonGap * 3, '📦 Loot Box ($100)', () => this.openLootBox())
     const closeBtn = this.createButton(0, buttonY + buttonGap * 4 + 20, 'Close', () => this.close(), 0xe74c3c)
 
-    this.container.add([title, moneyText, slotBtn, blackjackBtn, rouletteBtn, lootboxBtn, closeBtn])
+    this.container.add([title, moneyText,
+      slotBtn.bg, slotBtn.label,
+      blackjackBtn.bg, blackjackBtn.label,
+      rouletteBtn.bg, rouletteBtn.label,
+      lootboxBtn.bg, lootboxBtn.label,
+      closeBtn.bg, closeBtn.label
+    ])
   }
 
   private openSlotMachine() {
@@ -151,7 +160,7 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 220, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    this.container.add([title, betText, ...reelTexts, resultText, spinBtn, backBtn])
+    this.container.add([title, betText, ...reelTexts, resultText, spinBtn.bg, spinBtn.label, backBtn.bg, backBtn.label])
   }
 
   private openBlackjack() {
@@ -213,7 +222,7 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    this.container.add([title, betText, playerHandText, dealerHandText, resultText, playBtn, backBtn])
+    this.container.add([title, betText, playerHandText, dealerHandText, resultText, playBtn.bg, playBtn.label, backBtn.bg, backBtn.label])
   }
 
   private openRoulette() {
@@ -283,7 +292,7 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 180, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    this.container.add([title, betText, resultText, outcomeText, redBtn, blackBtn, backBtn])
+    this.container.add([title, betText, resultText, outcomeText, redBtn.bg, redBtn.label, blackBtn.bg, blackBtn.label, backBtn.bg, backBtn.label])
   }
 
   private openLootBox() {
@@ -345,32 +354,44 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
-    this.container.add([title, infoText, rewardText, rarityText, valueText, openBtn, backBtn])
+    this.container.add([title, infoText, rewardText, rarityText, valueText, openBtn.bg, openBtn.label, backBtn.bg, backBtn.label])
   }
 
+  // FIX V6: Create buttons with ABSOLUTE positioning (no nested containers!)
   private createButton(
     x: number,
     y: number,
     text: string,
     onClick: () => void,
     color: number = 0x3498db
-  ): Phaser.GameObjects.Container {
-    const btn = this.scene.add.container(x, y)
+  ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text } {
+    // Get absolute screen position
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const absX = screenWidth / 2 + x
+    const absY = screenHeight / 2 + y
 
-    const bg = this.scene.add.rectangle(0, 0, 280, 50, color)
-    const label = this.scene.add.text(0, 0, text, {
+    const bg = this.scene.add.rectangle(absX, absY, 280, 50, color)
+      .setScrollFactor(0)
+      .setDepth(1005) // Higher than overlay!
+
+    const label = this.scene.add.text(absX, absY, text, {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1006)
 
     bg.setInteractive({ useHandCursor: true })
-      .on('pointerover', () => bg.setFillStyle(color, 0.8))
+      .on('pointerover', () => {
+        bg.setFillStyle(color, 0.8)
+      })
       .on('pointerout', () => bg.setFillStyle(color, 1))
-      .on('pointerdown', onClick)
+      .on('pointerdown', () => {
+        this.scene.cameras.main.flash(100, 0, 255, 0)
+        onClick()
+      })
 
-    btn.add([bg, label])
-    return btn
+    return { bg, label }
   }
 
   private clearContainer() {

@@ -447,10 +447,41 @@ export default class GameSceneV3 extends Phaser.Scene {
       // Drop power-up chance
       this.powerUpManager.tryDropPowerUp(enemy.x, enemy.y)
 
-      // Explosion effect
+      // FIX V6: FLASH SCREEN + BIG EXPLOSION!
+      this.cameras.main.flash(enemy.isBoss() ? 200 : 100, 255, 100, 0)
+
+      // Create explosion effect
       this.createExplosion(enemy.x, enemy.y, enemy.isBoss())
 
+      // FIX V6: Add extra kill particles!
+      this.createKillParticles(enemy.x, enemy.y, enemy.isBoss())
+
       enemy.destroy()
+    }
+  }
+
+  // FIX V6: Kill particle effects!
+  private createKillParticles(x: number, y: number, isBig: boolean) {
+    const count = isBig ? 40 : 20
+    const colors = [0xff0000, 0xff6b00, 0xffff00, 0xff00ff]
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const speed = Phaser.Math.Between(100, isBig ? 300 : 200)
+      const color = Phaser.Math.RND.pick(colors)
+
+      const particle = this.add.circle(x, y, isBig ? 8 : 4, color)
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        alpha: 0,
+        scale: 0,
+        duration: isBig ? 1000 : 600,
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy()
+      })
     }
   }
 
@@ -660,43 +691,45 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.physics.pause()
 
-    // FIX V5: Use actual screen dimensions, not camera dimensions!
+    // FIX V6: Use actual screen dimensions!
     const screenWidth = this.scale.width
     const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
 
-    // Overlay - FIX V4: Don't make overlay interactive - it blocks clicks!
+    // FIX V6: Overlay at LOWER depth so it doesn't block anything!
     const overlay = this.add.rectangle(
-      screenWidth / 2,
-      screenHeight / 2,
-      screenWidth * 2, // Make it larger to cover everything
+      centerX,
+      centerY,
+      screenWidth * 2,
       screenHeight * 2,
       0x000000,
       0.9
-    ).setScrollFactor(0).setDepth(9000)
-    // Removed .setInteractive() - this was blocking skill button clicks!
+    ).setScrollFactor(0).setDepth(8000) // LOWER depth!
 
-    const container = this.add.container(
-      screenWidth / 2,
-      screenHeight / 2
-    ).setScrollFactor(0).setDepth(9001)
+    // Store all UI elements for cleanup
+    const uiElements: any[] = [overlay]
 
-    const title = this.add.text(0, -250, '⚡ SKILL TREE ⚡', {
+    // FIX V6: Create ALL elements with ABSOLUTE positioning (no container!)
+    const title = this.add.text(centerX, centerY - 250, '⚡ SKILL TREE ⚡', {
       fontSize: '42px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
 
-    const pointsText = this.add.text(0, -200, `Skill Points: ${this.player.skillPoints}`, {
+    const pointsText = this.add.text(centerX, centerY - 200, `Skill Points: ${this.player.skillPoints}`, {
       fontSize: '24px',
       color: '#2ecc71',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
 
-    // Skills grid
+    uiElements.push(title, pointsText)
+
+    // Skills grid - ALL INDEPENDENT!
     const skills = this.player.skillTree.getAllSkills()
-    const startY = -140
+    const startY = centerY - 140
     const gap = 55
 
     skills.forEach((skillData, index) => {
@@ -706,66 +739,80 @@ export default class GameSceneV3 extends Phaser.Scene {
       const y = startY + index * gap
       const canUpgrade = this.player.skillTree.canUpgradeSkill(skill.id)
 
-      const skillBg = this.add.rectangle(0, y, 520, 48, canUpgrade ? 0x27ae60 : 0x34495e, canUpgrade ? 0.9 : 0.6)
-      const skillText = this.add.text(-240, y, `${skill.icon} ${skill.name}`, {
+      // Background - ABSOLUTE position!
+      const skillBg = this.add.rectangle(centerX, y, 520, 48, canUpgrade ? 0x27ae60 : 0x34495e, canUpgrade ? 0.9 : 0.6)
+        .setScrollFactor(0)
+        .setDepth(canUpgrade ? 9003 : 9001) // Higher depth if clickable!
+
+      const skillText = this.add.text(centerX - 240, y, `${skill.icon} ${skill.name}`, {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
 
-      const levelText = this.add.text(0, y, `${level}/${skill.maxLevel}`, {
+      const levelText = this.add.text(centerX, y, `${level}/${skill.maxLevel}`, {
         fontSize: '18px',
         color: level === skill.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
 
-      const descText = this.add.text(70, y, skill.description, {
+      const descText = this.add.text(centerX + 70, y, skill.description, {
         fontSize: '13px',
         color: '#ecf0f1',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(9004)
 
-      // Upgrade button - FIX: Make it more interactive
+      // Make clickable AFTER positioning and depth!
       if (canUpgrade) {
         skillBg.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => skillBg.setFillStyle(0x2ecc71, 1))
+          .on('pointerover', () => {
+            skillBg.setFillStyle(0x2ecc71, 1)
+            this.cameras.main.flash(50, 0, 255, 0)
+          })
           .on('pointerout', () => skillBg.setFillStyle(0x27ae60, 0.9))
           .on('pointerdown', () => {
             if (this.player.skillTree.upgradeSkill(skill.id)) {
               this.player.skillPoints--
               this.player.applySkillBonuses()
-              this.addKillFeedMessage(`⚡ Upgraded ${skill.name}!`, '#f39c12', 3000)
+              this.showBigPopup(`⚡ ${skill.name} Upgraded!`, '#2ecc71')
+              this.cameras.main.flash(200, 50, 255, 50)
               this.closeSkillTree()
               this.openSkillTree() // Refresh
             }
           })
       }
 
-      container.add([skillBg, skillText, levelText, descText])
+      uiElements.push(skillBg, skillText, levelText, descText)
     })
 
-    const closeBtn = this.add.rectangle(0, 220, 220, 50, 0xe74c3c, 0.9)
-    const closeTxt = this.add.text(0, 220, 'Close (T)', {
+    // Close button - ABSOLUTE position!
+    const closeBtn = this.add.rectangle(centerX, centerY + 220, 220, 50, 0xe74c3c, 0.9)
+      .setScrollFactor(0)
+      .setDepth(9003)
+
+    const closeTxt = this.add.text(centerX, centerY + 220, 'Close (T)', {
       fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9004)
 
     closeBtn.setInteractive({ useHandCursor: true })
       .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
       .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
       .on('pointerdown', () => this.closeSkillTree())
 
-    container.add([title, pointsText, closeBtn, closeTxt])
+    uiElements.push(closeBtn, closeTxt)
 
-    this.skillTreeUI = { overlay, container }
+    // Store ALL elements for cleanup (no container!)
+    this.skillTreeUI = { elements: uiElements }
   }
 
   private closeSkillTree() {
     if (!this.skillTreeUI) return
 
     this.physics.resume()
-    this.skillTreeUI.overlay.destroy()
-    this.skillTreeUI.container.destroy()
+
+    // FIX V6: Destroy all independent elements
+    this.skillTreeUI.elements.forEach((el: any) => el.destroy())
     this.skillTreeUI = null
   }
 
@@ -808,5 +855,31 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private emitMessage(text: string, type: 'success' | 'warning' | 'danger') {
     this.emitGameEvent('message', { text, type })
+  }
+
+  // FIX V6: Big popup notification for important events!
+  private showBigPopup(text: string, color: string) {
+    const popup = this.add.text(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      text,
+      {
+        fontSize: '48px',
+        color: color,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6,
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(15000)
+
+    // Scale up and fade out
+    this.tweens.add({
+      targets: popup,
+      scale: 1.5,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy()
+    })
   }
 }

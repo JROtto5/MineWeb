@@ -325,61 +325,71 @@ export class ShopUI {
       tabObjects.push(tabBg, tabText)
     })
 
-    // Items list
+    // Items list - FIX V6: Create items with ABSOLUTE positioning (still in container but higher depth!)
     const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
-    const startY = -120
+    const startY = screenHeight / 2 - 120
     const itemHeight = 70
 
     items.forEach((itemData, index) => {
       const item = itemData.item
-      const y = startY + index * itemHeight
+      const absY = startY + index * itemHeight
 
       // Can afford?
       const canAfford = this.player.money >= itemData.price
       const canBuy = itemData.canUpgrade && canAfford
 
-      // Background
+      // Background - HIGHER DEPTH for clickable items!
       const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
-      const itemBg = this.scene.add.rectangle(0, y, 650, 65, bgColor, 0.9)
+      const itemBg = this.scene.add.rectangle(screenWidth / 2, absY, 650, 65, bgColor, 0.9)
+        .setScrollFactor(0)
+        .setDepth(canBuy ? 10005 : 10003) // MUCH higher if clickable!
 
       // Icon and name
-      const itemText = this.scene.add.text(-300, y, `${item.icon} ${item.name}`, {
+      const itemText = this.scene.add.text(screenWidth / 2 - 300, absY, `${item.icon} ${item.name}`, {
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10006)
 
       // Description
-      const descText = this.scene.add.text(-300, y + 20, item.description, {
+      const descText = this.scene.add.text(screenWidth / 2 - 300, absY + 20, item.description, {
         fontSize: '13px',
         color: '#bdc3c7',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10006)
 
       // Level
-      const levelText = this.scene.add.text(140, y, `Level: ${itemData.level}/${item.maxLevel}`, {
+      const levelText = this.scene.add.text(screenWidth / 2 + 140, absY, `Level: ${itemData.level}/${item.maxLevel}`, {
         fontSize: '16px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10006)
 
-      // Price button
+      // Price button - ABSOLUTE positioning!
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
-      const priceBg = this.scene.add.rectangle(260, y, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
-      const priceText = this.scene.add.text(260, y, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
+      const priceBg = this.scene.add.rectangle(screenWidth / 2 + 260, absY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+        .setScrollFactor(0)
+        .setDepth(canBuy ? 10005 : 10003)
+
+      const priceText = this.scene.add.text(screenWidth / 2 + 260, absY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10007)
 
-      // Make clickable if can buy
+      // Make clickable AFTER positioning and depth!
       if (canBuy) {
         itemBg.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => itemBg.setFillStyle(0x2ecc71, 1))
+          .on('pointerover', () => {
+            itemBg.setFillStyle(0x2ecc71, 1)
+            this.scene.cameras.main.flash(50, 0, 255, 0)
+          })
           .on('pointerout', () => itemBg.setFillStyle(0x27ae60, 0.9))
           .on('pointerdown', () => this.buyItem(item.id))
 
         priceBg.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => priceBg.setFillStyle(0x27ae60, 1))
+          .on('pointerover', () => {
+            priceBg.setFillStyle(0x27ae60, 1)
+          })
           .on('pointerout', () => priceBg.setFillStyle(0x2ecc71, 0.9))
           .on('pointerdown', () => this.buyItem(item.id))
       }
@@ -413,18 +423,71 @@ export class ShopUI {
       this.shopManager.purchase(itemId)
       this.player.applyShopBonuses(this.shopManager)
 
-      // Success feedback
-      this.scene.cameras.main.flash(100, 0, 255, 0)
+      // Get item for feedback
+      const item = SHOP_ITEMS.find(i => i.id === itemId)
+      if (item) {
+        // FIX V6: BIG POPUP + Flash + Particles!
+        this.showBigPopup(`${item.icon} ${item.name} Purchased!`, '#2ecc71')
+        this.scene.cameras.main.flash(200, 50, 255, 50)
+
+        // Create particle burst at center
+        this.createPurchaseParticles(this.scene.scale.width / 2, this.scene.scale.height / 2, 0x2ecc71)
+
+        this.emitMessage(`✅ Purchased ${item.name}!`, 'success')
+      }
 
       // Refresh shop
       this.close()
       this.open()
+    }
+  }
 
-      // Send message
-      const item = SHOP_ITEMS.find(i => i.id === itemId)
-      if (item) {
-        this.emitMessage(`✅ Purchased ${item.name}!`, 'success')
+  // FIX V6: Big popup notification for purchases!
+  private showBigPopup(text: string, color: string) {
+    const popup = this.scene.add.text(
+      this.scene.scale.width / 2,
+      this.scene.scale.height / 2 - 100,
+      text,
+      {
+        fontSize: '42px',
+        color: color,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6,
       }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(15000)
+
+    // Scale up and fade out
+    this.scene.tweens.add({
+      targets: popup,
+      scale: 1.5,
+      alpha: 0,
+      duration: 1500,
+      ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy()
+    })
+  }
+
+  // FIX V6: Particle effects for purchases!
+  private createPurchaseParticles(x: number, y: number, color: number) {
+    for (let i = 0; i < 20; i++) {
+      const angle = (i / 20) * Math.PI * 2
+      const distance = Phaser.Math.Between(50, 150)
+
+      const particle = this.scene.add.circle(x, y, 6, color)
+        .setScrollFactor(0)
+        .setDepth(14000)
+
+      this.scene.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
+        alpha: 0,
+        scale: 0,
+        duration: 800,
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy()
+      })
     }
   }
 
