@@ -78,13 +78,187 @@ export class CasinoUI {
     const { bg: slotBg, label: slotLabel } = this.createButton(centerX, buttonY, '🎰 Slot Machine', () => this.openSlotMachine())
     const { bg: bjBg, label: bjLabel } = this.createButton(centerX, buttonY + buttonGap, '🃏 Blackjack', () => this.openBlackjack())
     const { bg: rouletteBg, label: rouletteLabel } = this.createButton(centerX, buttonY + buttonGap * 2, '🎲 Roulette', () => this.openRoulette())
-    const { bg: lootBg, label: lootLabel } = this.createButton(centerX, buttonY + buttonGap * 3, '📦 Loot Box ($100)', () => this.openLootBox())
+    const { bg: lootBg, label: lootLabel } = this.createButton(centerX, buttonY + buttonGap * 3, '📦 Loot Box', () => this.openLootBox())
     const { bg: closeBg, label: closeLabel } = this.createButton(centerX, buttonY + buttonGap * 4 + 20, 'Close', () => this.close(), 0xe74c3c)
 
     this.uiElements = [title, moneyText, slotBg, slotLabel, bjBg, bjLabel, rouletteBg, rouletteLabel, lootBg, lootLabel, closeBg, closeLabel]
   }
 
   private openSlotMachine() {
+    this.showBetSelection('slot')
+  }
+
+  // CREATIVE EXPANSION: Bet selection screen for all games!
+  private showBetSelection(gameType: 'slot' | 'blackjack' | 'roulette' | 'lootbox') {
+    this.clearElements()
+
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const gameNames = {
+      slot: '🎰 SLOT MACHINE',
+      blackjack: '🃏 BLACKJACK',
+      roulette: '🎲 ROULETTE',
+      lootbox: '📦 LOOT BOX'
+    }
+
+    const title = this.scene.add.text(centerX, centerY - 200, gameNames[gameType], {
+      fontSize: '36px',
+      color: '#f39c12',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+
+    const subtitle = this.scene.add.text(centerX, centerY - 150, 'Choose your bet amount:', {
+      fontSize: '22px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+
+    const moneyText = this.scene.add.text(centerX, centerY - 110, `Your Money: $${this.player.money}`, {
+      fontSize: '20px',
+      color: '#2ecc71',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+
+    // Bet amount buttons
+    const betAmounts = [10, 50, 100, 500]
+    const betButtons: any[] = []
+
+    betAmounts.forEach((amount, index) => {
+      const x = centerX - 150 + (index % 2) * 300
+      const y = centerY - 30 + Math.floor(index / 2) * 80
+
+      const canAfford = this.player.money >= amount
+      const { bg, label } = this.createButton(
+        x, y,
+        `$${amount}`,
+        () => {
+          if (canAfford) {
+            this.startGame(gameType, amount)
+          }
+        },
+        canAfford ? 0x2ecc71 : 0x7f8c8d
+      )
+
+      if (!canAfford) {
+        bg.setAlpha(0.5)
+        label.setAlpha(0.5)
+      }
+
+      betButtons.push(bg, label)
+    })
+
+    // Custom amount button
+    const { bg: customBg, label: customLabel } = this.createButton(
+      centerX, centerY + 130,
+      '💰 Custom Amount',
+      () => this.showCustomBetInput(gameType),
+      0x9b59b6
+    )
+
+    const { bg: backBg, label: backLabel } = this.createButton(
+      centerX, centerY + 200,
+      'Back',
+      () => this.showMainMenu(),
+      0x95a5a6
+    )
+
+    this.uiElements = [title, subtitle, moneyText, ...betButtons, customBg, customLabel, backBg, backLabel]
+  }
+
+  // CREATIVE EXPANSION: Custom bet input with on-screen number pad!
+  private showCustomBetInput(gameType: 'slot' | 'blackjack' | 'roulette' | 'lootbox') {
+    this.clearElements()
+
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const title = this.scene.add.text(centerX, centerY - 220, 'Enter Custom Bet Amount', {
+      fontSize: '28px',
+      color: '#f39c12',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+
+    let currentInput = ''
+    const displayText = this.scene.add.text(centerX, centerY - 160, '$0', {
+      fontSize: '48px',
+      color: '#2ecc71',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+
+    const moneyText = this.scene.add.text(centerX, centerY - 110, `Your Money: $${this.player.money}`, {
+      fontSize: '18px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+
+    // Number pad
+    const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '✓']
+    const numButtons: any[] = []
+
+    numbers.forEach((num, index) => {
+      const col = index % 3
+      const row = Math.floor(index / 3)
+      const x = centerX - 100 + col * 100
+      const y = centerY - 30 + row * 70
+
+      let color = 0x3498db
+      if (num === 'C') color = 0xe74c3c
+      if (num === '✓') color = 0x2ecc71
+
+      const { bg, label } = this.createButton(x, y, num, () => {
+        if (num === 'C') {
+          currentInput = ''
+          displayText.setText('$0')
+        } else if (num === '✓') {
+          const amount = parseInt(currentInput) || 0
+          if (amount > 0 && amount <= this.player.money) {
+            this.startGame(gameType, amount)
+          } else if (amount > this.player.money) {
+            displayText.setText('NOT ENOUGH $')
+            displayText.setColor('#e74c3c')
+            this.scene.time.delayedCall(1000, () => {
+              displayText.setText(`$${currentInput}`)
+              displayText.setColor('#2ecc71')
+            })
+          }
+        } else {
+          currentInput += num
+          if (currentInput.length > 6) currentInput = currentInput.slice(0, 6)
+          displayText.setText(`$${currentInput}`)
+          displayText.setColor('#2ecc71')
+        }
+      }, color, 60, 50)
+
+      numButtons.push(bg, label)
+    })
+
+    const { bg: backBg, label: backLabel } = this.createButton(
+      centerX, centerY + 220,
+      'Back',
+      () => this.showBetSelection(gameType),
+      0x95a5a6
+    )
+
+    this.uiElements = [title, displayText, moneyText, ...numButtons, backBg, backLabel]
+  }
+
+  // CREATIVE EXPANSION: Start game with chosen bet amount!
+  private startGame(gameType: 'slot' | 'blackjack' | 'roulette' | 'lootbox', betAmount: number) {
+    if (gameType === 'slot') {
+      this.playSlotMachine(betAmount)
+    } else if (gameType === 'blackjack') {
+      this.playBlackjack(betAmount)
+    } else if (gameType === 'roulette') {
+      this.playRoulette(betAmount)
+    } else if (gameType === 'lootbox') {
+      this.playLootBox(betAmount)
+    }
+  }
+
+  private playSlotMachine(betAmount: number) {
     this.clearElements()
 
     const screenWidth = this.scene.scale.width
@@ -99,7 +273,7 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     title.disableInteractive()
 
-    const betText = this.scene.add.text(centerX, centerY - 140, 'Bet: $50 | Match 3 symbols to win!', {
+    const betText = this.scene.add.text(centerX, centerY - 140, `Bet: $${betAmount} | Match 3 symbols to win!`, {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
@@ -122,14 +296,14 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     resultText.disableInteractive()
 
-    const { bg: spinBg, label: spinLabel } = this.createButton(centerX, centerY + 150, '🎰 SPIN ($50)', () => {
-      if (this.player.money < 50) {
+    const { bg: spinBg, label: spinLabel } = this.createButton(centerX, centerY + 150, `🎰 SPIN ($${betAmount})`, () => {
+      if (this.player.money < betAmount) {
         resultText.setText('Not enough money!')
         resultText.setColor('#e74c3c')
         return
       }
 
-      this.player.addMoney(-50)
+      this.player.addMoney(-betAmount)
 
       // Spin animation
       let spins = 0
@@ -144,7 +318,7 @@ export class CasinoUI {
             spinInterval.destroy()
 
             // Final result
-            const result = this.casinoManager.spinSlots(50)
+            const result = this.casinoManager.spinSlots(betAmount)
             reelTexts.forEach((reel, i) => {
               reel.setText(result.symbols[i])
             })
@@ -165,12 +339,16 @@ export class CasinoUI {
       })
     })
 
-    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 220, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 220, 'Back', () => this.showBetSelection('slot'), 0x95a5a6)
 
     this.uiElements = [title, betText, ...reelTexts, resultText, spinBg, spinLabel, backBg, backLabel]
   }
 
   private openBlackjack() {
+    this.showBetSelection('blackjack')
+  }
+
+  private playBlackjack(betAmount: number) {
     this.clearElements()
 
     const screenWidth = this.scene.scale.width
@@ -185,7 +363,7 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     title.disableInteractive()
 
-    const betText = this.scene.add.text(centerX, centerY - 140, 'Bet: $100 | Get closer to 21 than dealer!', {
+    const betText = this.scene.add.text(centerX, centerY - 140, `Bet: $${betAmount} | Get closer to 21 than dealer!`, {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
@@ -210,24 +388,24 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     resultText.disableInteractive()
 
-    const { bg: playBg, label: playLabel } = this.createButton(centerX, centerY + 140, '🃏 PLAY ($100)', () => {
-      if (this.player.money < 100) {
+    const { bg: playBg, label: playLabel } = this.createButton(centerX, centerY + 140, `🃏 PLAY ($${betAmount})`, () => {
+      if (this.player.money < betAmount) {
         resultText.setText('Not enough money!')
         resultText.setColor('#e74c3c')
         return
       }
 
-      this.player.addMoney(-100)
-      const result = this.casinoManager.playBlackjack(100)
+      this.player.addMoney(-betAmount)
+      const result = this.casinoManager.playBlackjack(betAmount)
 
       playerHandText.setText(`Your Hand: ${result.playerHand}`)
       dealerHandText.setText(`Dealer Hand: ${result.dealerHand}`)
       resultText.setText(result.result)
 
-      if (result.payout > 100) {
+      if (result.payout > betAmount) {
         resultText.setColor('#2ecc71')
         this.player.addMoney(result.payout)
-      } else if (result.payout === 100) {
+      } else if (result.payout === betAmount) {
         resultText.setColor('#f39c12')
         this.player.addMoney(result.payout)
       } else {
@@ -237,12 +415,16 @@ export class CasinoUI {
       betText.setText(`Your Money: $${this.player.money}`)
     })
 
-    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 210, 'Back', () => this.showBetSelection('blackjack'), 0x95a5a6)
 
     this.uiElements = [title, betText, playerHandText, dealerHandText, resultText, playBg, playLabel, backBg, backLabel]
   }
 
   private openRoulette() {
+    this.showBetSelection('roulette')
+  }
+
+  private playRoulette(betAmount: number) {
     this.clearElements()
 
     const screenWidth = this.scene.scale.width
@@ -257,7 +439,7 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     title.disableInteractive()
 
-    const betText = this.scene.add.text(centerX, centerY - 140, 'Bet: $75 | Choose Red or Black!', {
+    const betText = this.scene.add.text(centerX, centerY - 140, `Bet: $${betAmount} | Choose Red or Black!`, {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
@@ -277,13 +459,13 @@ export class CasinoUI {
     outcomeText.disableInteractive()
 
     const { bg: redBg, label: redLabel } = this.createButton(centerX - 120, centerY + 100, '🔴 RED', () => {
-      if (this.player.money < 75) {
+      if (this.player.money < betAmount) {
         resultText.setText('Not enough money!')
         return
       }
 
-      this.player.addMoney(-75)
-      const result = this.casinoManager.spinRouletteWheel(75, 'red')
+      this.player.addMoney(-betAmount)
+      const result = this.casinoManager.spinRouletteWheel(betAmount, 'red')
 
       resultText.setText(result.result === 'red' ? '🔴 RED' : '⚫ BLACK')
       outcomeText.setText(result.isWin ? `WIN! +$${result.payout}` : 'LOSE!')
@@ -297,13 +479,13 @@ export class CasinoUI {
     }, 0xe74c3c)
 
     const { bg: blackBg, label: blackLabel } = this.createButton(centerX + 120, centerY + 100, '⚫ BLACK', () => {
-      if (this.player.money < 75) {
+      if (this.player.money < betAmount) {
         resultText.setText('Not enough money!')
         return
       }
 
-      this.player.addMoney(-75)
-      const result = this.casinoManager.spinRouletteWheel(75, 'black')
+      this.player.addMoney(-betAmount)
+      const result = this.casinoManager.spinRouletteWheel(betAmount, 'black')
 
       resultText.setText(result.result === 'red' ? '🔴 RED' : '⚫ BLACK')
       outcomeText.setText(result.isWin ? `WIN! +$${result.payout}` : 'LOSE!')
@@ -316,12 +498,16 @@ export class CasinoUI {
       betText.setText(`Your Money: $${this.player.money}`)
     }, 0x000000)
 
-    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 180, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 180, 'Back', () => this.showBetSelection('roulette'), 0x95a5a6)
 
     this.uiElements = [title, betText, resultText, outcomeText, redBg, redLabel, blackBg, blackLabel, backBg, backLabel]
   }
 
   private openLootBox() {
+    this.showBetSelection('lootbox')
+  }
+
+  private playLootBox(betAmount: number) {
     this.clearElements()
 
     const screenWidth = this.scene.scale.width
@@ -336,7 +522,7 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     title.disableInteractive()
 
-    const infoText = this.scene.add.text(centerX, centerY - 140, 'Cost: $100 | Rare rewards inside!', {
+    const infoText = this.scene.add.text(centerX, centerY - 140, `Cost: $${betAmount} | Rare rewards inside!`, {
       fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
@@ -359,15 +545,15 @@ export class CasinoUI {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
     valueText.disableInteractive()
 
-    const { bg: openBg, label: openLabel } = this.createButton(centerX, centerY + 140, '📦 OPEN ($100)', () => {
-      if (this.player.money < 100) {
+    const { bg: openBg, label: openLabel } = this.createButton(centerX, centerY + 140, `📦 OPEN ($${betAmount})`, () => {
+      if (this.player.money < betAmount) {
         rarityText.setText('Not enough money!')
         rarityText.setColor('#e74c3c')
         return
       }
 
-      this.player.addMoney(-100)
-      const result = this.casinoManager.openLootBox(100)
+      this.player.addMoney(-betAmount)
+      const result = this.casinoManager.openLootBox(betAmount)
 
       rewardText.setText(result.reward)
       rarityText.setText(result.rarity)
@@ -388,7 +574,7 @@ export class CasinoUI {
       infoText.setText(`Your Money: $${this.player.money}`)
     })
 
-    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
+    const { bg: backBg, label: backLabel } = this.createButton(centerX, centerY + 210, 'Back', () => this.showBetSelection('lootbox'), 0x95a5a6)
 
     this.uiElements = [title, infoText, rewardText, rarityText, valueText, openBg, openLabel, backBg, backLabel]
   }
@@ -399,10 +585,12 @@ export class CasinoUI {
     y: number,
     text: string,
     onClick: () => void,
-    color: number = 0x3498db
+    color: number = 0x3498db,
+    width: number = 280,
+    height: number = 50
   ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text } {
     // ABSOLUTE position!
-    const bg = this.scene.add.rectangle(x, y, 280, 50, color)
+    const bg = this.scene.add.rectangle(x, y, width, height, color)
       .setScrollFactor(0).setDepth(1003) // Higher depth for buttons!
 
     const label = this.scene.add.text(x, y, text, {
