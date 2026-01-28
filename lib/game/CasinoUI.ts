@@ -82,7 +82,7 @@ export class CasinoUI {
     }).setOrigin(0.5)
     moneyText.disableInteractive()
 
-    // Buttons - createButton now returns {bg, label}
+    // Buttons - FIX V9: Create, add to container, THEN make interactive!
     const buttonY = -50
     const buttonGap = 70
 
@@ -92,6 +92,7 @@ export class CasinoUI {
     const lootboxBtn = this.createButton(0, buttonY + buttonGap * 3, '📦 Loot Box ($100)', () => this.openLootBox())
     const closeBtn = this.createButton(0, buttonY + buttonGap * 4 + 20, 'Close', () => this.close(), 0xe74c3c)
 
+    // Add to container FIRST
     this.container.add([title, moneyText,
       slotBtn.bg, slotBtn.label,
       blackjackBtn.bg, blackjackBtn.label,
@@ -99,6 +100,13 @@ export class CasinoUI {
       lootboxBtn.bg, lootboxBtn.label,
       closeBtn.bg, closeBtn.label
     ])
+
+    // FIX V9: Make interactive AFTER adding to container!
+    slotBtn.makeInteractive()
+    blackjackBtn.makeInteractive()
+    rouletteBtn.makeInteractive()
+    lootboxBtn.makeInteractive()
+    closeBtn.makeInteractive()
   }
 
   private openSlotMachine() {
@@ -179,7 +187,12 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 220, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
+    // FIX V9: Add to container FIRST
     this.container.add([title, betText, ...reelTexts, resultText, spinBtn.bg, spinBtn.label, backBtn.bg, backBtn.label])
+
+    // FIX V9: Make interactive AFTER adding to container!
+    spinBtn.makeInteractive()
+    backBtn.makeInteractive()
   }
 
   private openBlackjack() {
@@ -246,7 +259,12 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
+    // FIX V9: Add to container FIRST
     this.container.add([title, betText, playerHandText, dealerHandText, resultText, playBtn.bg, playBtn.label, backBtn.bg, backBtn.label])
+
+    // FIX V9: Make interactive AFTER adding to container!
+    playBtn.makeInteractive()
+    backBtn.makeInteractive()
   }
 
   private openRoulette() {
@@ -320,7 +338,13 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 180, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
+    // FIX V9: Add to container FIRST
     this.container.add([title, betText, resultText, outcomeText, redBtn.bg, redBtn.label, blackBtn.bg, blackBtn.label, backBtn.bg, backBtn.label])
+
+    // FIX V9: Make interactive AFTER adding to container!
+    redBtn.makeInteractive()
+    blackBtn.makeInteractive()
+    backBtn.makeInteractive()
   }
 
   private openLootBox() {
@@ -387,39 +411,48 @@ export class CasinoUI {
 
     const backBtn = this.createButton(0, 210, 'Back', () => this.showMainMenu(), 0x95a5a6)
 
+    // FIX V9: Add to container FIRST
     this.container.add([title, infoText, rewardText, rarityText, valueText, openBtn.bg, openBtn.label, backBtn.bg, backBtn.label])
+
+    // FIX V9: Make interactive AFTER adding to container!
+    openBtn.makeInteractive()
+    backBtn.makeInteractive()
   }
 
-  // FIX V8: Create buttons with RELATIVE positioning for container!
+  // FIX V9: Create buttons and make them interactive AFTER they'll be added to container!
   private createButton(
     x: number,
     y: number,
     text: string,
     onClick: () => void,
     color: number = 0x3498db
-  ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text } {
+  ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text, makeInteractive: () => void } {
     // Use RELATIVE position since these will be added to centered container
     const bg = this.scene.add.rectangle(x, y, 280, 50, color)
+      .setDepth(1) // FIX V9: Explicit depth!
 
     const label = this.scene.add.text(x, y, text, {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    label.disableInteractive() // FIX V7: Prevent text from blocking clicks
+    }).setOrigin(0.5).setDepth(2) // FIX V9: Above background!
+    label.disableInteractive()
 
-    bg.setInteractive({ useHandCursor: true })
-      .on('pointerover', () => {
-        bg.setFillStyle(color, 0.8)
-      })
-      .on('pointerout', () => bg.setFillStyle(color, 1))
-      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        event.stopPropagation() // FIX V7: Stop event from bubbling
-        this.scene.cameras.main.flash(100, 0, 255, 0)
-        onClick()
-      })
+    // FIX V9: Return function to make interactive AFTER adding to container!
+    const makeInteractive = () => {
+      bg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => {
+          bg.setFillStyle(color, 0.8)
+        })
+        .on('pointerout', () => bg.setFillStyle(color, 1))
+        .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+          event.stopPropagation()
+          this.scene.cameras.main.flash(100, 0, 255, 0)
+          onClick()
+        })
+    }
 
-    return { bg, label }
+    return { bg, label, makeInteractive }
   }
 
   private clearContainer() {

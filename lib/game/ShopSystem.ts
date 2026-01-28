@@ -349,45 +349,50 @@ export class ShopUI {
       const canAfford = this.player.money >= itemData.price
       const canBuy = itemData.canUpgrade && canAfford
 
-      // Background - HIGHER DEPTH for clickable items! RELATIVE POSITION!
+      // Background - FIX V9: Set depth for proper click handling in container!
       const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
-      const itemBg = this.scene.add.rectangle(0, relY, 650, 65, bgColor, 0.9) // RELATIVE to container!
+      const itemBg = this.scene.add.rectangle(0, relY, 650, 65, bgColor, 0.9)
+        .setDepth(1) // FIX V9: Explicit depth for click priority!
 
-      // Icon and name - FIX V8: RELATIVE positioning
+      // Icon and name
       const itemText = this.scene.add.text(-300, relY, `${item.icon} ${item.name}`, {
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setDepth(2) // FIX V9: Above background!
       itemText.disableInteractive()
 
-      // Description - FIX V8: RELATIVE positioning
+      // Description
       const descText = this.scene.add.text(-300, relY + 20, item.description, {
         fontSize: '13px',
         color: '#bdc3c7',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setDepth(2) // FIX V9: Above background!
       descText.disableInteractive()
 
-      // Level - FIX V8: RELATIVE positioning
+      // Level
       const levelText = this.scene.add.text(140, relY, `Level: ${itemData.level}/${item.maxLevel}`, {
         fontSize: '16px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setDepth(2) // FIX V9: Above background!
       levelText.disableInteractive()
 
-      // Price button - FIX V8: RELATIVE positioning!
+      // Price button
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
       const priceBg = this.scene.add.rectangle(260, relY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+        .setDepth(1) // FIX V9: Same as item background!
 
       const priceText = this.scene.add.text(260, relY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setDepth(2) // FIX V9: Above background!
       priceText.disableInteractive()
 
-      // Make clickable AFTER positioning and depth!
+      // FIX V9: Add to container FIRST, THEN make interactive!
+      container.add([itemBg, itemText, descText, levelText, priceBg, priceText])
+
+      // Make clickable AFTER adding to container!
       if (canBuy) {
         itemBg.setInteractive({ useHandCursor: true })
           .on('pointerover', () => {
@@ -396,7 +401,7 @@ export class ShopUI {
           })
           .on('pointerout', () => itemBg.setFillStyle(0x27ae60, 0.9))
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-            event.stopPropagation() // FIX V7: Stop event from bubbling
+            event.stopPropagation()
             this.buyItem(item.id)
           })
 
@@ -406,32 +411,32 @@ export class ShopUI {
           })
           .on('pointerout', () => priceBg.setFillStyle(0x2ecc71, 0.9))
           .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-            event.stopPropagation() // FIX V7: Stop event from bubbling
+            event.stopPropagation()
             this.buyItem(item.id)
           })
       }
-
-      container.add([itemBg, itemText, descText, levelText, priceBg, priceText])
     })
 
-    // Close button
+    // Close button - FIX V9: Add to container first, then make interactive!
     const closeBtn = this.scene.add.rectangle(0, 260, 250, 55, 0xe74c3c, 0.9)
+      .setDepth(1) // FIX V9: Explicit depth!
     const closeTxt = this.scene.add.text(0, 260, 'Close (ESC)', {
       fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
-    closeTxt.disableInteractive() // FIX V7: Prevent text from blocking clicks
+    }).setOrigin(0.5).setDepth(2) // FIX V9: Above button!
+    closeTxt.disableInteractive()
 
+    container.add([title, moneyText, closeBtn, closeTxt])
+
+    // FIX V9: Make interactive AFTER adding to container!
     closeBtn.setInteractive({ useHandCursor: true })
       .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
       .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
       .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        event.stopPropagation() // FIX V7: Stop event from bubbling
+        event.stopPropagation()
         this.close()
       })
-
-    container.add([title, moneyText, closeBtn, closeTxt])
 
     this.ui = { overlay, container, tabObjects }
   }
