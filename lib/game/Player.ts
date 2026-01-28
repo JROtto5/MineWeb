@@ -528,6 +528,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.emitMessage('⏱️ TIME SLOW ACTIVATED!', 'warning')
   }
 
+  // TESTING: Auto-click/reload checkers
+  hasAutoClick(): boolean {
+    return this.shopManager ? this.shopManager.hasAbility('autoClick') : false
+  }
+
+  hasAutoReload(): boolean {
+    return this.shopManager ? this.shopManager.hasAbility('autoReload') : false
+  }
+
   updateAbilities() {
     // Check time slow expiration
     if (this.timeSlowActive && this.scene.time.now >= this.timeSlowEnd) {

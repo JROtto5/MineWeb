@@ -14,7 +14,8 @@ export interface ShopItem {
     type: 'damage' | 'fireRate' | 'ammo' | 'health' | 'speed' | 'critChance' | 'moneyBoost' | 'xpBoost' | 'dash' | 'shield' | 'timeSlow' |
           'piercing' | 'explosive' | 'reloadSpeed' | 'dualWield' | 'homing' | 'multishot' |
           'healthRegen' | 'dodgeChance' | 'luck' | 'armor' | 'lifesteal' | 'comboBonus' |
-          'teleport' | 'berserk' | 'invisibility' | 'orbitalStrike'
+          'teleport' | 'berserk' | 'invisibility' | 'orbitalStrike' |
+          'autoClick' | 'autoReload'
     value: number
   }
 }
@@ -328,6 +329,30 @@ export const SHOP_ITEMS: ShopItem[] = [
     priceScaling: 1,
     effect: { type: 'orbitalStrike', value: 1 }
   },
+
+  // TESTING: Free automation items!
+  {
+    id: 'auto_click',
+    name: 'Auto-Clicker [TEST]',
+    description: 'Automatically fires weapon (FREE for testing)',
+    icon: '🤖',
+    category: 'ability',
+    basePrice: 0,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'autoClick', value: 1 }
+  },
+  {
+    id: 'auto_reload',
+    name: 'Auto-Reload [TEST]',
+    description: 'Automatically reloads weapon (FREE for testing)',
+    icon: '🔄',
+    category: 'ability',
+    basePrice: 0,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'autoReload', value: 1 }
+  },
 ]
 
 export class ShopManager {
@@ -408,6 +433,8 @@ export class ShopUI {
   private uiElements: any[] = [] // FIX V11: Store elements like skill tree!
   private overlay!: Phaser.GameObjects.Rectangle
   private currentCategory: 'weapon' | 'stat' | 'ability' = 'weapon'
+  private scrollOffset = 0
+  private scrollableItems: any[] = []
 
   constructor(scene: Phaser.Scene, shopManager: ShopManager, player: Player) {
     this.scene = scene
@@ -513,10 +540,35 @@ export class ShopUI {
       this.uiElements.push(tabBg, tabText)
     })
 
-    // Items list - ABSOLUTE positions!
+    // Items list - SCROLLABLE!
     const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
     const startY = centerY - 120
     const itemHeight = 70
+    this.scrollOffset = 0
+    this.scrollableItems = []
+
+    // Add scroll hint
+    const scrollHint = this.scene.add.text(centerX, centerY + 240, '🖱️ Scroll with Mouse Wheel', {
+      fontSize: '16px',
+      color: '#95a5a6',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002)
+    scrollHint.disableInteractive()
+    this.uiElements.push(scrollHint)
+
+    // Mouse wheel scroll for shop
+    this.scene.input.on('wheel', (pointer: any, gameObjects: any[], deltaX: number, deltaY: number) => {
+      if (this.isOpen) {
+        this.scrollOffset += deltaY * 0.3
+        const maxScroll = Math.max(0, items.length * itemHeight - 350)
+        this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, maxScroll)
+
+        this.scrollableItems.forEach(el => {
+          const idx = this.scrollableItems.indexOf(el) / 5 // 5 elements per item
+          const baseY = startY + Math.floor(idx) * itemHeight
+          el.setY(baseY - this.scrollOffset)
+        })
+      }
+    })
 
     items.forEach((itemData, index) => {
       const item = itemData.item
@@ -566,6 +618,7 @@ export class ShopUI {
       priceText.disableInteractive()
 
       this.uiElements.push(itemBg, itemText, descText, levelText, priceBg, priceText)
+      this.scrollableItems.push(itemBg, itemText, descText, levelText, priceBg, priceText)
 
       // Make clickable IMMEDIATELY
       if (canBuy) {

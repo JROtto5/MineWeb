@@ -36,6 +36,10 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private casinoZones: any[] = []
   private skillTreeUI: any = null
+  private pauseMenuUI: any[] = []
+  private isPaused = false
+  private skillTreeScrollOffset = 0
+  private skillTreeSkillElements: any[] = []
 
   // Persistent UI elements
   private comboDisplay!: Phaser.GameObjects.Container
@@ -294,7 +298,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Shop (B key)
     this.input.keyboard!.on('keydown-B', () => this.shopUI.toggle())
 
-    // FIX V8: ESC key closes ALL UIs!
+    // ESC key: closes UIs or toggles pause menu
     this.input.keyboard!.on('keydown-ESC', () => {
       if (this.skillTreeUI) {
         this.closeSkillTree()
@@ -302,6 +306,9 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.shopUI.close()
       } else if (this.casinoUI.isOpen) {
         this.casinoUI.close()
+      } else {
+        // Toggle pause menu
+        this.togglePauseMenu()
       }
     })
 
@@ -396,6 +403,21 @@ export default class GameSceneV3 extends Phaser.Scene {
       const moveX = (this.wasd.D.isDown ? 1 : 0) - (this.wasd.A.isDown ? 1 : 0)
       const moveY = (this.wasd.S.isDown ? 1 : 0) - (this.wasd.W.isDown ? 1 : 0)
       this.player.move(moveX, moveY)
+
+      // TESTING: Auto-click (auto shoot at nearest enemy)
+      if (this.player && this.player.hasAutoClick()) {
+        const nearestEnemy = this.getNearestEnemy()
+        if (nearestEnemy) {
+          this.player.shoot(nearestEnemy.x, nearestEnemy.y)
+        }
+      }
+
+      // TESTING: Auto-reload
+      if (this.player && this.player.hasAutoReload()) {
+        if (this.player.currentAmmo <= 0) {
+          this.player.reload()
+        }
+      }
     }
 
     // Weapon system
@@ -415,10 +437,8 @@ export default class GameSceneV3 extends Phaser.Scene {
       }
     })
 
-    // Combo system
-    if (this.comboSystem.update(time)) {
-      this.addKillFeedMessage('Combo ended!', '#f39c12', 2000)
-    }
+    // Combo system (REDUCED POPUPS: removed "Combo ended!" message)
+    this.comboSystem.update(time)
 
     // Update persistent UI
     this.updateComboDisplay()
@@ -536,13 +556,16 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.player.addMoney(money)
       this.player.addXP(xp)
 
-      // Add to kill feed
-      const killColor = combo.combo > 10 ? '#ff6b00' : combo.combo > 5 ? '#f39c12' : '#2ecc71'
-      this.addKillFeedMessage(`+$${money} +${xp}XP (${combo.combo}x)`, killColor, 4000)
+      // REDUCED POPUPS: Only show kill messages for combo milestones or every 10 kills
+      const shouldShowKillMessage = (combo.combo % 5 === 0 && combo.combo >= 5) || this.enemiesKilled % 10 === 0
+      if (shouldShowKillMessage) {
+        const killColor = combo.combo > 10 ? '#ff6b00' : combo.combo > 5 ? '#f39c12' : '#2ecc71'
+        this.addKillFeedMessage(`+$${money} +${xp}XP (${combo.combo}x)`, killColor, 3000)
+      }
 
       // New record?
-      if (combo.isNewRecord && combo.combo >= 5) {
-        this.addKillFeedMessage(`🔥 NEW RECORD: ${combo.combo}! 🔥`, '#ff6b00', 5000)
+      if (combo.isNewRecord && combo.combo >= 10) { // Only show for combo 10+
+        this.addKillFeedMessage(`🔥 NEW RECORD: ${combo.combo}! 🔥`, '#ff6b00', 4000)
       }
 
       // Drop power-up chance
@@ -655,6 +678,34 @@ export default class GameSceneV3 extends Phaser.Scene {
     powerUp.collect(player)
   }
 
+  // TESTING: Helper for auto-click
+  private getNearestEnemy(): any {
+    let nearest = null
+    let minDist = Infinity
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y)
+        if (dist < minDist) {
+          minDist = dist
+          nearest = enemy
+        }
+      }
+    })
+
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, boss.x, boss.y)
+        if (dist < minDist) {
+          minDist = dist
+          nearest = boss
+        }
+      }
+    })
+
+    return nearest
+  }
+
   private checkStageCompletion() {
     const stage = this.stageManager.getCurrentStage()
 
@@ -692,6 +743,88 @@ export default class GameSceneV3 extends Phaser.Scene {
       // GAME WON!
       this.gameWon()
     }
+  }
+
+  // PAUSE MENU
+  private togglePauseMenu() {
+    if (this.isPaused) {
+      this.closePauseMenu()
+    } else {
+      this.showPauseMenu()
+    }
+  }
+
+  private showPauseMenu() {
+    this.isPaused = true
+    this.physics.pause()
+
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    // Dark overlay
+    const overlay = this.add.rectangle(centerX, centerY, screenWidth * 2, screenHeight * 2, 0x000000, 0.85)
+      .setScrollFactor(0).setDepth(15000)
+
+    // Title
+    const title = this.add.text(centerX, centerY - 150, '⏸️ PAUSED', {
+      fontSize: '64px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
+
+    // Stats
+    const stats = this.add.text(centerX, centerY - 60,
+      `Level ${this.player.level} | Money: $${this.player.money} | Stage ${this.stageManager.getCurrentStageNumber()}`,
+      {
+        fontSize: '24px',
+        color: '#f39c12',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
+
+    // Resume button
+    const resumeBg = this.add.rectangle(centerX, centerY + 20, 300, 60, 0x2ecc71)
+      .setScrollFactor(0).setDepth(15001)
+    const resumeLabel = this.add.text(centerX, centerY + 20, 'Resume (ESC)', {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    resumeBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => resumeBg.setFillStyle(0x27ae60))
+      .on('pointerout', () => resumeBg.setFillStyle(0x2ecc71))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.closePauseMenu()
+      })
+
+    // Restart button
+    const restartBg = this.add.rectangle(centerX, centerY + 100, 300, 60, 0xe74c3c)
+      .setScrollFactor(0).setDepth(15001)
+    const restartLabel = this.add.text(centerX, centerY + 100, 'Restart', {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    restartBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => restartBg.setFillStyle(0xc0392b))
+      .on('pointerout', () => restartBg.setFillStyle(0xe74c3c))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.scene.restart()
+      })
+
+    this.pauseMenuUI = [overlay, title, stats, resumeBg, resumeLabel, restartBg, restartLabel]
+  }
+
+  private closePauseMenu() {
+    this.isPaused = false
+    this.physics.resume()
+
+    this.pauseMenuUI.forEach(el => el.destroy())
+    this.pauseMenuUI = []
   }
 
   private gameOver() {
@@ -886,10 +1019,36 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     uiElements.push(title, pointsText)
 
-    // Skills grid - ALL INDEPENDENT!
+    // Skills grid - SCROLLABLE!
     const skills = this.player.skillTree.getAllSkills()
     const startY = centerY - 140
     const gap = 55
+    this.skillTreeScrollOffset = 0
+    this.skillTreeSkillElements = []
+
+    // Add scroll hint
+    const scrollHint = this.add.text(centerX, centerY + 180, '🖱️ Scroll with Mouse Wheel', {
+      fontSize: '16px',
+      color: '#95a5a6',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(9002)
+    scrollHint.disableInteractive()
+    uiElements.push(scrollHint)
+
+    // Mouse wheel scroll
+    this.input.on('wheel', (pointer: any, gameObjects: any[], deltaX: number, deltaY: number) => {
+      if (this.skillTreeUI) {
+        this.skillTreeScrollOffset += deltaY * 0.3
+        // Clamp scroll: can't go above 0, max is (skills.length * gap) - viewable area
+        const maxScroll = Math.max(0, skills.length * gap - 400)
+        this.skillTreeScrollOffset = Phaser.Math.Clamp(this.skillTreeScrollOffset, 0, maxScroll)
+
+        // Update all skill element positions
+        this.skillTreeSkillElements.forEach((el, idx) => {
+          const baseY = startY + Math.floor(idx / 6) * gap
+          el.setY(baseY - this.skillTreeScrollOffset)
+        })
+      }
+    })
 
     skills.forEach((skillData, index) => {
       const skill = skillData.skill
@@ -942,6 +1101,7 @@ export default class GameSceneV3 extends Phaser.Scene {
       upgradeLabel.disableInteractive()
 
       uiElements.push(skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
+      this.skillTreeSkillElements.push(skillBg, skillText, levelText, descText, upgradeBtn, upgradeLabel)
 
       // Make BUTTON clickable immediately!
       if (canUpgrade) {
@@ -958,8 +1118,8 @@ export default class GameSceneV3 extends Phaser.Scene {
               // Sync player skillPoints with skillTree
               this.player.skillPoints = this.player.skillTree.getSkillPoints()
               this.player.applySkillBonuses()
-              this.showBigPopup(`⚡ ${skill.name} Upgraded!`, '#2ecc71')
-              this.cameras.main.flash(200, 50, 255, 50)
+              // REDUCED POPUPS: Removed showBigPopup, only flash
+              this.cameras.main.flash(150, 50, 255, 50)
               this.closeSkillTree()
               this.openSkillTree() // Refresh
             }
