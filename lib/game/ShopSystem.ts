@@ -215,13 +215,13 @@ export class ShopManager {
     return this.getItemLevel(item.id) > 0
   }
 }
-
 export class ShopUI {
   private scene: Phaser.Scene
   private shopManager: ShopManager
   private player: Player
   private isOpen = false
-  private ui: any = null
+  private uiElements: any[] = [] // FIX V11: Store elements like skill tree!
+  private overlay!: Phaser.GameObjects.Rectangle
   private currentCategory: 'weapon' | 'stat' | 'ability' = 'weapon'
 
   constructor(scene: Phaser.Scene, shopManager: ShopManager, player: Player) {
@@ -244,78 +244,69 @@ export class ShopUI {
 
     this.scene.physics.pause()
 
-    // FIX V5: Use screen dimensions for proper positioning!
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
 
-    // Dark overlay - FIX V7: Make interactive to block clicks!
-    const overlay = this.scene.add.rectangle(
-      screenWidth / 2,
-      screenHeight / 2,
+    // Dark overlay - NO interactive!
+    this.overlay = this.scene.add.rectangle(
+      centerX,
+      centerY,
       screenWidth * 2,
       screenHeight * 2,
       0x000000,
       0.85
     ).setScrollFactor(0).setDepth(10000)
 
-    // FIX V10: Don't make overlay interactive - let container handle clicks!
-    // The container (depth 10001) is above overlay (depth 10000), so it will catch clicks first
-    // overlay.setInteractive()
-    //   .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-    //     // Stop event from reaching game world below
-    //     event.stopPropagation()
-    //   })
+    this.uiElements = [this.overlay]
 
-    const container = this.scene.add.container(
-      screenWidth / 2,
-      screenHeight / 2
-    ).setScrollFactor(0).setDepth(10001)
+    // FIX V11: Use ABSOLUTE positioning like skill tree!
 
-    // Title - FIX V7: Disable text interactivity
-    const title = this.scene.add.text(0, -280, '🏪 WEAPON SHOP 🏪', {
+    // Title
+    const title = this.scene.add.text(centerX, centerY - 280, '🏪 WEAPON SHOP 🏪', {
       fontSize: '48px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 5,
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002)
     title.disableInteractive()
+    this.uiElements.push(title)
 
-    // Money display - FIX V7: Disable text interactivity
-    const moneyText = this.scene.add.text(0, -230, `💰 Money: $${this.player.money}`, {
+    // Money display
+    const moneyText = this.scene.add.text(centerX, centerY - 230, `💰 Money: $${this.player.money}`, {
       fontSize: '24px',
       color: '#2ecc71',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10002)
     moneyText.disableInteractive()
+    this.uiElements.push(moneyText)
 
-    // Category tabs - FIX V5: Create tabs OUTSIDE container for proper click handling!
+    // Category tabs - ABSOLUTE positions!
     const categories = [
       { id: 'weapon', name: 'WEAPONS', icon: '💥' },
       { id: 'stat', name: 'STATS', icon: '⚡' },
       { id: 'ability', name: 'ABILITIES', icon: '🌟' },
     ]
 
-    const tabsY = screenHeight / 2 - 180
-    const tabObjects: any[] = []
+    const tabsY = centerY - 180
 
     categories.forEach((cat, index) => {
-      const tabX = screenWidth / 2 + (-200 + index * 200)
+      const tabX = centerX + (-200 + index * 200)
       const isActive = cat.id === this.currentCategory
 
       const tabBg = this.scene.add.rectangle(tabX, tabsY, 180, 50, isActive ? 0xf39c12 : 0x34495e, 1)
-        .setScrollFactor(0)
-        .setDepth(10002) // Above container!
+        .setScrollFactor(0).setDepth(10003)
+      
       const tabText = this.scene.add.text(tabX, tabsY, `${cat.icon} ${cat.name}`, {
         fontSize: '16px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(10003) // Above background!
-      tabText.disableInteractive() // FIX V7: Prevent text from blocking clicks
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
+      tabText.disableInteractive()
 
-      // Make interactive AFTER setting position and depth
+      // Make interactive IMMEDIATELY
       tabBg.setInteractive({ useHandCursor: true })
         .on('pointerover', () => {
           if (!isActive) {
@@ -328,70 +319,70 @@ export class ShopUI {
           }
         })
         .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-          event.stopPropagation() // FIX V7: Stop event from bubbling
+          event.stopPropagation()
           this.currentCategory = cat.id as any
           this.close()
           this.open() // Refresh
         })
 
-      tabObjects.push(tabBg, tabText)
+      this.uiElements.push(tabBg, tabText)
     })
 
-    // Items list - FIX V8: Use RELATIVE positioning for container elements!
+    // Items list - ABSOLUTE positions!
     const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
-    const startY = -120 // RELATIVE to container center!
+    const startY = centerY - 120
     const itemHeight = 70
 
     items.forEach((itemData, index) => {
       const item = itemData.item
-      const relY = startY + index * itemHeight // RELATIVE Y position
+      const absY = startY + index * itemHeight
 
-      // Can afford?
       const canAfford = this.player.money >= itemData.price
       const canBuy = itemData.canUpgrade && canAfford
 
-      // Background - FIX V10: No depth needed in containers!
+      // Background
       const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
-      const itemBg = this.scene.add.rectangle(0, relY, 650, 65, bgColor, 0.9)
+      const itemBg = this.scene.add.rectangle(centerX, absY, 650, 65, bgColor, 0.9)
+        .setScrollFactor(0).setDepth(10003)
 
       // Icon and name
-      const itemText = this.scene.add.text(-300, relY, `${item.icon} ${item.name}`, {
+      const itemText = this.scene.add.text(centerX - 300, absY, `${item.icon} ${item.name}`, {
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004)
       itemText.disableInteractive()
 
       // Description
-      const descText = this.scene.add.text(-300, relY + 20, item.description, {
+      const descText = this.scene.add.text(centerX - 300, absY + 20, item.description, {
         fontSize: '13px',
         color: '#bdc3c7',
-      }).setOrigin(0, 0.5)
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10004)
       descText.disableInteractive()
 
       // Level
-      const levelText = this.scene.add.text(140, relY, `Level: ${itemData.level}/${item.maxLevel}`, {
+      const levelText = this.scene.add.text(centerX + 140, absY, `Level: ${itemData.level}/${item.maxLevel}`, {
         fontSize: '16px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
       levelText.disableInteractive()
 
       // Price button
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
-      const priceBg = this.scene.add.rectangle(260, relY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+      const priceBg = this.scene.add.rectangle(centerX + 260, absY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
+        .setScrollFactor(0).setDepth(10003)
 
-      const priceText = this.scene.add.text(260, relY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
+      const priceText = this.scene.add.text(centerX + 260, absY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5)
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
       priceText.disableInteractive()
 
-      // FIX V9: Add to container FIRST, THEN make interactive!
-      container.add([itemBg, itemText, descText, levelText, priceBg, priceText])
+      this.uiElements.push(itemBg, itemText, descText, levelText, priceBg, priceText)
 
-      // Make clickable AFTER adding to container!
+      // Make clickable IMMEDIATELY
       if (canBuy) {
         itemBg.setInteractive({ useHandCursor: true })
           .on('pointerover', () => {
@@ -416,18 +407,19 @@ export class ShopUI {
       }
     })
 
-    // Close button - FIX V10: No depth needed in containers!
-    const closeBtn = this.scene.add.rectangle(0, 260, 250, 55, 0xe74c3c, 0.9)
-    const closeTxt = this.scene.add.text(0, 260, 'Close (ESC)', {
+    // Close button
+    const closeBtn = this.scene.add.rectangle(centerX, centerY + 260, 250, 55, 0xe74c3c, 0.9)
+      .setScrollFactor(0).setDepth(10003)
+    const closeTxt = this.scene.add.text(centerX, centerY + 260, 'Close (ESC)', {
       fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(10004)
     closeTxt.disableInteractive()
 
-    container.add([title, moneyText, closeBtn, closeTxt])
+    this.uiElements.push(closeBtn, closeTxt)
 
-    // FIX V9: Make interactive AFTER adding to container!
+    // Make close button interactive IMMEDIATELY
     closeBtn.setInteractive({ useHandCursor: true })
       .on('pointerover', () => closeBtn.setFillStyle(0xc0392b, 1))
       .on('pointerout', () => closeBtn.setFillStyle(0xe74c3c, 0.9))
@@ -435,53 +427,40 @@ export class ShopUI {
         event.stopPropagation()
         this.close()
       })
-
-    this.ui = { overlay, container, tabObjects }
   }
-
   private buyItem(itemId: string) {
     const price = this.shopManager.getPrice(itemId)
-
-    if (this.shopManager.canPurchase(itemId, this.player.money)) {
-      this.player.money -= price
+    if (this.player.money >= price) {
       this.shopManager.purchase(itemId)
+      this.player.addMoney(-price)
+
+      const item = SHOP_ITEMS.find(i => i.id === itemId)!
+      this.emitMessage(`✅ Purchased ${item.icon} ${item.name}!`, 'success')
+
+      const screenWidth = this.scene.scale.width
+      const screenHeight = this.scene.scale.height
+      this.showPurchasePopup(screenWidth / 2, screenHeight / 2 - 50, item.name)
+      this.createPurchaseParticles(screenWidth / 2, screenHeight / 2 - 50, 0x2ecc71)
+
       this.player.applyShopBonuses(this.shopManager)
-
-      // Get item for feedback
-      const item = SHOP_ITEMS.find(i => i.id === itemId)
-      if (item) {
-        // FIX V6: BIG POPUP + Flash + Particles!
-        this.showBigPopup(`${item.icon} ${item.name} Purchased!`, '#2ecc71')
-        this.scene.cameras.main.flash(200, 50, 255, 50)
-
-        // Create particle burst at center
-        this.createPurchaseParticles(this.scene.scale.width / 2, this.scene.scale.height / 2, 0x2ecc71)
-
-        this.emitMessage(`✅ Purchased ${item.name}!`, 'success')
-      }
-
-      // Refresh shop
       this.close()
-      this.open()
+      this.open() // Refresh
     }
   }
 
-  // FIX V6: Big popup notification for purchases!
-  private showBigPopup(text: string, color: string) {
+  private showPurchasePopup(x: number, y: number, itemName: string) {
     const popup = this.scene.add.text(
-      this.scene.scale.width / 2,
-      this.scene.scale.height / 2 - 100,
-      text,
+      x, y,
+      `✨ ${itemName} Upgraded! ✨`,
       {
-        fontSize: '42px',
-        color: color,
+        fontSize: '32px',
+        color: '#2ecc71',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 6,
       }
     ).setOrigin(0.5).setScrollFactor(0).setDepth(15000)
 
-    // Scale up and fade out
     this.scene.tweens.add({
       targets: popup,
       scale: 1.5,
@@ -492,7 +471,6 @@ export class ShopUI {
     })
   }
 
-  // FIX V6: Particle effects for purchases!
   private createPurchaseParticles(x: number, y: number, color: number) {
     for (let i = 0; i < 20; i++) {
       const angle = (i / 20) * Math.PI * 2
@@ -521,15 +499,9 @@ export class ShopUI {
 
     this.scene.physics.resume()
 
-    if (this.ui) {
-      this.ui.overlay.destroy()
-      this.ui.container.destroy()
-      // FIX V5: Destroy tab objects too!
-      if (this.ui.tabObjects) {
-        this.ui.tabObjects.forEach((obj: any) => obj.destroy())
-      }
-      this.ui = null
-    }
+    // FIX V11: Destroy all elements like skill tree!
+    this.uiElements.forEach(el => el.destroy())
+    this.uiElements = []
   }
 
   isShopOpen(): boolean {
