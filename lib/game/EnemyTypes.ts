@@ -1,0 +1,435 @@
+import Phaser from 'phaser'
+import Player from './Player'
+
+export enum EnemyType {
+  GRUNT = 'grunt',
+  SCOUT = 'scout',
+  TANK = 'tank',
+  SNIPER = 'sniper',
+  BERSERKER = 'berserker',
+  BOSS = 'boss',
+}
+
+export interface EnemyStats {
+  health: number
+  speed: number
+  damage: number
+  attackRange: number
+  attackSpeed: number
+  moneyDrop: [number, number]
+  xpDrop: [number, number]
+  color: number
+  size: number
+  behavior: 'chase' | 'ranged' | 'tank' | 'fast' | 'berserker'
+}
+
+export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
+  [EnemyType.GRUNT]: {
+    health: 50,
+    speed: 80,
+    damage: 5,
+    attackRange: 300,
+    attackSpeed: 1000,
+    moneyDrop: [10, 30],
+    xpDrop: [5, 15],
+    color: 0xe74c3c,
+    size: 16,
+    behavior: 'chase',
+  },
+  [EnemyType.SCOUT]: {
+    health: 30,
+    speed: 150,
+    damage: 3,
+    attackRange: 250,
+    attackSpeed: 500,
+    moneyDrop: [15, 35],
+    xpDrop: [8, 18],
+    color: 0xf39c12,
+    size: 12,
+    behavior: 'fast',
+  },
+  [EnemyType.TANK]: {
+    health: 200,
+    speed: 40,
+    damage: 15,
+    attackRange: 350,
+    attackSpeed: 2000,
+    moneyDrop: [30, 80],
+    xpDrop: [25, 50],
+    color: 0x8e44ad,
+    size: 24,
+    behavior: 'tank',
+  },
+  [EnemyType.SNIPER]: {
+    health: 40,
+    speed: 60,
+    damage: 25,
+    attackRange: 600,
+    attackSpeed: 3000,
+    moneyDrop: [20, 50],
+    xpDrop: [15, 30],
+    color: 0x16a085,
+    size: 14,
+    behavior: 'ranged',
+  },
+  [EnemyType.BERSERKER]: {
+    health: 100,
+    speed: 120,
+    damage: 20,
+    attackRange: 400,
+    attackSpeed: 600,
+    moneyDrop: [40, 90],
+    xpDrop: [30, 60],
+    color: 0xc0392b,
+    size: 20,
+    behavior: 'berserker',
+  },
+  [EnemyType.BOSS]: {
+    health: 500,
+    speed: 60,
+    damage: 30,
+    attackRange: 500,
+    attackSpeed: 1500,
+    moneyDrop: [200, 500],
+    xpDrop: [100, 200],
+    color: 0xe67e22,
+    size: 40,
+    behavior: 'tank',
+  },
+}
+
+export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
+  private health: number
+  private maxHealth: number
+  private speed: number
+  private damage: number
+  private attackRange: number
+  private attackSpeed: number
+  private lastAttack = 0
+  private moneyDrop: [number, number]
+  private xpDrop: [number, number]
+  private behavior: string
+  private healthBar!: Phaser.GameObjects.Graphics
+  private nameTag!: Phaser.GameObjects.Text
+  private enemyType: EnemyType
+  private enraged = false
+
+  constructor(
+    scene: Phaser.Scene,
+    x: number,
+    y: number,
+    type: EnemyType = EnemyType.GRUNT
+  ) {
+    super(scene, x, y, '')
+
+    const stats = ENEMY_STATS[type]
+    this.enemyType = type
+    this.health = stats.health
+    this.maxHealth = stats.health
+    this.speed = stats.speed
+    this.damage = stats.damage
+    this.attackRange = stats.attackRange
+    this.attackSpeed = stats.attackSpeed
+    this.moneyDrop = stats.moneyDrop
+    this.xpDrop = stats.xpDrop
+    this.behavior = stats.behavior
+
+    scene.add.existing(this)
+    scene.physics.add.existing(this)
+
+    // Create visual
+    this.createVisual(stats.color, stats.size)
+
+    // Set up physics
+    this.setCollideWorldBounds(true)
+    this.setSize(stats.size * 2, stats.size * 2)
+
+    // Create health bar
+    this.healthBar = scene.add.graphics()
+
+    // Create name tag
+    const typeNames = {
+      [EnemyType.GRUNT]: 'Grunt',
+      [EnemyType.SCOUT]: 'Scout',
+      [EnemyType.TANK]: 'Tank',
+      [EnemyType.SNIPER]: 'Sniper',
+      [EnemyType.BERSERKER]: 'Berserker',
+      [EnemyType.BOSS]: '💀 BOSS 💀',
+    }
+
+    this.nameTag = scene.add.text(x, y - 35, typeNames[type], {
+      fontSize: type === EnemyType.BOSS ? '16px' : '10px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setOrigin(0.5)
+
+    this.updateHealthBar()
+  }
+
+  private createVisual(color: number, size: number) {
+    const graphics = this.scene.make.graphics({ x: 0, y: 0 }, false)
+
+    // Body
+    graphics.fillStyle(color, 1)
+    graphics.fillCircle(size, size, size)
+
+    // Eyes (angry)
+    graphics.fillStyle(0xffffff, 1)
+    const eyeSize = Math.max(2, size / 5)
+    graphics.fillCircle(size - eyeSize * 1.5, size - eyeSize, eyeSize)
+    graphics.fillCircle(size + eyeSize * 1.5, size - eyeSize, eyeSize)
+
+    // Pupils (red)
+    graphics.fillStyle(0xff0000, 1)
+    graphics.fillCircle(size - eyeSize * 1.5, size - eyeSize, eyeSize * 0.7)
+    graphics.fillCircle(size + eyeSize * 1.5, size - eyeSize, eyeSize * 0.7)
+
+    // Special markers for types
+    if (this.enemyType === EnemyType.TANK) {
+      // Armor lines
+      graphics.lineStyle(2, 0x000000, 1)
+      graphics.strokeCircle(size, size, size - 2)
+      graphics.strokeCircle(size, size, size - 5)
+    } else if (this.enemyType === EnemyType.SNIPER) {
+      // Scope crosshair
+      graphics.lineStyle(1, 0x00ff00, 0.8)
+      graphics.lineBetween(size - 8, size, size + 8, size)
+      graphics.lineBetween(size, size - 8, size, size + 8)
+    } else if (this.enemyType === EnemyType.BERSERKER) {
+      // Angry mouth
+      graphics.lineStyle(2, 0x000000, 1)
+      graphics.strokeCircle(size, size + eyeSize * 2, 4)
+    } else if (this.enemyType === EnemyType.BOSS) {
+      // Crown
+      graphics.fillStyle(0xf1c40f, 1)
+      graphics.fillTriangle(
+        size - size / 2, size - size,
+        size - size / 3, size - size * 1.3,
+        size - size / 6, size - size
+      )
+      graphics.fillTriangle(
+        size - size / 6, size - size,
+        size, size - size * 1.5,
+        size + size / 6, size - size
+      )
+      graphics.fillTriangle(
+        size + size / 6, size - size,
+        size + size / 3, size - size * 1.3,
+        size + size / 2, size - size
+      )
+    }
+
+    const textureName = `enemy_${this.enemyType}`
+    graphics.generateTexture(textureName, size * 2, size * 2)
+    graphics.destroy()
+
+    this.setTexture(textureName)
+  }
+
+  update(player: Player, weaponSystem?: any) {
+    if (!player || !player.active) return
+
+    const distance = Phaser.Math.Distance.Between(
+      this.x,
+      this.y,
+      player.x,
+      player.y
+    )
+
+    // Behavior logic
+    switch (this.behavior) {
+      case 'chase':
+        this.chasePlayer(player, distance)
+        break
+      case 'fast':
+        this.fastChasePlayer(player, distance)
+        break
+      case 'tank':
+        this.slowChasePlayer(player, distance)
+        break
+      case 'ranged':
+        this.rangedBehavior(player, distance, weaponSystem)
+        break
+      case 'berserker':
+        this.berserkerBehavior(player, distance)
+        break
+    }
+
+    // Update health bar and name tag
+    this.updateHealthBar()
+    this.nameTag.setPosition(this.x, this.y - (this.enemyType === EnemyType.BOSS ? 50 : 35))
+  }
+
+  private chasePlayer(player: Player, distance: number) {
+    if (distance < this.attackRange) {
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y)
+      this.setVelocity(
+        Math.cos(angle) * this.speed,
+        Math.sin(angle) * this.speed
+      )
+      this.setRotation(angle + Math.PI / 2)
+    } else {
+      this.setVelocity(0, 0)
+    }
+  }
+
+  private fastChasePlayer(player: Player, distance: number) {
+    // Scouts dart in and out
+    if (distance < this.attackRange && distance > 100) {
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y)
+      this.setVelocity(
+        Math.cos(angle) * this.speed,
+        Math.sin(angle) * this.speed
+      )
+      this.setRotation(angle + Math.PI / 2)
+    } else if (distance <= 100) {
+      // Too close, back away
+      const angle = Phaser.Math.Angle.Between(player.x, player.y, this.x, this.y)
+      this.setVelocity(
+        Math.cos(angle) * this.speed * 0.7,
+        Math.sin(angle) * this.speed * 0.7
+      )
+      this.setRotation(angle + Math.PI / 2)
+    } else {
+      this.setVelocity(0, 0)
+    }
+  }
+
+  private slowChasePlayer(player: Player, distance: number) {
+    if (distance < this.attackRange) {
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y)
+      this.setVelocity(
+        Math.cos(angle) * this.speed,
+        Math.sin(angle) * this.speed
+      )
+      this.setRotation(angle + Math.PI / 2)
+    } else {
+      this.setVelocity(0, 0)
+    }
+  }
+
+  private rangedBehavior(player: Player, distance: number, weaponSystem: any) {
+    // Keep distance and shoot
+    if (distance < 400) {
+      // Too close, back away
+      const angle = Phaser.Math.Angle.Between(player.x, player.y, this.x, this.y)
+      this.setVelocity(
+        Math.cos(angle) * this.speed,
+        Math.sin(angle) * this.speed
+      )
+      this.setRotation(angle + Math.PI / 2)
+    } else if (distance < this.attackRange) {
+      this.setVelocity(0, 0)
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y)
+      this.setRotation(angle + Math.PI / 2)
+
+      // Shoot at player
+      if (weaponSystem && this.scene.time.now - this.lastAttack > this.attackSpeed) {
+        this.lastAttack = this.scene.time.now
+        weaponSystem.fireEnemyBullet(this.x, this.y, angle, this.damage)
+      }
+    }
+  }
+
+  private berserkerBehavior(player: Player, distance: number) {
+    // Gets faster as health decreases
+    const healthPercent = this.health / this.maxHealth
+    if (healthPercent < 0.5 && !this.enraged) {
+      this.enraged = true
+      this.speed *= 1.5
+      this.setTint(0xff0000)
+    }
+
+    if (distance < this.attackRange) {
+      const angle = Phaser.Math.Angle.Between(this.x, this.y, player.x, player.y)
+      this.setVelocity(
+        Math.cos(angle) * this.speed,
+        Math.sin(angle) * this.speed
+      )
+      this.setRotation(angle + Math.PI / 2)
+    }
+  }
+
+  takeDamage(amount: number): boolean {
+    this.health -= amount
+    if (this.health < 0) this.health = 0
+
+    // Visual feedback
+    this.setTint(0xffffff)
+    this.scene.time.delayedCall(100, () => {
+      if (this.active) {
+        if (this.enraged) {
+          this.setTint(0xff0000)
+        } else {
+          this.clearTint()
+        }
+      }
+    })
+
+    this.updateHealthBar()
+
+    // Return true if killed
+    return this.health <= 0
+  }
+
+  isDead(): boolean {
+    return this.health <= 0
+  }
+
+  getMoneyDrop(): number {
+    return Phaser.Math.Between(this.moneyDrop[0], this.moneyDrop[1])
+  }
+
+  getXPDrop(): number {
+    return Phaser.Math.Between(this.xpDrop[0], this.xpDrop[1])
+  }
+
+  getDamage(): number {
+    return this.damage
+  }
+
+  isBoss(): boolean {
+    return this.enemyType === EnemyType.BOSS
+  }
+
+  private updateHealthBar() {
+    this.healthBar.clear()
+
+    if (this.health > 0 && this.health < this.maxHealth) {
+      const barWidth = this.enemyType === EnemyType.BOSS ? 80 : 40
+      const barHeight = this.enemyType === EnemyType.BOSS ? 6 : 4
+      const yOffset = this.enemyType === EnemyType.BOSS ? 35 : 25
+
+      // Background
+      this.healthBar.fillStyle(0x000000, 0.5)
+      this.healthBar.fillRect(
+        this.x - barWidth / 2,
+        this.y - yOffset,
+        barWidth,
+        barHeight
+      )
+
+      // Health
+      const healthPercent = this.health / this.maxHealth
+      let healthColor = 0xe74c3c
+      if (healthPercent > 0.6) healthColor = 0x2ecc71
+      else if (healthPercent > 0.3) healthColor = 0xf39c12
+
+      this.healthBar.fillStyle(healthColor, 1)
+      this.healthBar.fillRect(
+        this.x - barWidth / 2,
+        this.y - yOffset,
+        barWidth * healthPercent,
+        barHeight
+      )
+    }
+  }
+
+  destroy(fromScene?: boolean) {
+    this.healthBar.destroy()
+    this.nameTag.destroy()
+    super.destroy(fromScene)
+  }
+}

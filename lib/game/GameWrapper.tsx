@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
-import GameScene from './GameScene'
+import GameSceneV2 from './GameSceneV2'
 
 export default function GameWrapper() {
   const gameRef = useRef<Phaser.Game | null>(null)
@@ -23,7 +23,7 @@ export default function GameWrapper() {
           debug: false,
         },
       },
-      scene: [GameScene],
+      scene: [GameSceneV2],
       scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,

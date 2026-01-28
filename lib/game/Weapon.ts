@@ -54,9 +54,16 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
 
 export class WeaponSystem {
   public bullets: Phaser.GameObjects.Group
+  public enemyBullets: Phaser.GameObjects.Group
 
   constructor(private scene: Phaser.Scene) {
     this.bullets = scene.add.group({
+      classType: Bullet,
+      maxSize: 200,
+      runChildUpdate: false,
+    })
+
+    this.enemyBullets = scene.add.group({
       classType: Bullet,
       maxSize: 100,
       runChildUpdate: false,
@@ -75,12 +82,25 @@ export class WeaponSystem {
     }
   }
 
-  private createMuzzleFlash(x: number, y: number, angle: number) {
+  fireEnemyBullet(x: number, y: number, angle: number, damage: number) {
+    const bullet = this.enemyBullets.get(x, y, '', undefined, true) as Bullet
+
+    if (bullet) {
+      bullet.damage = damage
+      bullet.fire(angle)
+      bullet.setTint(0xff0000) // Red bullets for enemies
+
+      // Different muzzle flash
+      this.createMuzzleFlash(x, y, angle, 0xff0000)
+    }
+  }
+
+  private createMuzzleFlash(x: number, y: number, angle: number, color: number = 0xffff00) {
     const flash = this.scene.add.circle(
       x + Math.cos(angle) * 20,
       y + Math.sin(angle) * 20,
       8,
-      0xffff00,
+      color,
       0.8
     )
 
@@ -95,20 +115,25 @@ export class WeaponSystem {
 
   update(time: number, delta: number) {
     // Clean up off-screen bullets
-    this.bullets.children.entries.forEach((bullet: any) => {
-      if (bullet.active) {
-        const cam = this.scene.cameras.main
-        const worldView = cam.worldView
+    const cleanupBullets = (group: Phaser.GameObjects.Group) => {
+      group.children.entries.forEach((bullet: any) => {
+        if (bullet.active) {
+          const cam = this.scene.cameras.main
+          const worldView = cam.worldView
 
-        if (
-          bullet.x < worldView.x - 100 ||
-          bullet.x > worldView.x + worldView.width + 100 ||
-          bullet.y < worldView.y - 100 ||
-          bullet.y > worldView.y + worldView.height + 100
-        ) {
-          bullet.destroy()
+          if (
+            bullet.x < worldView.x - 100 ||
+            bullet.x > worldView.x + worldView.width + 100 ||
+            bullet.y < worldView.y - 100 ||
+            bullet.y > worldView.y + worldView.height + 100
+          ) {
+            bullet.destroy()
+          }
         }
-      }
-    })
+      })
+    }
+
+    cleanupBullets(this.bullets)
+    cleanupBullets(this.enemyBullets)
   }
 }

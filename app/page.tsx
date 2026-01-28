@@ -27,6 +27,9 @@ export default function Home() {
     xp: 0,
     level: 1,
     weapon: 'Pistol',
+    skillPoints: 0,
+    combo: 0,
+    bestCombo: 0,
   })
 
   const [currentMission, setCurrentMission] = useState({
@@ -102,6 +105,20 @@ export default function Home() {
             </div>
             <div className="stat-value">XP: {gameStats.xp}</div>
           </div>
+
+          {gameStats.skillPoints > 0 && (
+            <div className="stat-bar" style={{ marginTop: '10px' }}>
+              <div className="stat-label" style={{ color: '#f39c12' }}>⚡ Skill Points: {gameStats.skillPoints}</div>
+              <div className="stat-value" style={{ color: '#f39c12' }}>Press T to upgrade!</div>
+            </div>
+          )}
+
+          {gameStats.combo > 0 && (
+            <div className="stat-bar" style={{ marginTop: '10px' }}>
+              <div className="stat-label" style={{ color: '#e74c3c' }}>🔥 COMBO: {gameStats.combo}x</div>
+              <div className="stat-value">Best: {gameStats.bestCombo}</div>
+            </div>
+          )}
         </div>
 
         {/* Money */}
@@ -127,9 +144,10 @@ export default function Home() {
           <div className="control-line">WASD - Move</div>
           <div className="control-line">Mouse - Aim</div>
           <div className="control-line">Left Click - Shoot</div>
-          <div className="control-line">E - Interact</div>
-          <div className="control-line">R - Reload</div>
           <div className="control-line">1-3 - Switch Weapon</div>
+          <div className="control-line">R - Reload</div>
+          <div className="control-line">E - Casino</div>
+          <div className="control-line" style={{ color: '#f39c12' }}>T - Skill Tree</div>
         </div>
 
         {/* Messages */}
