@@ -562,10 +562,19 @@ export class ShopUI {
         const maxScroll = Math.max(0, items.length * itemHeight - 350)
         this.scrollOffset = Phaser.Math.Clamp(this.scrollOffset, 0, maxScroll)
 
+        // Visibility clipping bounds
+        const visibleTop = centerY - 150
+        const visibleBottom = centerY + 200
+
         this.scrollableItems.forEach(el => {
           const idx = this.scrollableItems.indexOf(el) / 5 // 5 elements per item
           const baseY = startY + Math.floor(idx) * itemHeight
-          el.setY(baseY - this.scrollOffset)
+          const newY = baseY - this.scrollOffset
+          el.setY(newY)
+
+          // Hide elements outside visible bounds to prevent overlap
+          const isVisible = newY >= visibleTop - 35 && newY <= visibleBottom + 35
+          el.setVisible(isVisible)
         })
       }
     })

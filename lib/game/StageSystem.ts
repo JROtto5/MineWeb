@@ -19,8 +19,8 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 1,
     name: 'BACKSTREETS',
-    enemyCount: 50, // V6: More enemies + VARIETY!
-    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT], // V6: Added Scouts for variety!
+    enemyCount: 30, // FAST-PACED: Reduced for quicker stages!
+    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT],
     bossEnabled: false,
     moneyReward: 200,
     xpReward: 100,
@@ -30,8 +30,8 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 2,
     name: 'WAREHOUSE DISTRICT',
-    enemyCount: 60, // V6: Even more variety!
-    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK], // V6: Added Tanks early!
+    enemyCount: 35, // FAST-PACED: Boss spawns at kill 21!
+    enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK],
     bossEnabled: true,
     moneyReward: 400,
     xpReward: 200,
@@ -41,7 +41,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 3,
     name: 'DOWNTOWN CHAOS',
-    enemyCount: 70, // V5: DOUBLED! (was 35)
+    enemyCount: 40,
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK],
     bossEnabled: true,
     moneyReward: 600,
@@ -53,7 +53,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 4,
     name: 'INDUSTRIAL COMPLEX',
-    enemyCount: 80, // V5: DOUBLED! (was 40)
+    enemyCount: 45,
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER],
     bossEnabled: true,
     moneyReward: 800,
@@ -64,7 +64,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 5,
     name: 'CASINO ROYALE',
-    enemyCount: 90, // V5: DOUBLED! (was 45)
+    enemyCount: 50,
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
     moneyReward: 1000,
@@ -76,7 +76,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 6,
     name: 'ROOFTOP RUMBLE',
-    enemyCount: 100, // V5: DOUBLED! (was 50)
+    enemyCount: 55,
     enemyTypes: [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
     moneyReward: 1300,
@@ -88,7 +88,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 7,
     name: 'UNDERGROUND ARENA',
-    enemyCount: 110, // V5: DOUBLED! (was 55)
+    enemyCount: 60,
     enemyTypes: [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
     moneyReward: 1800,
@@ -99,7 +99,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 8,
     name: 'HARBOR HEIST',
-    enemyCount: 120, // V5: DOUBLED! (was 60)
+    enemyCount: 70,
     enemyTypes: [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
     moneyReward: 2500,
@@ -111,7 +111,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 9,
     name: 'SKYSCRAPER SHOWDOWN',
-    enemyCount: 140, // V5: DOUBLED! (was 70)
+    enemyCount: 80,
     enemyTypes: [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER],
     bossEnabled: true,
     moneyReward: 4000,
@@ -124,7 +124,7 @@ export const STAGES: StageConfig[] = [
   {
     stageNumber: 10,
     name: '💀 FINAL BOSS GAUNTLET 💀',
-    enemyCount: 150, // V5: ALMOST DOUBLED! (was 80) - EPIC FINALE!
+    enemyCount: 100, // Epic finale but still manageable
     enemyTypes: [EnemyType.BOSS],
     bossEnabled: true,
     moneyReward: 20000,

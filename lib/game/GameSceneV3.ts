@@ -150,6 +150,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     }
   }
 
+  private abilityHotbarUI: any[] = []
+  private enemyTrackerUI: any = null
+
   private createPersistentUI() {
     // Combo display (always visible when combo > 0)
     this.comboDisplay = this.add.container(0, 0).setDepth(5000).setScrollFactor(0)
@@ -167,6 +170,12 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Kill feed (top right, shows last 5 kills)
     this.killFeedContainer = this.add.container(0, 0).setDepth(5000).setScrollFactor(0)
+
+    // WOW-STYLE ABILITY HOTBAR (bottom center)
+    this.createAbilityHotbar()
+
+    // PERSISTENT ENEMY TRACKER (always visible)
+    this.createEnemyTracker()
   }
 
   private updateComboDisplay() {
@@ -265,6 +274,190 @@ export default class GameSceneV3 extends Phaser.Scene {
         ease: 'Sine.easeOut',
       })
     })
+  }
+
+  private createAbilityHotbar() {
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const slotSize = 60
+    const slotGap = 10
+    const totalSlots = 9
+    const startX = (screenWidth - (totalSlots * (slotSize + slotGap) - slotGap)) / 2
+    const barY = screenHeight - 100
+
+    const abilities = [
+      { key: '1', name: 'Dash', icon: '💨', cooldown: 3000, check: () => this.player.canDash() },
+      { key: '2', name: 'Shield', icon: '🛡️', cooldown: 15000, check: () => this.player.canActivateShield() },
+      { key: '3', name: 'Time Slow', icon: '⏰', cooldown: 20000, check: () => this.player.canActivateTimeSlow() },
+    ]
+
+    for (let i = 0; i < totalSlots; i++) {
+      const x = startX + i * (slotSize + slotGap)
+      const ability = abilities[i]
+
+      // Slot background
+      const slotBg = this.add.rectangle(x, barY, slotSize, slotSize, 0x000000, 0.7)
+        .setScrollFactor(0).setDepth(5000)
+
+      // Slot border
+      const slotBorder = this.add.rectangle(x, barY, slotSize, slotSize)
+        .setStrokeStyle(3, 0x444444)
+        .setScrollFactor(0).setDepth(5001)
+
+      // Key number
+      const keyText = this.add.text(x - 22, barY - 22, (i + 1).toString(), {
+        fontSize: '14px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0, 0).setScrollFactor(0).setDepth(5003)
+
+      if (ability) {
+        // Ability icon
+        const icon = this.add.text(x, barY, ability.icon, {
+          fontSize: '32px',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(5002)
+
+        // Cooldown overlay (hidden initially)
+        const cooldownOverlay = this.add.rectangle(x, barY, slotSize, slotSize, 0x000000, 0.7)
+          .setScrollFactor(0).setDepth(5002).setVisible(false)
+
+        // Cooldown text (hidden initially)
+        const cooldownText = this.add.text(x, barY, '', {
+          fontSize: '20px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(5003).setVisible(false)
+
+        this.abilityHotbarUI.push({
+          slotBg,
+          slotBorder,
+          keyText,
+          icon,
+          cooldownOverlay,
+          cooldownText,
+          ability,
+        })
+      } else {
+        // Empty slot
+        const emptyText = this.add.text(x, barY, '—', {
+          fontSize: '24px',
+          color: '#666666',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(5002)
+
+        this.abilityHotbarUI.push({
+          slotBg,
+          slotBorder,
+          keyText,
+          emptyText,
+        })
+      }
+    }
+  }
+
+  private updateAbilityHotbar() {
+    const currentTime = this.time.now
+
+    this.abilityHotbarUI.forEach((slot: any) => {
+      if (!slot.ability) return
+
+      const canUse = slot.ability.check()
+
+      if (canUse) {
+        // Ability ready - highlight border
+        slot.slotBorder.setStrokeStyle(3, 0x2ecc71)
+        slot.cooldownOverlay.setVisible(false)
+        slot.cooldownText.setVisible(false)
+      } else {
+        // On cooldown - show overlay
+        slot.slotBorder.setStrokeStyle(3, 0x444444)
+        slot.cooldownOverlay.setVisible(true)
+        slot.cooldownText.setVisible(true)
+
+        // Calculate remaining cooldown (approximate)
+        // Note: This is a simplified version - actual cooldown tracking would need to be improved
+        const cdText = '...'
+        slot.cooldownText.setText(cdText)
+      }
+    })
+  }
+
+  private createEnemyTracker() {
+    const screenWidth = this.scale.width
+
+    // Background panel
+    const bg = this.add.rectangle(screenWidth - 150, 150, 280, 100, 0x000000, 0.8)
+      .setScrollFactor(0).setDepth(5000)
+
+    // Title
+    const title = this.add.text(screenWidth - 150, 120, '🎯 NEAREST ENEMY', {
+      fontSize: '16px',
+      color: '#f39c12',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(5001)
+
+    // Distance text
+    const distText = this.add.text(screenWidth - 150, 150, '---', {
+      fontSize: '32px',
+      color: '#e74c3c',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(5001)
+
+    // Direction arrow
+    const arrow = this.add.triangle(screenWidth - 150, 175, 0, -10, -8, 10, 8, 10, 0xff0000)
+      .setScrollFactor(0).setDepth(5001)
+
+    this.enemyTrackerUI = { bg, title, distText, arrow }
+  }
+
+  private updateEnemyTracker() {
+    if (!this.enemyTrackerUI) return
+
+    // Find nearest enemy
+    let nearest: any = null
+    let minDist = Infinity
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y)
+        if (dist < minDist) {
+          minDist = dist
+          nearest = enemy
+        }
+      }
+    })
+
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, boss.x, boss.y)
+        if (dist < minDist) {
+          minDist = dist
+          nearest = boss
+        }
+      }
+    })
+
+    if (nearest) {
+      // Update distance
+      const distMeters = Math.floor(minDist)
+      this.enemyTrackerUI.distText.setText(`${distMeters}m`)
+
+      // Update arrow direction
+      const angle = Phaser.Math.Angle.Between(this.player.x, this.player.y, nearest.x, nearest.y)
+      this.enemyTrackerUI.arrow.setRotation(angle + Math.PI / 2)
+
+      // Color based on distance
+      if (distMeters < 200) {
+        this.enemyTrackerUI.distText.setColor('#e74c3c') // Red - close
+      } else if (distMeters < 500) {
+        this.enemyTrackerUI.distText.setColor('#f39c12') // Orange - medium
+      } else {
+        this.enemyTrackerUI.distText.setColor('#3498db') // Blue - far
+      }
+    } else {
+      // No enemies
+      this.enemyTrackerUI.distText.setText('---')
+      this.enemyTrackerUI.distText.setColor('#666666')
+    }
   }
 
   private setupInput() {
@@ -474,6 +667,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Update persistent UI
     this.updateComboDisplay()
     this.updateKillFeed()
+    this.updateAbilityHotbar()
+    this.updateEnemyTracker()
 
     // Check stage completion
     if (!this.stageCompleted) {
@@ -567,9 +762,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     // CREATIVE EXPANSION: Clear existing bosses!
     this.bosses.clear(true, true)
 
-    // Spawn regular enemies
-    const regularCount = stage.bossEnabled ? stage.enemyCount - 1 : stage.enemyCount
-    this.spawnEnemies(regularCount, stage.enemyTypes)
+    // Spawn ALL enemies (including boss count)
+    this.spawnEnemies(stage.enemyCount, stage.enemyTypes)
 
     // Update background
     this.createStageBackground()
@@ -829,8 +1023,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   private checkStageCompletion() {
     const stage = this.stageManager.getCurrentStage()
 
-    // Spawn boss when almost done
-    if (stage.bossEnabled && !this.bossSpawned && this.enemiesKilled >= this.totalEnemies - 1) {
+    // FAST-PACED: Spawn boss at 60% completion instead of 95%!
+    const bossSpawnThreshold = Math.floor(this.totalEnemies * 0.6)
+    if (stage.bossEnabled && !this.bossSpawned && this.enemiesKilled >= bossSpawnThreshold) {
       this.spawnBoss()
     }
 
@@ -1217,10 +1412,18 @@ export default class GameSceneV3 extends Phaser.Scene {
         const maxScroll = Math.max(0, skills.length * gap - 400)
         this.skillTreeScrollOffset = Phaser.Math.Clamp(this.skillTreeScrollOffset, 0, maxScroll)
 
-        // Update all skill element positions
+        // Update all skill element positions with visibility clipping
+        const visibleTop = centerY - 150
+        const visibleBottom = centerY + 200
+
         this.skillTreeSkillElements.forEach((el, idx) => {
           const baseY = startY + Math.floor(idx / 6) * gap
-          el.setY(baseY - this.skillTreeScrollOffset)
+          const newY = baseY - this.skillTreeScrollOffset
+          el.setY(newY)
+
+          // Hide elements outside visible bounds to prevent overlap
+          const isVisible = newY >= visibleTop - 30 && newY <= visibleBottom + 30
+          el.setVisible(isVisible)
         })
       }
     })

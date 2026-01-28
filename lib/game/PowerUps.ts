@@ -114,31 +114,24 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
     switch (this.powerUpType) {
       case PowerUpType.HEALTH:
         player.heal(config.value!)
-        this.emitMessage(`+${config.value} Health!`, 'success')
         break
       case PowerUpType.AMMO:
         player.addAmmo(config.value!)
-        this.emitMessage(`+${config.value} Ammo!`, 'success')
         break
       case PowerUpType.DAMAGE_BOOST:
         player.activateDamageBoost(config.duration!)
-        this.emitMessage('Damage Boost Activated!', 'success')
         break
       case PowerUpType.SPEED_BOOST:
         player.activateSpeedBoost(config.duration!)
-        this.emitMessage('Speed Boost Activated!', 'success')
         break
       case PowerUpType.INVINCIBILITY:
         player.activateInvincibility(config.duration!)
-        this.emitMessage('Invincibility Activated!', 'success')
         break
       case PowerUpType.MULTI_SHOT:
         player.activateMultiShot(config.duration!)
-        this.emitMessage('Multi-Shot Activated!', 'success')
         break
       case PowerUpType.RAPID_FIRE:
         player.activateRapidFire(config.duration!)
-        this.emitMessage('Rapid Fire Activated!', 'success')
         break
     }
 
