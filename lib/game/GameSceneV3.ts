@@ -40,6 +40,7 @@ export default class GameSceneV3 extends Phaser.Scene {
   private isPaused = false
   private skillTreeScrollOffset = 0
   private skillTreeSkillElements: any[] = []
+  private enemyLocators: any[] = []
 
   // Persistent UI elements
   private comboDisplay!: Phaser.GameObjects.Container
@@ -268,20 +269,26 @@ export default class GameSceneV3 extends Phaser.Scene {
       }
     })
 
-    // Weapon switching - FIX V8: Block when UI open!
+    // ROGUELIKE: Ability Hotbar (keys 1-9)!
     this.input.keyboard!.on('keydown-ONE', () => {
       if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
-        this.player.switchWeapon(0)
+        if (this.player.canDash()) {
+          this.player.performDash()
+        }
       }
     })
     this.input.keyboard!.on('keydown-TWO', () => {
       if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
-        this.player.switchWeapon(1)
+        if (this.player.canActivateShield()) {
+          this.player.activateShield()
+        }
       }
     })
     this.input.keyboard!.on('keydown-THREE', () => {
       if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
-        this.player.switchWeapon(2)
+        if (this.player.canActivateTimeSlow()) {
+          this.player.activateTimeSlow()
+        }
       }
     })
 
@@ -454,6 +461,72 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Update UI
     this.updateUI()
+
+    // ROGUELIKE: Update enemy locators
+    this.updateEnemyLocators()
+  }
+
+  // ROGUELIKE: Enemy locator for finding last enemies!
+  private updateEnemyLocators() {
+    // Clear old locators
+    this.enemyLocators.forEach(loc => loc.destroy())
+    this.enemyLocators = []
+
+    // Only show when 3 or fewer enemies remain
+    const enemyCount = this.enemies.countActive(true) + this.bosses.countActive(true)
+    if (enemyCount > 3 || enemyCount === 0) return
+
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+
+    // Get all active enemies
+    const allEnemies: any[] = []
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) allEnemies.push(enemy)
+    })
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) allEnemies.push(boss)
+    })
+
+    // Create locator for each enemy
+    allEnemies.forEach((enemy, index) => {
+      const angle = Phaser.Math.Angle.Between(
+        this.player.x, this.player.y,
+        enemy.x, enemy.y
+      )
+
+      // Position arrow at edge of screen pointing to enemy
+      const edgeDist = 100
+      const arrowX = this.player.x + Math.cos(angle) * edgeDist
+      const arrowY = this.player.y + Math.sin(angle) * edgeDist
+
+      // Create arrow indicator
+      const arrow = this.add.triangle(
+        arrowX, arrowY,
+        0, -15,
+        -10, 15,
+        10, 15,
+        0xff0000
+      ).setDepth(4000).setAlpha(0.8)
+
+      arrow.setRotation(angle + Math.PI / 2)
+
+      // Distance text
+      const dist = Math.floor(Phaser.Math.Distance.Between(
+        this.player.x, this.player.y,
+        enemy.x, enemy.y
+      ))
+
+      const distText = this.add.text(arrowX, arrowY + 25, `${dist}m`, {
+        fontSize: '14px',
+        color: '#ff0000',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(4000)
+
+      this.enemyLocators.push(arrow, distText)
+    })
   }
 
   private startStage() {

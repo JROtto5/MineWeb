@@ -16,7 +16,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   private baseSpeed = 200
   private speed = 200
-  private currentWeapon = 0
+  private currentWeapon = 2 // ROGUELIKE: Always shotgun!
   private weaponSystem: WeaponSystem
   public skillTree: SkillTreeManager
   private shopManager: ShopManager | null = null
@@ -164,23 +164,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   switchWeapon(index: number) {
-    if (index >= 0 && index < this.weapons.length) {
-      this.currentWeapon = index
-      const weapon = this.weapons[index]
-
-      this.currentAmmo = weapon.ammo
-      this.maxAmmo = weapon.maxAmmo
-
-      // Message
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('gameEvent', {
-          detail: {
-            type: 'message',
-            data: { text: `Switched to ${weapon.name}`, type: 'success' }
-          }
-        }))
-      }
-    }
+    // ROGUELIKE: Weapon switching disabled - always shotgun!
+    return
   }
 
   getCurrentWeaponName(): string {
