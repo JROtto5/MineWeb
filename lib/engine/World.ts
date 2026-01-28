@@ -9,7 +9,7 @@ export class World {
 
   private readonly CHUNK_SIZE = 16
   private readonly CHUNK_HEIGHT = 64
-  private readonly RENDER_DISTANCE = 3 // chunks (reduced for performance)
+  private readonly RENDER_DISTANCE = 2 // chunks (optimized for performance!)
 
   constructor(scene: THREE.Scene) {
     this.scene = scene

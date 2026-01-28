@@ -8,15 +8,19 @@ export const BlockType = {
   STONE: 3,
   SAND: 4,
   WATER: 5,
+  WOOD: 6,
+  LEAVES: 7,
 }
 
-// Block colors
+// Block colors - VIBRANT!
 const BLOCK_COLORS: { [key: number]: THREE.Color } = {
-  [BlockType.GRASS]: new THREE.Color(0x32DC46), // Bright green
+  [BlockType.GRASS]: new THREE.Color(0x32DC46), // Bright lime green
   [BlockType.DIRT]: new THREE.Color(0xA06432),  // Rich brown
   [BlockType.STONE]: new THREE.Color(0x8C8C91), // Blue-grey
   [BlockType.SAND]: new THREE.Color(0xFAE6B4),  // Warm sand
   [BlockType.WATER]: new THREE.Color(0x1E90FF), // Dodger blue
+  [BlockType.WOOD]: new THREE.Color(0x966428), // Wood brown
+  [BlockType.LEAVES]: new THREE.Color(0x28B428), // Leaf green
 }
 
 export class Chunk {

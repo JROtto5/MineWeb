@@ -16,6 +16,8 @@ export class Game {
   private frameCount: number = 0
   private fps: number = 0
   private fpsTime: number = 0
+  private selectedSlot: number = 0
+  private blockTypes: number[] = [1, 2, 3, 4, 6] // Grass, Dirt, Stone, Sand, Wood
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -31,15 +33,25 @@ export class Game {
 
     // Create scene
     this.scene = new THREE.Scene()
-    this.scene.fog = new THREE.Fog(0x87CEEB, 20, 100) // Distance fog
+    this.scene.fog = new THREE.Fog(0xA8D8FF, 50, 150) // Lighter, further fog
 
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+    // Add sky gradient background
+    this.scene.background = new THREE.Color(0x87CEEB)
+
+    // Add lighting - brighter and more dynamic!
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7) // Brighter ambient
     this.scene.add(ambientLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4)
-    directionalLight.position.set(1, 1, 0.5)
+    const directionalLight = new THREE.DirectionalLight(0xFFE6B3, 0.5) // Warm sunlight
+    directionalLight.position.set(50, 80, 30) // High sun position
     this.scene.add(directionalLight)
+
+    // Add sun visual (just a bright sphere)
+    const sunGeometry = new THREE.SphereGeometry(5, 16, 16)
+    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFAA })
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial)
+    sun.position.set(100, 150, 50)
+    this.scene.add(sun)
 
     // Create player (with camera)
     this.player = new Player(this.canvas)
@@ -140,6 +152,17 @@ export class Game {
 
   getChunksLoaded(): number {
     return this.world.getChunkCount()
+  }
+
+  selectSlot(slot: number) {
+    if (slot >= 0 && slot < this.blockTypes.length) {
+      this.selectedSlot = slot
+      this.player.setSelectedBlockType(this.blockTypes[slot])
+    }
+  }
+
+  getSelectedSlot(): number {
+    return this.selectedSlot
   }
 
   dispose() {

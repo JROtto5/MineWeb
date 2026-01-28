@@ -23,17 +23,20 @@ export class Player {
   private readonly playerHeight = 1.8
   private readonly playerWidth = 0.6
 
+  // Block selection
+  private selectedBlockType = 1 // Default to grass
+
   constructor(canvas: HTMLCanvasElement) {
     // Create camera
     this.camera = new THREE.PerspectiveCamera(
       75, // FOV
       window.innerWidth / window.innerHeight,
       0.1, // Near
-      1000 // Far
+      200 // Far (increased view distance)
     )
 
-    // Initialize position and velocity
-    this.position = new THREE.Vector3(0, 40, 0) // Start at y=40
+    // Initialize position and velocity - start higher up
+    this.position = new THREE.Vector3(0, 60, 0) // Start at y=60
     this.velocity = new THREE.Vector3(0, 0, 0)
     this.direction = new THREE.Vector3(0, 0, 0)
     this.rotation = new THREE.Euler(0, 0, 0, 'YXZ')
@@ -80,11 +83,15 @@ export class Player {
       if (raycast) {
         // Place block adjacent to hit face
         const placePos = raycast.position.clone().add(raycast.normal)
-        world.setBlock(placePos.x, placePos.y, placePos.z, 1) // Place grass block
-        console.log(`Placed block at (${placePos.x}, ${placePos.y}, ${placePos.z})`)
+        world.setBlock(placePos.x, placePos.y, placePos.z, this.selectedBlockType)
+        console.log(`Placed ${this.selectedBlockType} block at (${placePos.x}, ${placePos.y}, ${placePos.z})`)
       }
       input.resetMouseButtons()
     }
+  }
+
+  setSelectedBlockType(blockType: number) {
+    this.selectedBlockType = blockType
   }
 
   private updateRotation(input: InputManager) {

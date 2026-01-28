@@ -11,6 +11,15 @@ export default function Home() {
   const [fps, setFps] = useState(0)
   const [position, setPosition] = useState({ x: 0, y: 0, z: 0 })
   const [chunksLoaded, setChunksLoaded] = useState(0)
+  const [selectedSlot, setSelectedSlot] = useState(0)
+
+  const blockTypes = [
+    { name: 'Grass', color: '#32DC46' },
+    { name: 'Dirt', color: '#A06432' },
+    { name: 'Stone', color: '#8C8C91' },
+    { name: 'Sand', color: '#FAE6B4' },
+    { name: 'Wood', color: '#966428' },
+  ]
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -31,12 +40,24 @@ export default function Home() {
         setFps(game.getFPS())
         setPosition(game.getPlayerPosition())
         setChunksLoaded(game.getChunksLoaded())
+        setSelectedSlot(game.getSelectedSlot())
       }
     }, 100)
+
+    // Keyboard shortcuts for hotbar selection
+    const handleKeyPress = (e: KeyboardEvent) => {
+      const key = parseInt(e.key)
+      if (key >= 1 && key <= 5) {
+        game.selectSlot(key - 1)
+        setSelectedSlot(key - 1)
+      }
+    }
+    window.addEventListener('keydown', handleKeyPress)
 
     // Cleanup
     return () => {
       clearInterval(debugInterval)
+      window.removeEventListener('keydown', handleKeyPress)
       game.dispose()
     }
   }, [])
@@ -71,7 +92,28 @@ export default function Home() {
             <div>Shift - Sprint</div>
             <div>Left Click - Break</div>
             <div>Right Click - Place</div>
+            <div>1-5 - Select Block</div>
             <div>ESC - Unlock Mouse</div>
+          </div>
+        )}
+
+        {/* Hotbar */}
+        {!showClickToStart && !isLoading && (
+          <div id="hotbar">
+            {blockTypes.map((block, index) => (
+              <div
+                key={index}
+                className={`hotbar-slot ${index === selectedSlot ? 'selected' : ''}`}
+              >
+                <div className="hotbar-slot-number">{index + 1}</div>
+                <div style={{
+                  width: '30px',
+                  height: '30px',
+                  backgroundColor: block.color,
+                  border: '1px solid rgba(0,0,0,0.3)'
+                }} />
+              </div>
+            ))}
           </div>
         )}
 
