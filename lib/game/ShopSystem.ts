@@ -943,13 +943,15 @@ export class ShopUI {
 
       // Make all cards interactive to show tooltip on hover
       itemBg.setInteractive({ useHandCursor: canBuy })
-        .on('pointerover', () => {
+        .on('pointerover', (pointer: any) => {
           // Show tooltip with description
+          // Use pointer Y position (screen coordinates) instead of card Y (world coordinates)
           const tooltipX = centerX + 360
           const tooltipHeight = 60
-          // Clamp tooltip Y to stay on screen
           const screenHeight = this.scene.scale.height
-          let tooltipY = absY
+
+          // Use mouse Y position and clamp to screen
+          let tooltipY = pointer.y
           if (tooltipY - tooltipHeight / 2 < 10) {
             tooltipY = 10 + tooltipHeight / 2
           } else if (tooltipY + tooltipHeight / 2 > screenHeight - 10) {

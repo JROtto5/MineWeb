@@ -1699,13 +1699,15 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // Add hover tooltip to card background
       skillBg.setInteractive()
-        .on('pointerover', () => {
+        .on('pointerover', (pointer: any) => {
           // Show tooltip with description
+          // Use pointer Y position (screen coordinates) instead of card Y (world coordinates)
           const tooltipX = centerX + 350
           const tooltipHeight = 60
-          // Clamp tooltip Y to stay on screen
           const screenHeight = this.scale.height
-          let tooltipY = y
+
+          // Use mouse Y position and clamp to screen
+          let tooltipY = pointer.y
           if (tooltipY - tooltipHeight / 2 < 10) {
             tooltipY = 10 + tooltipHeight / 2
           } else if (tooltipY + tooltipHeight / 2 > screenHeight - 10) {
