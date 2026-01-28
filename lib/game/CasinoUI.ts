@@ -42,12 +42,13 @@ export class CasinoUI {
       0.8
     ).setScrollFactor(0).setDepth(1000)
 
-    // CRITICAL: Make overlay interactive to consume all clicks
-    this.overlay.setInteractive()
-      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        // Stop event from reaching game world below
-        event.stopPropagation()
-      })
+    // FIX V10: Don't make overlay interactive - let container handle clicks!
+    // The container (depth 1001) is above overlay (depth 1000), so it will catch clicks first
+    // this.overlay.setInteractive()
+    //   .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+    //     // Stop event from reaching game world below
+    //     event.stopPropagation()
+    //   })
 
     // Create main container
     this.container = this.scene.add.container(
@@ -419,7 +420,7 @@ export class CasinoUI {
     backBtn.makeInteractive()
   }
 
-  // FIX V9: Create buttons and make them interactive AFTER they'll be added to container!
+  // FIX V10: Create buttons WITHOUT depth (container handles it!)
   private createButton(
     x: number,
     y: number,
@@ -429,14 +430,13 @@ export class CasinoUI {
   ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text, makeInteractive: () => void } {
     // Use RELATIVE position since these will be added to centered container
     const bg = this.scene.add.rectangle(x, y, 280, 50, color)
-      .setDepth(1) // FIX V9: Explicit depth!
 
     const label = this.scene.add.text(x, y, text, {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(2) // FIX V9: Above background!
-    label.disableInteractive()
+    }).setOrigin(0.5)
+    label.disableInteractive() // FIX V10: Prevent text from blocking clicks!
 
     // FIX V9: Return function to make interactive AFTER adding to container!
     const makeInteractive = () => {

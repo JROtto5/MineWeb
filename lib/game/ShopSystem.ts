@@ -258,12 +258,13 @@ export class ShopUI {
       0.85
     ).setScrollFactor(0).setDepth(10000)
 
-    // CRITICAL: Make overlay interactive to consume all clicks
-    overlay.setInteractive()
-      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
-        // Stop event from reaching game world below
-        event.stopPropagation()
-      })
+    // FIX V10: Don't make overlay interactive - let container handle clicks!
+    // The container (depth 10001) is above overlay (depth 10000), so it will catch clicks first
+    // overlay.setInteractive()
+    //   .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+    //     // Stop event from reaching game world below
+    //     event.stopPropagation()
+    //   })
 
     const container = this.scene.add.container(
       screenWidth / 2,
@@ -349,24 +350,23 @@ export class ShopUI {
       const canAfford = this.player.money >= itemData.price
       const canBuy = itemData.canUpgrade && canAfford
 
-      // Background - FIX V9: Set depth for proper click handling in container!
+      // Background - FIX V10: No depth needed in containers!
       const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
       const itemBg = this.scene.add.rectangle(0, relY, 650, 65, bgColor, 0.9)
-        .setDepth(1) // FIX V9: Explicit depth for click priority!
 
       // Icon and name
       const itemText = this.scene.add.text(-300, relY, `${item.icon} ${item.name}`, {
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5).setDepth(2) // FIX V9: Above background!
+      }).setOrigin(0, 0.5)
       itemText.disableInteractive()
 
       // Description
       const descText = this.scene.add.text(-300, relY + 20, item.description, {
         fontSize: '13px',
         color: '#bdc3c7',
-      }).setOrigin(0, 0.5).setDepth(2) // FIX V9: Above background!
+      }).setOrigin(0, 0.5)
       descText.disableInteractive()
 
       // Level
@@ -374,19 +374,18 @@ export class ShopUI {
         fontSize: '16px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(2) // FIX V9: Above background!
+      }).setOrigin(0.5)
       levelText.disableInteractive()
 
       // Price button
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
       const priceBg = this.scene.add.rectangle(260, relY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
-        .setDepth(1) // FIX V9: Same as item background!
 
       const priceText = this.scene.add.text(260, relY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(2) // FIX V9: Above background!
+      }).setOrigin(0.5)
       priceText.disableInteractive()
 
       // FIX V9: Add to container FIRST, THEN make interactive!
@@ -417,14 +416,13 @@ export class ShopUI {
       }
     })
 
-    // Close button - FIX V9: Add to container first, then make interactive!
+    // Close button - FIX V10: No depth needed in containers!
     const closeBtn = this.scene.add.rectangle(0, 260, 250, 55, 0xe74c3c, 0.9)
-      .setDepth(1) // FIX V9: Explicit depth!
     const closeTxt = this.scene.add.text(0, 260, 'Close (ESC)', {
       fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(2) // FIX V9: Above button!
+    }).setOrigin(0.5)
     closeTxt.disableInteractive()
 
     container.add([title, moneyText, closeBtn, closeTxt])
