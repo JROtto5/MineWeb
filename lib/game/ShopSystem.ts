@@ -857,8 +857,9 @@ export class ShopUI {
           const newY = baseY - this.scrollOffset
           el.setY(newY)
 
-          // Smooth fade for items outside visible bounds
-          const isVisible = newY >= visibleTop - 40 && newY <= visibleBottom + 40
+          // Improved clipping - account for card height and text offsets
+          const cardHalfHeight = 26 // Half of 52px card height
+          const isVisible = (newY + cardHalfHeight >= visibleTop - 10) && (newY - cardHalfHeight <= visibleBottom + 10)
           el.setVisible(isVisible)
         })
       }

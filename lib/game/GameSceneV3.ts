@@ -1562,8 +1562,9 @@ export default class GameSceneV3 extends Phaser.Scene {
           const newY = baseY - this.skillTreeScrollOffset
           el.setY(newY)
 
-          // Smooth visibility clipping
-          const isVisible = newY >= visibleTop - 35 && newY <= visibleBottom + 35
+          // Improved clipping - account for card height (46px) and text offsets
+          const cardHalfHeight = 23 // Half of 46px card height
+          const isVisible = (newY + cardHalfHeight >= visibleTop - 10) && (newY - cardHalfHeight <= visibleBottom + 10)
           el.setVisible(isVisible)
         })
       }
