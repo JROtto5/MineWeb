@@ -42,6 +42,18 @@ export default class GameSceneV3 extends Phaser.Scene {
   private skillTreeSkillElements: any[] = []
   private enemyLocators: any[] = []
 
+  // ROGUELIKE: Run statistics!
+  private runStats = {
+    startTime: 0,
+    totalKills: 0,
+    totalMoney: 0,
+    highestCombo: 0,
+    stagesCompleted: 0,
+    bossesKilled: 0,
+    damageDealt: 0,
+    damageTaken: 0
+  }
+
   // Persistent UI elements
   private comboDisplay!: Phaser.GameObjects.Container
   private killFeedContainer!: Phaser.GameObjects.Container
@@ -56,6 +68,18 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   create() {
+    // ROGUELIKE: Initialize run statistics
+    this.runStats = {
+      startTime: Date.now(),
+      totalKills: 0,
+      totalMoney: 0,
+      highestCombo: 0,
+      stagesCompleted: 0,
+      bossesKilled: 0,
+      damageDealt: 0,
+      damageTaken: 0
+    }
+
     // Initialize systems
     this.stageManager = new StageManager()
     this.comboSystem = new ComboSystem()
@@ -619,8 +643,16 @@ export default class GameSceneV3 extends Phaser.Scene {
     if (killed) {
       this.enemiesKilled++
 
+      // ROGUELIKE: Track run stats
+      this.runStats.totalKills++
+
       // Combo system
       const combo = this.comboSystem.addKill(this.time.now)
+
+      // ROGUELIKE: Track highest combo
+      if (combo.combo > this.runStats.highestCombo) {
+        this.runStats.highestCombo = combo.combo
+      }
 
       // Calculate rewards with combo multiplier
       const money = Math.floor(enemy.getMoneyDrop() * combo.multiplier)
@@ -628,6 +660,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       this.player.addMoney(money)
       this.player.addXP(xp)
+
+      // ROGUELIKE: Track money earned
+      this.runStats.totalMoney += money
 
       // REDUCED POPUPS: Only show kill messages for combo milestones or every 10 kills
       const shouldShowKillMessage = (combo.combo % 5 === 0 && combo.combo >= 5) || this.enemiesKilled % 10 === 0
@@ -712,7 +747,16 @@ export default class GameSceneV3 extends Phaser.Scene {
       // Boss defeated! Count as enemy kill
       this.enemiesKilled++
 
+      // ROGUELIKE: Track boss kills
+      this.runStats.totalKills++
+      this.runStats.bossesKilled++
+
       const combo = this.comboSystem.addKill(this.time.now)
+
+      // ROGUELIKE: Track highest combo
+      if (combo.combo > this.runStats.highestCombo) {
+        this.runStats.highestCombo = combo.combo
+      }
 
       // EPIC rewards with combo multiplier
       const money = Math.floor(boss.getMoneyDrop() * combo.multiplier)
@@ -720,6 +764,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       this.player.addMoney(money)
       this.player.addXP(xp)
+
+      // ROGUELIKE: Track money earned
+      this.runStats.totalMoney += money
 
       // Add skill point for boss kill!
       this.player.skillPoints++
@@ -799,9 +846,15 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     const stage = this.stageManager.getCurrentStage()
 
+    // ROGUELIKE: Track stages completed
+    this.runStats.stagesCompleted++
+
     // Rewards
     this.player.addMoney(stage.moneyReward)
     this.player.addXP(stage.xpReward)
+
+    // ROGUELIKE: Track money earned
+    this.runStats.totalMoney += stage.moneyReward
 
     this.addKillFeedMessage(`Stage Complete! +$${stage.moneyReward} +${stage.xpReward}XP`, '#2ecc71', 6000)
 
@@ -902,16 +955,65 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private gameOver() {
     this.addKillFeedMessage('💀 GAME OVER 💀', '#e74c3c', 3000)
-    this.time.delayedCall(2000, () => {
+    this.showRunStats(false)
+    this.time.delayedCall(8000, () => {
       this.scene.restart()
     })
   }
 
   private gameWon() {
     this.addKillFeedMessage('🏆 YOU WON! ALL STAGES CLEARED! 🏆', '#2ecc71', 6000)
-    this.time.delayedCall(5000, () => {
+    this.showRunStats(true)
+    this.time.delayedCall(10000, () => {
       this.scene.restart()
     })
+  }
+
+  // ROGUELIKE: Show run statistics!
+  private showRunStats(victory: boolean) {
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    // Calculate run time
+    const runTime = Math.floor((Date.now() - this.runStats.startTime) / 1000)
+    const minutes = Math.floor(runTime / 60)
+    const seconds = runTime % 60
+
+    // Create stats display
+    const title = this.add.text(centerX, centerY - 200, victory ? '🏆 VICTORY! 🏆' : '💀 RUN ENDED 💀', {
+      fontSize: '48px',
+      color: victory ? '#2ecc71' : '#e74c3c',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 6
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
+
+    const stats = [
+      `⏱️  Time: ${minutes}m ${seconds}s`,
+      `🎯  Kills: ${this.runStats.totalKills}`,
+      `👑  Bosses: ${this.runStats.bossesKilled}`,
+      `💰  Money: $${this.runStats.totalMoney}`,
+      `🔥  Max Combo: ${this.runStats.highestCombo}x`,
+      `📊  Stages: ${this.runStats.stagesCompleted}`,
+      `⚔️  Level: ${this.player.level}`
+    ]
+
+    stats.forEach((stat, index) => {
+      this.add.text(centerX, centerY - 120 + index * 40, stat, {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
+    })
+
+    this.add.text(centerX, centerY + 180, 'Restarting...', {
+      fontSize: '20px',
+      color: '#95a5a6',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
   }
 
   private createStageBackground() {
