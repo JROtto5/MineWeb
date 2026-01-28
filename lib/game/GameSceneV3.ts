@@ -104,6 +104,16 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Welcome message
     this.addKillFeedMessage('🎮 CRIME CITY V3 - All systems online!', '#2ecc71', 5000)
     this.showStageIntro()
+
+    // FIX V8: Listen for weapon switch events and show shorter messages
+    if (typeof window !== 'undefined') {
+      window.addEventListener('gameEvent', ((event: CustomEvent) => {
+        if (event.detail.type === 'message' && event.detail.data.text.includes('Switched to')) {
+          // Show weapon switch with SHORT duration (1 second)
+          this.addKillFeedMessage(event.detail.data.text, '#3498db', 1000)
+        }
+      }) as EventListener)
+    }
   }
 
   private createPersistentUI() {
@@ -239,46 +249,79 @@ export default class GameSceneV3 extends Phaser.Scene {
       ONE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       TWO: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
       THREE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
+      ESC: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC), // FIX V8: Add ESC key!
     }
 
-    // Shooting
+    // Shooting - FIX V8: Block if casino is open too!
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.leftButtonDown() && !this.skillTreeUI && !this.shopUI.isShopOpen()) {
+      if (pointer.leftButtonDown() && !this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
         this.player.shoot(pointer.worldX, pointer.worldY)
       }
     })
 
-    // Weapon switching
-    this.input.keyboard!.on('keydown-ONE', () => this.player.switchWeapon(0))
-    this.input.keyboard!.on('keydown-TWO', () => this.player.switchWeapon(1))
-    this.input.keyboard!.on('keydown-THREE', () => this.player.switchWeapon(2))
+    // Weapon switching - FIX V8: Block when UI open!
+    this.input.keyboard!.on('keydown-ONE', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        this.player.switchWeapon(0)
+      }
+    })
+    this.input.keyboard!.on('keydown-TWO', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        this.player.switchWeapon(1)
+      }
+    })
+    this.input.keyboard!.on('keydown-THREE', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        this.player.switchWeapon(2)
+      }
+    })
 
-    // Reload
-    this.input.keyboard!.on('keydown-R', () => this.player.reload())
+    // Reload - FIX V8: Block when UI open!
+    this.input.keyboard!.on('keydown-R', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        this.player.reload()
+      }
+    })
 
     // Skill tree (T key)
     this.input.keyboard!.on('keydown-T', () => this.toggleSkillTree())
 
-    // Shop (S key) - FIX: Don't use S key conflict with movement
-    // Use B key for "Buy" instead
+    // Shop (B key)
     this.input.keyboard!.on('keydown-B', () => this.shopUI.toggle())
 
-    // Abilities
+    // FIX V8: ESC key closes ALL UIs!
+    this.input.keyboard!.on('keydown-ESC', () => {
+      if (this.skillTreeUI) {
+        this.closeSkillTree()
+      } else if (this.shopUI.isShopOpen()) {
+        this.shopUI.close()
+      } else if (this.casinoUI.isOpen) {
+        this.casinoUI.close()
+      }
+    })
+
+    // Abilities - FIX V8: Block when UI open!
     this.input.keyboard!.on('keydown-SPACE', () => {
-      if (this.player.canDash()) {
-        this.player.performDash()
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canDash()) {
+          this.player.performDash()
+        }
       }
     })
 
     this.input.keyboard!.on('keydown-Q', () => {
-      if (this.player.canActivateShield()) {
-        this.player.activateShield()
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateShield()) {
+          this.player.activateShield()
+        }
       }
     })
 
     this.input.keyboard!.on('keydown-F', () => {
-      if (this.player.canActivateTimeSlow()) {
-        this.player.activateTimeSlow()
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen) {
+        if (this.player.canActivateTimeSlow()) {
+          this.player.activateTimeSlow()
+        }
       }
     })
   }
@@ -322,10 +365,15 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    // Player movement
-    const moveX = (this.wasd.D.isDown ? 1 : 0) - (this.wasd.A.isDown ? 1 : 0)
-    const moveY = (this.wasd.S.isDown ? 1 : 0) - (this.wasd.W.isDown ? 1 : 0)
-    this.player.move(moveX, moveY)
+    // FIX V8: Block ALL input when any UI is open!
+    const uiOpen = this.skillTreeUI || this.shopUI.isShopOpen() || this.casinoUI.isOpen
+
+    // Player movement - only if no UI open
+    if (!uiOpen) {
+      const moveX = (this.wasd.D.isDown ? 1 : 0) - (this.wasd.A.isDown ? 1 : 0)
+      const moveY = (this.wasd.S.isDown ? 1 : 0) - (this.wasd.W.isDown ? 1 : 0)
+      this.player.move(moveX, moveY)
+    }
 
     // Weapon system
     this.weaponSystem.update(time, delta)

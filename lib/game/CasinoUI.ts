@@ -6,7 +6,7 @@ export class CasinoUI {
   private scene: Phaser.Scene
   private casinoManager: CasinoManager
   private player: Player
-  private isOpen = false
+  private _isOpen = false // FIX V8: Use private with underscore
   private container!: Phaser.GameObjects.Container
   private overlay!: Phaser.GameObjects.Rectangle
 
@@ -16,9 +16,14 @@ export class CasinoUI {
     this.player = player
   }
 
+  // FIX V8: Add getter so GameScene can check if casino is open
+  get isOpen(): boolean {
+    return this._isOpen
+  }
+
   open() {
-    if (this.isOpen) return
-    this.isOpen = true
+    if (this._isOpen) return
+    this._isOpen = true
 
     // Pause game
     this.scene.physics.pause()
@@ -56,24 +61,25 @@ export class CasinoUI {
   private showMainMenu() {
     this.clearContainer()
 
+    // FIX V8: Use RELATIVE positioning for elements in container!
     const screenWidth = this.scene.scale.width
     const screenHeight = this.scene.scale.height
 
-    // Title - ABSOLUTE position! FIX V7: Disable text interactivity
-    const title = this.scene.add.text(screenWidth / 2, screenHeight / 2 - 200, '🎰 CASINO 🎰', {
+    // Title - RELATIVE position in container!
+    const title = this.scene.add.text(0, -200, '🎰 CASINO 🎰', {
       fontSize: '48px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    }).setOrigin(0.5)
     title.disableInteractive()
 
-    // Money display - FIX V7: Disable text interactivity
-    const moneyText = this.scene.add.text(screenWidth / 2, screenHeight / 2 - 140, `Your Money: $${this.player.money}`, {
+    // Money display - RELATIVE position in container!
+    const moneyText = this.scene.add.text(0, -140, `Your Money: $${this.player.money}`, {
       fontSize: '24px',
       color: '#2ecc71',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1002)
+    }).setOrigin(0.5)
     moneyText.disableInteractive()
 
     // Buttons - createButton now returns {bg, label}
@@ -384,7 +390,7 @@ export class CasinoUI {
     this.container.add([title, infoText, rewardText, rarityText, valueText, openBtn.bg, openBtn.label, backBtn.bg, backBtn.label])
   }
 
-  // FIX V6: Create buttons with ABSOLUTE positioning (no nested containers!)
+  // FIX V8: Create buttons with RELATIVE positioning for container!
   private createButton(
     x: number,
     y: number,
@@ -392,21 +398,14 @@ export class CasinoUI {
     onClick: () => void,
     color: number = 0x3498db
   ): { bg: Phaser.GameObjects.Rectangle, label: Phaser.GameObjects.Text } {
-    // Get absolute screen position
-    const screenWidth = this.scene.scale.width
-    const screenHeight = this.scene.scale.height
-    const absX = screenWidth / 2 + x
-    const absY = screenHeight / 2 + y
+    // Use RELATIVE position since these will be added to centered container
+    const bg = this.scene.add.rectangle(x, y, 280, 50, color)
 
-    const bg = this.scene.add.rectangle(absX, absY, 280, 50, color)
-      .setScrollFactor(0)
-      .setDepth(1005) // Higher than overlay!
-
-    const label = this.scene.add.text(absX, absY, text, {
+    const label = this.scene.add.text(x, y, text, {
       fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1006)
+    }).setOrigin(0.5)
     label.disableInteractive() // FIX V7: Prevent text from blocking clicks
 
     bg.setInteractive({ useHandCursor: true })
@@ -430,9 +429,9 @@ export class CasinoUI {
   }
 
   close() {
-    if (!this.isOpen) return
+    if (!this._isOpen) return
 
-    this.isOpen = false
+    this._isOpen = false
     this.scene.physics.resume()
 
     if (this.container) {

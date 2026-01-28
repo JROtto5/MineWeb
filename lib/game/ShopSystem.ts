@@ -336,60 +336,56 @@ export class ShopUI {
       tabObjects.push(tabBg, tabText)
     })
 
-    // Items list - FIX V6: Create items with ABSOLUTE positioning (still in container but higher depth!)
+    // Items list - FIX V8: Use RELATIVE positioning for container elements!
     const items = this.shopManager.getAllItems().filter(i => i.item.category === this.currentCategory)
-    const startY = screenHeight / 2 - 120
+    const startY = -120 // RELATIVE to container center!
     const itemHeight = 70
 
     items.forEach((itemData, index) => {
       const item = itemData.item
-      const absY = startY + index * itemHeight
+      const relY = startY + index * itemHeight // RELATIVE Y position
 
       // Can afford?
       const canAfford = this.player.money >= itemData.price
       const canBuy = itemData.canUpgrade && canAfford
 
-      // Background - HIGHER DEPTH for clickable items!
+      // Background - HIGHER DEPTH for clickable items! RELATIVE POSITION!
       const bgColor = canBuy ? 0x27ae60 : (itemData.canUpgrade ? 0x34495e : 0x7f8c8d)
-      const itemBg = this.scene.add.rectangle(screenWidth / 2, absY, 650, 65, bgColor, 0.9)
-        .setScrollFactor(0)
-        .setDepth(canBuy ? 10005 : 10003) // MUCH higher if clickable!
+      const itemBg = this.scene.add.rectangle(0, relY, 650, 65, bgColor, 0.9) // RELATIVE to container!
 
-      // Icon and name - FIX V7: Disable text interactivity
-      const itemText = this.scene.add.text(screenWidth / 2 - 300, absY, `${item.icon} ${item.name}`, {
+      // Icon and name - FIX V8: RELATIVE positioning
+      const itemText = this.scene.add.text(-300, relY, `${item.icon} ${item.name}`, {
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10006)
+      }).setOrigin(0, 0.5)
       itemText.disableInteractive()
 
-      // Description - FIX V7: Disable text interactivity
-      const descText = this.scene.add.text(screenWidth / 2 - 300, absY + 20, item.description, {
+      // Description - FIX V8: RELATIVE positioning
+      const descText = this.scene.add.text(-300, relY + 20, item.description, {
         fontSize: '13px',
         color: '#bdc3c7',
-      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(10006)
+      }).setOrigin(0, 0.5)
       descText.disableInteractive()
 
-      // Level - FIX V7: Disable text interactivity
-      const levelText = this.scene.add.text(screenWidth / 2 + 140, absY, `Level: ${itemData.level}/${item.maxLevel}`, {
+      // Level - FIX V8: RELATIVE positioning
+      const levelText = this.scene.add.text(140, relY, `Level: ${itemData.level}/${item.maxLevel}`, {
         fontSize: '16px',
         color: itemData.level === item.maxLevel ? '#f1c40f' : '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(10006)
+      }).setOrigin(0.5)
       levelText.disableInteractive()
 
-      // Price button - ABSOLUTE positioning!
+      // Price button - FIX V8: RELATIVE positioning!
       const priceColor = canAfford ? 0x2ecc71 : 0xe74c3c
-      const priceBg = this.scene.add.rectangle(screenWidth / 2 + 260, absY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
-        .setScrollFactor(0)
-        .setDepth(canBuy ? 10005 : 10003)
+      const priceBg = this.scene.add.rectangle(260, relY, 120, 50, priceColor, itemData.canUpgrade ? 0.9 : 0.5)
 
-      const priceText = this.scene.add.text(screenWidth / 2 + 260, absY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
+      const priceText = this.scene.add.text(260, relY, itemData.canUpgrade ? `$${itemData.price}` : 'MAX', {
         fontSize: '18px',
         color: '#ffffff',
         fontStyle: 'bold',
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(10007)
-      priceText.disableInteractive() // FIX V7: Prevent text from blocking clicks
+      }).setOrigin(0.5)
+      priceText.disableInteractive()
 
       // Make clickable AFTER positioning and depth!
       if (canBuy) {
