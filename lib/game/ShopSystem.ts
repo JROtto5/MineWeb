@@ -11,7 +11,10 @@ export interface ShopItem {
   maxLevel: number
   priceScaling: number // Multiplier per level
   effect: {
-    type: 'damage' | 'fireRate' | 'ammo' | 'health' | 'speed' | 'critChance' | 'moneyBoost' | 'xpBoost' | 'dash' | 'shield' | 'timeSlow'
+    type: 'damage' | 'fireRate' | 'ammo' | 'health' | 'speed' | 'critChance' | 'moneyBoost' | 'xpBoost' | 'dash' | 'shield' | 'timeSlow' |
+          'piercing' | 'explosive' | 'reloadSpeed' | 'dualWield' | 'homing' | 'multishot' |
+          'healthRegen' | 'dodgeChance' | 'luck' | 'armor' | 'lifesteal' | 'comboBonus' |
+          'teleport' | 'berserk' | 'invisibility' | 'orbitalStrike'
     value: number
   }
 }
@@ -142,6 +145,188 @@ export const SHOP_ITEMS: ShopItem[] = [
     maxLevel: 1,
     priceScaling: 1,
     effect: { type: 'timeSlow', value: 1 }
+  },
+
+  // CREATIVE EXPANSION: More Weapon Upgrades!
+  {
+    id: 'piercing_rounds',
+    name: 'Piercing Rounds',
+    description: 'Bullets go through multiple enemies',
+    icon: '🔱',
+    category: 'weapon',
+    basePrice: 4000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'piercing', value: 1 }
+  },
+  {
+    id: 'explosive_rounds',
+    name: 'Explosive Rounds',
+    description: 'Bullets explode on impact',
+    icon: '💣',
+    category: 'weapon',
+    basePrice: 3500,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'explosive', value: 1 }
+  },
+  {
+    id: 'rapid_reload',
+    name: 'Rapid Reload',
+    description: '+40% reload speed per level',
+    icon: '🔄',
+    category: 'weapon',
+    basePrice: 550,
+    maxLevel: 5,
+    priceScaling: 1.5,
+    effect: { type: 'reloadSpeed', value: 0.40 }
+  },
+  {
+    id: 'dual_wielding',
+    name: 'Dual Wielding',
+    description: 'Fire two guns simultaneously',
+    icon: '🔫🔫',
+    category: 'weapon',
+    basePrice: 6000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'dualWield', value: 1 }
+  },
+  {
+    id: 'homing_bullets',
+    name: 'Homing Bullets',
+    description: 'Bullets track nearby enemies',
+    icon: '🎯',
+    category: 'weapon',
+    basePrice: 4500,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'homing', value: 1 }
+  },
+  {
+    id: 'multishot',
+    name: 'Multishot',
+    description: '+1 extra bullet per shot per level',
+    icon: '🔥',
+    category: 'weapon',
+    basePrice: 1200,
+    maxLevel: 3,
+    priceScaling: 2.0,
+    effect: { type: 'multishot', value: 1 }
+  },
+
+  // CREATIVE EXPANSION: More Stat Upgrades!
+  {
+    id: 'health_regen',
+    name: 'Health Regeneration',
+    description: '+2 HP per second per level',
+    icon: '💚',
+    category: 'stat',
+    basePrice: 1000,
+    maxLevel: 5,
+    priceScaling: 1.8,
+    effect: { type: 'healthRegen', value: 2 }
+  },
+  {
+    id: 'dodge_chance',
+    name: 'Dodge Master',
+    description: '+5% dodge chance per level',
+    icon: '🌀',
+    category: 'stat',
+    basePrice: 1100,
+    maxLevel: 4,
+    priceScaling: 1.9,
+    effect: { type: 'dodgeChance', value: 0.05 }
+  },
+  {
+    id: 'luck_boost',
+    name: 'Lucky Charm',
+    description: '+15% better loot quality per level',
+    icon: '🍀',
+    category: 'stat',
+    basePrice: 950,
+    maxLevel: 5,
+    priceScaling: 1.7,
+    effect: { type: 'luck', value: 0.15 }
+  },
+  {
+    id: 'armor_plating',
+    name: 'Armor Plating',
+    description: '+8% damage reduction per level',
+    icon: '🛡️',
+    category: 'stat',
+    basePrice: 1300,
+    maxLevel: 5,
+    priceScaling: 1.9,
+    effect: { type: 'armor', value: 0.08 }
+  },
+  {
+    id: 'lifesteal',
+    name: 'Vampiric Touch',
+    description: '+3% lifesteal per level',
+    icon: '🩸',
+    category: 'stat',
+    basePrice: 1400,
+    maxLevel: 5,
+    priceScaling: 2.0,
+    effect: { type: 'lifesteal', value: 0.03 }
+  },
+  {
+    id: 'combo_multiplier',
+    name: 'Combo Master',
+    description: '+10% combo rewards per level',
+    icon: '🔥',
+    category: 'stat',
+    basePrice: 800,
+    maxLevel: 5,
+    priceScaling: 1.6,
+    effect: { type: 'comboBonus', value: 0.10 }
+  },
+
+  // CREATIVE EXPANSION: More Special Abilities!
+  {
+    id: 'teleport',
+    name: 'Teleportation',
+    description: 'Unlock teleport ability (V key) - instant movement',
+    icon: '✨',
+    category: 'ability',
+    basePrice: 7000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'teleport', value: 1 }
+  },
+  {
+    id: 'berserk_mode',
+    name: 'Berserk Rage',
+    description: 'Unlock berserk mode (G key) - 3x damage for 10s',
+    icon: '😈',
+    category: 'ability',
+    basePrice: 8000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'berserk', value: 1 }
+  },
+  {
+    id: 'invisibility',
+    name: 'Ghost Cloak',
+    description: 'Unlock invisibility (H key) - enemies ignore you for 8s',
+    icon: '👻',
+    category: 'ability',
+    basePrice: 9000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'invisibility', value: 1 }
+  },
+  {
+    id: 'orbital_strike',
+    name: 'Orbital Strike',
+    description: 'Unlock orbital strike (Z key) - massive AOE damage',
+    icon: '☄️',
+    category: 'ability',
+    basePrice: 12000,
+    maxLevel: 1,
+    priceScaling: 1,
+    effect: { type: 'orbitalStrike', value: 1 }
   },
 ]
 
