@@ -1,31 +1,20 @@
-// AudioManager - Handles all music and sound effects with volume/mute controls
+// AudioManager - Simplified with Web Audio API for reliable browser audio
 
 export class AudioManager {
   private static instance: AudioManager
-  private bgMusic: HTMLAudioElement | null = null
-  private soundEffects: Map<string, HTMLAudioElement> = new Map()
+  private audioContext: AudioContext | null = null
+  private musicGain: GainNode | null = null
+  private sfxGain: GainNode | null = null
 
-  private musicVolume = 0.3 // 30% volume for background music
-  private sfxVolume = 0.5 // 50% volume for sound effects
+  private musicVolume = 0.15 // 15% volume for background music (quieter)
+  private sfxVolume = 0.3 // 30% volume for sound effects
   private musicMuted = false
   private sfxMuted = false
-
-  // Using royalty-free music URLs
-  private musicTracks = {
-    background: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3', // Energetic electronic music
-    boss: 'https://assets.mixkit.co/music/preview/mixkit-games-worldbeat-466.mp3', // Epic boss music
-  }
-
-  private soundUrls = {
-    kill: 'https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3',
-    death: 'https://assets.mixkit.co/sfx/preview/mixkit-player-losing-or-failing-2042.mp3',
-    levelUp: 'https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3',
-    shoot: 'https://assets.mixkit.co/sfx/preview/mixkit-short-laser-gun-shot-1670.mp3',
-    purchase: 'https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-complete-or-approved-mission-205.mp3',
-  }
+  private musicPlaying = false
+  private oscillators: OscillatorNode[] = []
 
   private constructor() {
-    this.initializeAudio()
+    // Audio context will be created on first user interaction
   }
 
   static getInstance(): AudioManager {
@@ -35,96 +24,202 @@ export class AudioManager {
     return AudioManager.instance
   }
 
-  private initializeAudio() {
-    // Pre-load sound effects
-    Object.entries(this.soundUrls).forEach(([name, url]) => {
-      const audio = new Audio(url)
-      audio.volume = this.sfxVolume
-      audio.preload = 'auto'
-      this.soundEffects.set(name, audio)
-    })
+  private initializeAudioContext() {
+    if (this.audioContext) return
 
-    // Initialize background music
-    this.bgMusic = new Audio(this.musicTracks.background)
-    this.bgMusic.volume = this.musicVolume
-    this.bgMusic.loop = true
-    this.bgMusic.preload = 'auto'
+    try {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+
+      // Create gain nodes for volume control
+      this.musicGain = this.audioContext.createGain()
+      this.musicGain.gain.value = this.musicMuted ? 0 : this.musicVolume
+      this.musicGain.connect(this.audioContext.destination)
+
+      this.sfxGain = this.audioContext.createGain()
+      this.sfxGain.gain.value = this.sfxMuted ? 0 : this.sfxVolume
+      this.sfxGain.connect(this.audioContext.destination)
+
+      console.log('✅ Audio system initialized!')
+    } catch (e) {
+      console.error('Failed to initialize audio:', e)
+    }
   }
 
-  // Background Music Controls
-  playBackgroundMusic() {
-    if (!this.bgMusic || this.musicMuted) return
+  // Play a simple tone (for sound effects)
+  private playTone(frequency: number, duration: number, type: OscillatorType = 'sine') {
+    if (!this.audioContext || !this.sfxGain || this.sfxMuted) return
 
-    this.bgMusic.src = this.musicTracks.background
-    this.bgMusic.play().catch(e => {
-      console.log('Background music autoplay blocked:', e)
-    })
+    try {
+      const oscillator = this.audioContext.createOscillator()
+      const gainNode = this.audioContext.createGain()
+
+      oscillator.type = type
+      oscillator.frequency.value = frequency
+
+      // Envelope for natural sound
+      gainNode.gain.setValueAtTime(0, this.audioContext.currentTime)
+      gainNode.gain.linearRampToValueAtTime(1, this.audioContext.currentTime + 0.01)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration)
+
+      oscillator.connect(gainNode)
+      gainNode.connect(this.sfxGain)
+
+      oscillator.start(this.audioContext.currentTime)
+      oscillator.stop(this.audioContext.currentTime + duration)
+    } catch (e) {
+      console.error('Failed to play tone:', e)
+    }
+  }
+
+  // Play a chord (for richer sounds)
+  private playChord(frequencies: number[], duration: number) {
+    frequencies.forEach(freq => this.playTone(freq, duration))
+  }
+
+  // Background Music - Simple ambient loop
+  playBackgroundMusic() {
+    if (!this.audioContext || this.musicMuted || this.musicPlaying) return
+
+    this.initializeAudioContext()
+    if (!this.audioContext || !this.musicGain) return
+
+    this.musicPlaying = true
+    this.playAmbientLoop()
+  }
+
+  private playAmbientLoop() {
+    if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
+
+    try {
+      // Play a simple ambient chord progression
+      const chords = [
+        [261.63, 329.63, 392.00], // C major
+        [293.66, 369.99, 440.00], // D minor
+        [329.63, 392.00, 493.88], // E minor
+        [349.23, 440.00, 523.25], // F major
+      ]
+
+      const playChord = (chordIndex: number) => {
+        if (!this.musicPlaying || this.musicMuted) return
+
+        const chord = chords[chordIndex % chords.length]
+        chord.forEach(freq => {
+          if (!this.audioContext || !this.musicGain) return
+
+          const osc = this.audioContext.createOscillator()
+          const gain = this.audioContext.createGain()
+
+          osc.type = 'sine'
+          osc.frequency.value = freq
+          gain.gain.value = 0.1 // Very quiet
+
+          osc.connect(gain)
+          gain.connect(this.musicGain)
+
+          osc.start(this.audioContext.currentTime)
+          osc.stop(this.audioContext.currentTime + 2)
+
+          this.oscillators.push(osc)
+        })
+
+        // Schedule next chord
+        setTimeout(() => playChord(chordIndex + 1), 2000)
+      }
+
+      playChord(0)
+    } catch (e) {
+      console.error('Failed to play background music:', e)
+    }
   }
 
   playBossMusic() {
-    if (!this.bgMusic || this.musicMuted) return
-
-    this.bgMusic.src = this.musicTracks.boss
-    this.bgMusic.currentTime = 0
-    this.bgMusic.play().catch(e => {
-      console.log('Boss music autoplay blocked:', e)
-    })
+    // For now, same as background but slightly different
+    this.playBackgroundMusic()
   }
 
   stopMusic() {
-    if (this.bgMusic) {
-      this.bgMusic.pause()
-      this.bgMusic.currentTime = 0
-    }
+    this.musicPlaying = false
+    this.oscillators.forEach(osc => {
+      try {
+        osc.stop()
+      } catch (e) {
+        // Already stopped
+      }
+    })
+    this.oscillators = []
   }
 
   pauseMusic() {
-    if (this.bgMusic) {
-      this.bgMusic.pause()
-    }
+    this.musicPlaying = false
   }
 
   resumeMusic() {
-    if (this.bgMusic && !this.musicMuted) {
-      this.bgMusic.play().catch(e => {
-        console.log('Music resume failed:', e)
-      })
+    if (!this.musicMuted) {
+      this.playBackgroundMusic()
     }
   }
 
-  // Sound Effects
+  // Sound Effects using tones
   playSound(soundName: string) {
-    if (this.sfxMuted) return
+    if (!this.audioContext || this.sfxMuted) return
 
-    const sound = this.soundEffects.get(soundName)
-    if (sound) {
-      // Clone the audio to allow overlapping sounds
-      const clone = sound.cloneNode() as HTMLAudioElement
-      clone.volume = this.sfxVolume
-      clone.play().catch(e => {
-        console.log(`Sound ${soundName} failed:`, e)
-      })
+    switch (soundName) {
+      case 'kill':
+        // Happy chime
+        this.playTone(523.25, 0.1) // C5
+        setTimeout(() => this.playTone(659.25, 0.1), 50) // E5
+        setTimeout(() => this.playTone(783.99, 0.15), 100) // G5
+        break
+
+      case 'death':
+        // Descending sad sound
+        this.playTone(440, 0.2, 'sawtooth') // A
+        setTimeout(() => this.playTone(392, 0.2, 'sawtooth'), 100) // G
+        setTimeout(() => this.playTone(349.23, 0.3, 'sawtooth'), 200) // F
+        break
+
+      case 'levelUp':
+        // Victory fanfare
+        this.playTone(523.25, 0.1) // C5
+        setTimeout(() => this.playTone(659.25, 0.1), 80) // E5
+        setTimeout(() => this.playTone(783.99, 0.1), 160) // G5
+        setTimeout(() => this.playTone(1046.50, 0.3), 240) // C6
+        break
+
+      case 'shoot':
+        // Pew pew laser
+        this.playTone(880, 0.05, 'square')
+        break
+
+      case 'purchase':
+        // Cash register
+        this.playChord([523.25, 659.25, 783.99], 0.15)
+        setTimeout(() => this.playChord([587.33, 739.99, 880.00], 0.2), 100)
+        break
     }
   }
 
   // Volume Controls
   setMusicVolume(volume: number) {
     this.musicVolume = Math.max(0, Math.min(1, volume))
-    if (this.bgMusic) {
-      this.bgMusic.volume = this.musicVolume
+    if (this.musicGain && !this.musicMuted) {
+      this.musicGain.gain.value = this.musicVolume
     }
   }
 
   setSfxVolume(volume: number) {
     this.sfxVolume = Math.max(0, Math.min(1, volume))
-    this.soundEffects.forEach(sound => {
-      sound.volume = this.sfxVolume
-    })
+    if (this.sfxGain && !this.sfxMuted) {
+      this.sfxGain.gain.value = this.sfxVolume
+    }
   }
 
   // Mute Controls
   toggleMusicMute(): boolean {
     this.musicMuted = !this.musicMuted
+    if (this.musicGain) {
+      this.musicGain.gain.value = this.musicMuted ? 0 : this.musicVolume
+    }
     if (this.musicMuted) {
       this.pauseMusic()
     } else {
@@ -135,6 +230,9 @@ export class AudioManager {
 
   toggleSfxMute(): boolean {
     this.sfxMuted = !this.sfxMuted
+    if (this.sfxGain) {
+      this.sfxGain.gain.value = this.sfxMuted ? 0 : this.sfxVolume
+    }
     return this.sfxMuted
   }
 
@@ -142,6 +240,14 @@ export class AudioManager {
     const mute = !this.musicMuted
     this.musicMuted = mute
     this.sfxMuted = mute
+
+    if (this.musicGain) {
+      this.musicGain.gain.value = mute ? 0 : this.musicVolume
+    }
+    if (this.sfxGain) {
+      this.sfxGain.gain.value = mute ? 0 : this.sfxVolume
+    }
+
     if (mute) {
       this.pauseMusic()
     } else {
@@ -158,7 +264,16 @@ export class AudioManager {
 
   // Enable audio (call after user interaction)
   enableAudio() {
-    // Some browsers require user interaction before playing audio
-    this.playBackgroundMusic()
+    this.initializeAudioContext()
+
+    // Resume audio context if suspended (browser requirement)
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().then(() => {
+        console.log('🔊 Audio context resumed!')
+        this.playBackgroundMusic()
+      })
+    } else {
+      this.playBackgroundMusic()
+    }
   }
 }
