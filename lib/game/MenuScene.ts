@@ -45,7 +45,6 @@ export default class MenuScene extends Phaser.Scene {
     this.createTitle()
     this.loadAndDisplayLeaderboard()
     this.loadAndDisplaySaveSlots()
-    this.createActionButtons()
     this.startAutoRefresh()
   }
 
@@ -359,84 +358,6 @@ export default class MenuScene extends Phaser.Scene {
     this.saveSlotContainers.push(container)
   }
 
-  private createActionButtons() {
-    const { width, height } = this.scale
-    const centerX = width / 2
-    const buttonY = height / 2 + 300
-
-    // Play New Game button
-    const playBg = this.add.rectangle(centerX - 150, buttonY, 240, 70, COLORS.accent, 0.9)
-    playBg.setStrokeStyle(3, COLORS.accent, 1)
-    playBg.setInteractive({ useHandCursor: true })
-
-    const playText = this.add.text(centerX - 150, buttonY, 'PLAY NEW GAME', {
-      fontSize: '24px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5)
-
-    // Continue button (loads most recent save)
-    const continueBg = this.add.rectangle(centerX + 150, buttonY, 240, 70, COLORS.accent2, 0.9)
-    continueBg.setStrokeStyle(3, COLORS.accent2, 1)
-    continueBg.setInteractive({ useHandCursor: true })
-
-    const continueText = this.add.text(centerX + 150, buttonY, 'CONTINUE', {
-      fontSize: '24px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 4,
-    }).setOrigin(0.5)
-
-    // Play button hover effect
-    playBg.on('pointerover', () => {
-      playBg.setFillStyle(COLORS.highlight, 1)
-      this.tweens.add({
-        targets: [playBg, playText],
-        scale: 1.05,
-        duration: 200,
-      })
-    })
-
-    playBg.on('pointerout', () => {
-      playBg.setFillStyle(COLORS.accent, 0.9)
-      this.tweens.add({
-        targets: [playBg, playText],
-        scale: 1,
-        duration: 200,
-      })
-    })
-
-    playBg.on('pointerdown', () => {
-      this.startNewGame()
-    })
-
-    // Continue button hover effect
-    continueBg.on('pointerover', () => {
-      continueBg.setFillStyle(COLORS.accent, 1)
-      this.tweens.add({
-        targets: [continueBg, continueText],
-        scale: 1.05,
-        duration: 200,
-      })
-    })
-
-    continueBg.on('pointerout', () => {
-      continueBg.setFillStyle(COLORS.accent2, 0.9)
-      this.tweens.add({
-        targets: [continueBg, continueText],
-        scale: 1,
-        duration: 200,
-      })
-    })
-
-    continueBg.on('pointerdown', async () => {
-      await this.loadMostRecentSave()
-    })
-  }
-
   private startAutoRefresh() {
     // Refresh leaderboard every 30 seconds
     this.refreshTimer = this.time.addEvent({
@@ -465,25 +386,6 @@ export default class MenuScene extends Phaser.Scene {
     this.time.delayedCall(300, () => {
       this.scene.start('GameSceneV3')
     })
-  }
-
-  private async loadMostRecentSave() {
-    try {
-      const saves = await this.saveManager.listSaves(this.playerName)
-
-      if (saves.length === 0) {
-        // No saves, start new game
-        this.startNewGame()
-        return
-      }
-
-      // Get most recent save (assumes saves are ordered by timestamp)
-      const mostRecent = saves[saves.length - 1]
-      await this.continueGame(mostRecent)
-    } catch (error) {
-      console.error('Failed to load saves:', error)
-      this.startNewGame()
-    }
   }
 
   shutdown() {

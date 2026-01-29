@@ -1320,10 +1320,43 @@ export default class GameSceneV3 extends Phaser.Scene {
         muteSfxLabel.setText(muted ? '🔔 SFX: OFF' : '🔔 SFX: ON')
       })
 
-    // Return to Menu button
-    const menuBg = this.add.rectangle(centerX, centerY + 360, 300, 60, 0x9b59b6)
+    // Save Game button
+    const saveBg = this.add.rectangle(centerX, centerY + 360, 300, 60, 0x1abc9c)
       .setScrollFactor(0).setDepth(15001)
-    const menuLabel = this.add.text(centerX, centerY + 360, '🏠 Return to Menu', {
+    const saveLabel = this.add.text(centerX, centerY + 360, '💾 Save Game', {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    saveBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => saveBg.setFillStyle(0x16a085))
+      .on('pointerout', () => saveBg.setFillStyle(0x1abc9c))
+      .on('pointerdown', async (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+
+        // Quick save to slot 1
+        const result = await this.saveManager.saveGame(
+          'Player',
+          1,
+          this.player,
+          this.stageManager.getCurrentStageNumber(),
+          this.shopManager
+        )
+
+        // Show save result
+        saveLabel.setText(result.success ? '✅ Saved!' : '❌ Failed')
+        this.time.delayedCall(2000, () => {
+          if (this.pauseMenuUI.includes(saveLabel)) {
+            saveLabel.setText('💾 Save Game')
+          }
+        })
+      })
+
+    // Return to Menu button
+    const menuBg = this.add.rectangle(centerX, centerY + 440, 300, 60, 0x9b59b6)
+      .setScrollFactor(0).setDepth(15001)
+    const menuLabel = this.add.text(centerX, centerY + 440, '🏠 Return to Menu', {
       fontSize: '24px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -1340,7 +1373,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.pauseMenuUI = [overlay, title, stats, resumeBg, resumeLabel, restartBg, restartLabel,
       audioTitle, muteAllBg, muteAllLabel, muteMusicBg, muteMusicLabel, muteSfxBg, muteSfxLabel,
-      menuBg, menuLabel]
+      saveBg, saveLabel, menuBg, menuLabel]
   }
 
   private closePauseMenu() {
