@@ -2076,11 +2076,11 @@ export default class GameSceneV3 extends Phaser.Scene {
       .setStrokeStyle(3, 0x3498db)
       .setScrollFactor(0).setDepth(25001)
 
-    // Player name text (start empty)
+    // Player name text (start with cursor)
     let playerName = ''
-    const nameText = this.add.text(centerX, centerY + 10, 'Type here...', {
+    const nameText = this.add.text(centerX, centerY + 10, '_', {
       fontSize: '28px',
-      color: '#666666',
+      color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
 
@@ -2089,14 +2089,12 @@ export default class GameSceneV3 extends Phaser.Scene {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Backspace') {
         playerName = playerName.slice(0, -1)
-        nameText.setText(playerName || 'Type here...')
-        nameText.setColor(playerName ? '#ffffff' : '#666666')
+        nameText.setText(playerName || '_')
       } else if (event.key === 'Enter' && playerName.length > 0) {
         submitScore()
       } else if (event.key.length === 1 && playerName.length < 20) {
         playerName += event.key
-        nameText.setText(playerName)
-        nameText.setColor('#ffffff')
+        nameText.setText(playerName + '_')
       }
     }
     keyboard.on('keydown', handleKeyPress)
