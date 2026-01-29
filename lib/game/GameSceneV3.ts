@@ -2038,43 +2038,65 @@ export default class GameSceneV3 extends Phaser.Scene {
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    // Create overlay
-    const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.7)
-      .setOrigin(0).setScrollFactor(0).setDepth(20000)
+    // Calculate score
+    const score = this.runStats.totalMoney + this.runStats.totalKills * 100 + this.runStats.stagesCompleted * 1000
 
-    // Title
-    const title = this.add.text(centerX, centerY - 200, '💀 ENTER YOUR NAME', {
-      fontSize: '32px',
-      color: '#e74c3c',
+    // Create full screen black overlay
+    const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.95)
+      .setOrigin(0).setScrollFactor(0).setDepth(25000)
+
+    // Game Over title
+    const gameOverText = this.add.text(centerX, centerY - 150, victory ? '🎉 VICTORY!' : '💀 GAME OVER', {
+      fontSize: '48px',
+      color: victory ? '#2ecc71' : '#e74c3c',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 6
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20001)
+      strokeThickness: 8
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+
+    // Score display
+    const scoreText = this.add.text(centerX, centerY - 90, `Final Score: $${score.toLocaleString()}`, {
+      fontSize: '24px',
+      color: '#f39c12',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+
+    // Enter name prompt
+    const promptText = this.add.text(centerX, centerY - 40, 'Enter your name:', {
+      fontSize: '20px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
 
     // Input field background
-    const inputBg = this.add.rectangle(centerX, centerY - 140, 400, 60, 0x2c3e50)
+    const inputBg = this.add.rectangle(centerX, centerY + 10, 400, 60, 0x2c3e50)
       .setStrokeStyle(3, 0x3498db)
-      .setScrollFactor(0).setDepth(20001)
+      .setScrollFactor(0).setDepth(25001)
 
-    // Player name text
-    let playerName = this.currentPlayerName
-    const nameText = this.add.text(centerX, centerY - 140, playerName, {
+    // Player name text (start empty)
+    let playerName = ''
+    const nameText = this.add.text(centerX, centerY + 10, 'Type here...', {
       fontSize: '28px',
-      color: '#ffffff',
+      color: '#666666',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20002)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
 
     // Keyboard input
     const keyboard = this.input.keyboard!
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Backspace') {
         playerName = playerName.slice(0, -1)
-        nameText.setText(playerName || '_')
+        nameText.setText(playerName || 'Type here...')
+        nameText.setColor(playerName ? '#ffffff' : '#666666')
       } else if (event.key === 'Enter' && playerName.length > 0) {
         submitScore()
       } else if (event.key.length === 1 && playerName.length < 20) {
         playerName += event.key
         nameText.setText(playerName)
+        nameText.setColor('#ffffff')
       }
     }
     keyboard.on('keydown', handleKeyPress)
@@ -2084,14 +2106,11 @@ export default class GameSceneV3 extends Phaser.Scene {
       keyboard.off('keydown', handleKeyPress)
       submitBtn.disableInteractive()
 
-      // Calculate score (money + kills * 100 + stage * 1000)
-      const score = this.runStats.totalMoney + this.runStats.totalKills * 100 + this.runStats.stagesCompleted * 1000
-
       // Calculate time played in seconds
       const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
 
       // Submit to leaderboard
-      const result = await this.leaderboardService.submitScore(
+      await this.leaderboardService.submitScore(
         playerName,
         score,
         this.runStats.stagesCompleted,
@@ -2099,65 +2118,50 @@ export default class GameSceneV3 extends Phaser.Scene {
         timePlayed
       )
 
-      // Show result message
-      const resultText = this.add.text(centerX, centerY - 70, result.message, {
-        fontSize: '20px',
-        color: result.success ? '#2ecc71' : '#e74c3c',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 4
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(20001)
-
-      // Hide input UI
-      title.destroy()
+      // Show brief success message
+      overlay.setAlpha(1)
+      gameOverText.destroy()
+      scoreText.destroy()
+      promptText.destroy()
       inputBg.destroy()
       nameText.destroy()
       submitBtn.destroy()
       submitLabel.destroy()
 
-      // Load and display top 10 leaderboard
-      this.time.delayedCall(1000, async () => {
-        const topScores = await this.leaderboardService.getTopScores(10)
+      const successText = this.add.text(centerX, centerY - 30, '✅ Score Submitted!', {
+        fontSize: '36px',
+        color: '#2ecc71',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
 
-        if (topScores.length > 0) {
-          const lbTitle = this.add.text(centerX - 300, centerY - 250, '🏆 TOP 10 LEADERBOARD', {
-            fontSize: '28px',
-            color: '#f39c12',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 4
-          }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
+      const returnText = this.add.text(centerX, centerY + 30, 'Returning to menu...', {
+        fontSize: '20px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
 
-          topScores.forEach((entry, index) => {
-            const rank = index + 1
-            const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
-            const text = `${medal} ${entry.player_name} - $${entry.score} (Stage ${entry.stage_reached})`
-
-            this.add.text(centerX - 300, centerY - 200 + index * 30, text, {
-              fontSize: '18px',
-              color: rank <= 3 ? '#f39c12' : '#ffffff',
-              fontStyle: rank <= 3 ? 'bold' : 'normal',
-              stroke: '#000000',
-              strokeThickness: 3
-            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
-          })
-        }
+      // Return to menu after 1.5 seconds
+      this.time.delayedCall(1500, () => {
+        this.scene.start('MenuScene')
       })
     }
 
     // Submit button
-    const submitBtn = this.add.rectangle(centerX, centerY - 60, 200, 50, 0x27ae60)
+    const submitBtn = this.add.rectangle(centerX, centerY + 90, 250, 60, 0x27ae60)
       .setInteractive({ useHandCursor: true })
-      .setScrollFactor(0).setDepth(20001)
+      .setScrollFactor(0).setDepth(25001)
 
     submitBtn.on('pointerover', () => submitBtn.setFillStyle(0x2ecc71))
     submitBtn.on('pointerout', () => submitBtn.setFillStyle(0x27ae60))
     submitBtn.on('pointerdown', submitScore)
 
-    const submitLabel = this.add.text(centerX, centerY - 60, 'SUBMIT', {
-      fontSize: '24px',
+    const submitLabel = this.add.text(centerX, centerY + 90, 'SUBMIT', {
+      fontSize: '28px',
       color: '#ffffff',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20002)
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
   }
 }
