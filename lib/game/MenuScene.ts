@@ -231,7 +231,7 @@ export default class MenuScene extends Phaser.Scene {
   private async loadAndDisplaySaveSlots() {
     const { width, height } = this.scale
     const centerX = width / 2
-    const bottomY = height - 180
+    const bottomY = height - 240
 
     // Save slots label
     const label = this.add.text(centerX, bottomY - 60, 'SAVE SLOTS', {
