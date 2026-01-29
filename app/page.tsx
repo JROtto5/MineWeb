@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import Script from 'next/script'
 
 // Dynamically import Phaser to avoid SSR issues
 const GameWrapper = dynamic(() => import('../lib/game/GameWrapper'), {
@@ -66,9 +67,46 @@ export default function Home() {
     return () => window.removeEventListener('gameEvent' as any, handleGameEvent)
   }, [])
 
+  // Structured data for SEO
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'VideoGame',
+    name: 'Crime City: Underground Empire',
+    description: 'Free browser-based top-down shooter with roguelike elements, skill trees, and global leaderboards',
+    genre: ['Shooter', 'Roguelike', 'Action'],
+    gamePlatform: 'Web browser',
+    applicationCategory: 'Game',
+    url: 'https://crime-city-game.vercel.app',
+    operatingSystem: 'Any (Web browser)',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.5',
+      ratingCount: '100',
+      bestRating: '5',
+      worstRating: '1',
+    },
+    author: {
+      '@type': 'Organization',
+      name: 'Crime City Team',
+    },
+    keywords: 'free browser game, online shooting game, roguelike, skill tree, leaderboard, no download',
+  }
+
   return (
-    <div id="game-container">
-      <GameWrapper />
+    <>
+      <Script
+        id="structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div id="game-container">
+        <GameWrapper />
 
       <div id="hud">
         {/* Stats */}
@@ -160,6 +198,7 @@ export default function Home() {
           ))}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

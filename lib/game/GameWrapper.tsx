@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Phaser from 'phaser'
+import MenuScene from './MenuScene'
 import GameSceneV3 from './GameSceneV3'
 
 export default function GameWrapper() {
@@ -23,7 +24,7 @@ export default function GameWrapper() {
           debug: false,
         },
       },
-      scene: [GameSceneV3],
+      scene: [MenuScene, GameSceneV3],
       scale: {
         mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,

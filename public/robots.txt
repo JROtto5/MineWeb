@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://crime-city-game.vercel.app/sitemap.xml
