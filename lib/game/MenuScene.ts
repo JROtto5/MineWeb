@@ -3,17 +3,17 @@ import { SaveManager } from '../supabase/SaveManager'
 import { LeaderboardService } from '../supabase/LeaderboardService'
 import { SaveData, LeaderboardEntry } from '../supabase/client'
 
-// Color palette for dark crime theme
+// Color palette for sci-fi cyber theme
 const COLORS = {
-  bg: 0x0a0a0a,
-  panel: 0x1a1a2e,
-  accent: 0xbb86fc,
-  accent2: 0x03dac6,
-  highlight: 0xff0266,
-  text: 0xe0e0e0,
-  gold: 0xffd700,
-  silver: 0xc0c0c0,
-  bronze: 0xcd7f32,
+  bg: 0x0a1929,          // Deep space blue
+  panel: 0x1a2332,       // Dark blue-grey
+  accent: 0x05878a,      // Cyan tech
+  accent2: 0x00d9ff,     // Bright cyan
+  highlight: 0x0fefef,   // Electric blue
+  text: 0xe0f4ff,        // Light blue-white
+  gold: 0x00d9ff,        // Cyan (replaced gold)
+  silver: 0x88c0d0,
+  bronze: 0x5e81ac,
 }
 
 export default class MenuScene extends Phaser.Scene {
@@ -23,6 +23,7 @@ export default class MenuScene extends Phaser.Scene {
   private saveSlotContainers: Phaser.GameObjects.Container[] = []
   private particles!: Phaser.GameObjects.Particles.ParticleEmitter
   private refreshTimer?: Phaser.Time.TimerEvent
+  private userId: string | null = null // Authenticated user ID
   private playerName: string = 'Player' // Default player name
 
   constructor() {
@@ -40,6 +41,14 @@ export default class MenuScene extends Phaser.Scene {
 
   create() {
     this.initServices()
+
+    // Get authenticated user from registry
+    const currentUser = this.registry.get('currentUser')
+    if (currentUser) {
+      this.userId = currentUser.id
+      this.playerName = currentUser.displayName || 'Player'
+    }
+
     this.createBackground()
     this.createParticles()
     this.createTitle()
@@ -93,7 +102,7 @@ export default class MenuScene extends Phaser.Scene {
     const { width } = this.scale
 
     // Main title
-    const title = this.add.text(width / 2, 80, 'CRIME CITY', {
+    const title = this.add.text(width / 2, 80, 'DOT SLAYER', {
       fontSize: '72px',
       fontStyle: 'bold',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
@@ -102,7 +111,7 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5)
 
     // Subtitle
-    const subtitle = this.add.text(width / 2, 140, 'UNDERGROUND EMPIRE', {
+    const subtitle = this.add.text(width / 2, 140, '100 FLOORS CHALLENGE', {
       fontSize: '28px',
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
       stroke: '#000000',
@@ -164,6 +173,9 @@ export default class MenuScene extends Phaser.Scene {
     try {
       const topScores = await this.leaderboardService.getTopScores(10)
 
+      // Check if scene is still active after async operation
+      if (!this.scene || !this.scene.isActive() || !this.add) return
+
       if (topScores.length === 0) {
         const noScoresText = this.add.text(centerX, centerY - 20, 'No scores yet! Be the first to play!', {
           fontSize: '20px',
@@ -179,6 +191,10 @@ export default class MenuScene extends Phaser.Scene {
       })
     } catch (error) {
       console.error('Failed to load leaderboard:', error)
+
+      // Check if scene is still active before showing error
+      if (!this.scene || !this.scene.isActive() || !this.add) return
+
       const errorText = this.add.text(centerX, centerY - 20, 'Failed to load leaderboard', {
         fontSize: '20px',
         color: `#${COLORS.highlight.toString(16).padStart(6, '0')}`,
@@ -206,8 +222,8 @@ export default class MenuScene extends Phaser.Scene {
       fontStyle: rank <= 3 ? 'bold' : 'normal',
     }).setOrigin(0, 0.5)
 
-    // Player name
-    const nameText = this.add.text(centerX - panelWidth/2 + 100, y, entry.player_name, {
+    // Player name (use display_name, fallback to player_name for backward compatibility)
+    const nameText = this.add.text(centerX - panelWidth/2 + 100, y, entry.display_name || entry.player_name || 'Anonymous', {
       fontSize: '18px',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
     }).setOrigin(0, 0.5)
@@ -243,7 +259,23 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5)
 
     try {
-      const saves = await this.saveManager.listSaves(this.playerName)
+      // Check if user is authenticated
+      if (!this.userId) {
+        console.error('No user ID available - user not authenticated')
+        // Still create empty slots for UI
+        for (let slot = 1; slot <= 3; slot++) {
+          const slotX = centerX + (slot - 2) * 250
+          const slotY = bottomY
+          this.createSaveSlot(slot, slotX, slotY, undefined)
+        }
+        return
+      }
+
+      const saves = await this.saveManager.listSaves(this.userId)
+
+      // Check if scene is still active after async operation
+      if (!this.scene || !this.scene.isActive() || !this.add) return
+
       const savesBySlot = new Map<number, SaveData>()
       saves.forEach(save => savesBySlot.set(save.save_slot, save))
 

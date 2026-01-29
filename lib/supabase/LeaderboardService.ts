@@ -12,9 +12,10 @@ export class LeaderboardService {
     return LeaderboardService.instance
   }
 
-  // Submit score to leaderboard
+  // Submit score to leaderboard (NOW USES user_id and display_name)
   async submitScore(
-    playerName: string,
+    userId: string,
+    displayName: string,
     score: number,
     stageReached: number,
     kills: number,
@@ -22,7 +23,8 @@ export class LeaderboardService {
   ): Promise<{ success: boolean; message: string; rank?: number }> {
     try {
       const entry: LeaderboardEntry = {
-        player_name: playerName,
+        user_id: userId,
+        display_name: displayName,
         score: score,
         stage_reached: stageReached,
         kills: kills,
@@ -101,13 +103,13 @@ export class LeaderboardService {
     }
   }
 
-  // Get player's best score
-  async getPlayerBest(playerName: string): Promise<LeaderboardEntry | null> {
+  // Get player's best score (NOW USES user_id)
+  async getPlayerBest(userId: string): Promise<LeaderboardEntry | null> {
     try {
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
-        .eq('player_name', playerName)
+        .eq('user_id', userId)
         .order('score', { ascending: false })
         .limit(1)
         .single()

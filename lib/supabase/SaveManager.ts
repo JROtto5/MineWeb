@@ -15,9 +15,9 @@ export class SaveManager {
     return SaveManager.instance
   }
 
-  // Save game to cloud
+  // Save game to cloud (NOW USES user_id)
   async saveGame(
-    playerName: string,
+    userId: string,
     saveSlot: number,
     player: Player,
     stageNumber: number,
@@ -25,7 +25,7 @@ export class SaveManager {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const saveData: SaveData = {
-        player_name: playerName,
+        user_id: userId,
         save_slot: saveSlot,
         player_data: {
           level: player.level,
@@ -42,11 +42,11 @@ export class SaveManager {
         is_alive: true,
       }
 
-      // Check if save slot already exists
+      // Check if save slot already exists for this user
       const { data: existing } = await supabase
         .from('saves')
         .select('id')
-        .eq('player_name', playerName)
+        .eq('user_id', userId)
         .eq('save_slot', saveSlot)
         .single()
 
@@ -78,16 +78,16 @@ export class SaveManager {
     }
   }
 
-  // Load game from cloud
+  // Load game from cloud (NOW USES user_id)
   async loadGame(
-    playerName: string,
+    userId: string,
     saveSlot: number
   ): Promise<{ success: boolean; data?: SaveData; message: string }> {
     try {
       const { data, error } = await supabase
         .from('saves')
         .select('*')
-        .eq('player_name', playerName)
+        .eq('user_id', userId)
         .eq('save_slot', saveSlot)
         .single()
 
@@ -114,13 +114,13 @@ export class SaveManager {
     }
   }
 
-  // List all saves for a player
-  async listSaves(playerName: string): Promise<SaveData[]> {
+  // List all saves for a user (NOW USES user_id)
+  async listSaves(userId: string): Promise<SaveData[]> {
     try {
       const { data, error } = await supabase
         .from('saves')
         .select('*')
-        .eq('player_name', playerName)
+        .eq('user_id', userId)
         .order('save_slot')
 
       if (error) throw error
@@ -131,16 +131,16 @@ export class SaveManager {
     }
   }
 
-  // Delete a save
+  // Delete a save (NOW USES user_id)
   async deleteSave(
-    playerName: string,
+    userId: string,
     saveSlot: number
   ): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
         .from('saves')
         .delete()
-        .eq('player_name', playerName)
+        .eq('user_id', userId)
         .eq('save_slot', saveSlot)
 
       if (error) throw error
@@ -158,16 +158,16 @@ export class SaveManager {
     }
   }
 
-  // Mark a save as dead (player died)
+  // Mark a save as dead (NOW USES user_id)
   async markSaveDead(
-    playerName: string,
+    userId: string,
     saveSlot: number
   ): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
         .from('saves')
         .update({ is_alive: false })
-        .eq('player_name', playerName)
+        .eq('user_id', userId)
         .eq('save_slot', saveSlot)
 
       if (error) throw error

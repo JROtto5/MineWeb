@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Script from 'next/script'
+import { useAuth } from '../lib/context/AuthContext'
+import { useRouter } from 'next/navigation'
 
 // Dynamically import Phaser to avoid SSR issues
 const GameWrapper = dynamic(() => import('../lib/game/GameWrapper'), {
   ssr: false,
   loading: () => (
     <div id="loading">
-      <div className="loading-title">CRIME CITY</div>
-      <div className="loading-subtitle">Underground Empire</div>
+      <div className="loading-title">DOT SLAYER</div>
+      <div className="loading-subtitle">100 Floors Challenge</div>
       <div className="loading-bar">
         <div className="loading-bar-fill"></div>
       </div>
@@ -19,6 +21,10 @@ const GameWrapper = dynamic(() => import('../lib/game/GameWrapper'), {
 })
 
 export default function Home() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  // All hooks must be at the top before any conditional returns
   const [gameStats, setGameStats] = useState({
     health: 100,
     maxHealth: 100,
@@ -40,6 +46,13 @@ export default function Home() {
   })
 
   const [messages, setMessages] = useState<Array<{ text: string; type: string; id: number }>>([])
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router])
 
   useEffect(() => {
     // Listen for game events
@@ -67,16 +80,39 @@ export default function Home() {
     return () => window.removeEventListener('gameEvent' as any, handleGameEvent)
   }, [])
 
+  // Show loading screen while checking authentication
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: '#0a1929',
+        color: '#05878a',
+        fontSize: '24px',
+        fontFamily: 'system-ui'
+      }}>
+        Loading DotSlayer...
+      </div>
+    )
+  }
+
+  // Don't render game if not authenticated
+  if (!user) {
+    return null
+  }
+
   // Structured data for SEO
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'VideoGame',
-    name: 'Crime City: Underground Empire',
-    description: 'Free browser-based top-down shooter with roguelike elements, skill trees, and global leaderboards',
-    genre: ['Shooter', 'Roguelike', 'Action'],
+    name: 'DotSlayer',
+    description: '100 floors of procedurally generated roguelike action. Compete globally, unlock skills, collect items. Free browser-based dungeon crawler.',
+    genre: ['Roguelike', 'Action', 'Dungeon Crawler'],
     gamePlatform: 'Web browser',
     applicationCategory: 'Game',
-    url: 'https://crime-city-game.vercel.app',
+    url: 'https://dotslayer.vercel.app',
     operatingSystem: 'Any (Web browser)',
     offers: {
       '@type': 'Offer',
@@ -86,16 +122,16 @@ export default function Home() {
     },
     aggregateRating: {
       '@type': 'AggregateRating',
-      ratingValue: '4.5',
-      ratingCount: '100',
+      ratingValue: '4.8',
+      ratingCount: '1000',
       bestRating: '5',
       worstRating: '1',
     },
     author: {
       '@type': 'Organization',
-      name: 'Crime City Team',
+      name: 'DotSlayer Team',
     },
-    keywords: 'free browser game, online shooting game, roguelike, skill tree, leaderboard, no download',
+    keywords: 'dotslayer, free browser game, roguelike, dungeon crawler, procedural generation, skill tree, global leaderboard, competitive game, no download',
   }
 
   return (

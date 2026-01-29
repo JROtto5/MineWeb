@@ -1,40 +1,41 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AuthProvider } from '../lib/context/AuthContext'
 
 export const metadata: Metadata = {
-  title: 'Crime City: Underground Empire - Free Online Shooting Game',
-  description: 'Play Crime City for free! Top-down roguelike shooter with skill trees, upgrades, and global leaderboards. No download required - play instantly in your browser.',
+  title: 'DotSlayer - Free Competitive Browser Roguelike',
+  description: 'Compete on global leaderboards in DotSlayer! 100 procedurally generated floors, skill trees, and intense dot-slaying action. No download required - play instantly in your browser.',
   keywords: [
+    'dotslayer',
     'free browser game',
-    'online shooting game',
+    'online roguelike',
+    'competitive browser game',
+    'procedural dungeon crawler',
     'no download game',
-    'browser shooter',
-    'roguelike shooter',
     'skill tree game',
+    'global leaderboard game',
+    'web roguelike',
+    'dungeon crawler browser',
     'free online game',
-    'top down shooter',
-    'web game',
-    'casual shooter',
     'browser action game',
-    'free shooter game',
-    'online arcade game',
+    'sci-fi shooter',
     'phaser game',
     'javascript game',
   ].join(', '),
-  authors: [{ name: 'Crime City Team' }],
-  creator: 'Crime City Team',
-  publisher: 'Crime City',
+  authors: [{ name: 'DotSlayer Team' }],
+  creator: 'DotSlayer Team',
+  publisher: 'DotSlayer',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://crime-city-game.vercel.app'),
+  metadataBase: new URL('https://dotslayer.vercel.app'),
   openGraph: {
-    title: 'Crime City: Underground Empire',
-    description: 'Free browser shooting game with roguelike progression. Compete on global leaderboards!',
-    url: 'https://crime-city-game.vercel.app',
-    siteName: 'Crime City',
+    title: 'DotSlayer - Competitive Browser Roguelike',
+    description: 'Climb 100 floors, compete globally, dominate the leaderboards! Free browser roguelike with procedurally generated dungeons.',
+    url: 'https://dotslayer.vercel.app',
+    siteName: 'DotSlayer',
     locale: 'en_US',
     type: 'website',
     images: [
@@ -42,14 +43,14 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Crime City gameplay screenshot',
+        alt: 'DotSlayer gameplay screenshot',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Crime City: Free Online Shooter',
-    description: 'Play free roguelike shooter in your browser. No download needed!',
+    title: 'DotSlayer - Free Competitive Roguelike',
+    description: '100 floors of procedurally generated action. Compete on global leaderboards!',
     images: ['/og-image.png'],
   },
   robots: {
@@ -77,7 +78,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }

@@ -32,7 +32,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     attackSpeed: 1000,
     moneyDrop: [10, 30],
     xpDrop: [5, 15],
-    color: 0xe74c3c,
+    color: 0xff6b6b, // Red dot
     size: 16,
     behavior: 'chase',
   },
@@ -44,7 +44,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     attackSpeed: 500,
     moneyDrop: [15, 35],
     xpDrop: [8, 18],
-    color: 0xf39c12,
+    color: 0x4ecdc4, // Cyan dot
     size: 12,
     behavior: 'fast',
   },
@@ -56,7 +56,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     attackSpeed: 2000,
     moneyDrop: [30, 80],
     xpDrop: [25, 50],
-    color: 0x8e44ad,
+    color: 0x9b59b6, // Purple dot
     size: 24,
     behavior: 'tank',
   },
@@ -68,7 +68,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     attackSpeed: 2500, // Shoots faster (was 3000)
     moneyDrop: [20, 50],
     xpDrop: [15, 30],
-    color: 0x16a085,
+    color: 0xf1c40f, // Yellow dot
     size: 14,
     behavior: 'ranged',
   },
@@ -80,7 +80,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     attackSpeed: 600,
     moneyDrop: [40, 90],
     xpDrop: [30, 60],
-    color: 0xc0392b,
+    color: 0xe74c3c, // Dark red dot
     size: 20,
     behavior: 'berserker',
   },
@@ -92,7 +92,7 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     attackSpeed: 1200, // Attacks faster (was 1500)
     moneyDrop: [200, 500],
     xpDrop: [100, 200],
-    color: 0xe67e22,
+    color: 0x00ff00, // Bright green dot (Matrix style)
     size: 40,
     behavior: 'tank',
   },

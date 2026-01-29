@@ -8,7 +8,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Database types
 export interface SaveData {
   id?: string
-  player_name: string
+  user_id: string  // Auth user ID (replaces player_name as primary identifier)
+  player_name?: string  // Kept for backward compatibility
   save_slot: number
   player_data: {
     level: number
@@ -28,7 +29,9 @@ export interface SaveData {
 
 export interface LeaderboardEntry {
   id?: string
-  player_name: string
+  user_id: string  // Auth user ID
+  display_name: string  // Display name (from auth metadata or user input)
+  player_name?: string  // Kept for backward compatibility
   score: number
   stage_reached: number
   kills: number

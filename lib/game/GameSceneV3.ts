@@ -12,6 +12,9 @@ import Boss, { BossType, BOSS_CONFIGS } from './Boss'
 import { AudioManager } from './AudioManager'
 import { SaveManager } from '../supabase/SaveManager'
 import { LeaderboardService } from '../supabase/LeaderboardService'
+import { FloorManager, FloorConfig } from './FloorSystem'
+import { ItemDrop, rollItemDrop, ItemRarity, ITEM_POOL } from './ItemSystem'
+import { AchievementManager, GameStats as AchievementStats } from './AchievementSystem'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
@@ -23,12 +26,19 @@ export default class GameSceneV3 extends Phaser.Scene {
   private powerUpManager!: PowerUpManager
   private comboSystem!: ComboSystem
   private stageManager!: StageManager
+  private floorManager!: FloorManager
   private shopManager!: ShopManager
   private shopUI!: ShopUI
   private audioManager!: AudioManager
   private saveManager!: SaveManager
   private leaderboardService!: LeaderboardService
+  private itemDrops!: Phaser.GameObjects.Group
+  private achievementManager!: AchievementManager
+  private itemsCollectedThisRun = 0
+  private legendariesCollectedThisRun = 0
+  private startTime = 0
 
+  private currentUserId: string | null = null
   private currentPlayerName: string = 'Player'
   private currentSaveSlot: number | null = null
 
@@ -40,8 +50,11 @@ export default class GameSceneV3 extends Phaser.Scene {
   private bossSpawned = false
   private stageCompleted = false // FIX: Prevent multiple completions
 
-  private worldWidth = 2000 // Much smaller arena (was 3200)
-  private worldHeight = 1500 // Much smaller arena (was 2400)
+  private worldWidth = 3000 // Expanded for procedural floors
+  private worldHeight = 2000 // Expanded for procedural floors
+  private floorGraphics: Phaser.GameObjects.Graphics[] = []
+  private shopNPCs: Phaser.GameObjects.Sprite[] = []
+  private treasureChests: Phaser.GameObjects.Sprite[] = []
 
   private casinoZones: any[] = []
   private skillTreeUI: any = null
@@ -91,6 +104,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Initialize systems
     this.stageManager = new StageManager()
+    this.floorManager = new FloorManager()
     this.comboSystem = new ComboSystem()
     this.weaponSystem = new WeaponSystem(this)
     this.casinoManager = new CasinoManager(this)
@@ -99,6 +113,13 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.audioManager = AudioManager.getInstance()
     this.saveManager = SaveManager.getInstance()
     this.leaderboardService = LeaderboardService.getInstance()
+    this.achievementManager = new AchievementManager()
+    this.startTime = Date.now()
+
+    // Setup achievement unlock notifications
+    this.achievementManager.onUnlock((achievement) => {
+      this.showAchievementUnlock(achievement)
+    })
 
     // Start background music (after user interaction)
     this.input.once('pointerdown', () => {
@@ -108,18 +129,32 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Set world bounds
     this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight)
 
-    // Create background
-    this.createStageBackground()
+    // Create background (DotSlayer style!)
+    this.createInitialBackground()
 
     // Create player
     this.player = new Player(this, this.worldWidth / 2, this.worldHeight / 2, this.weaponSystem)
 
+    // Get current user from auth context (passed via registry from React)
+    const currentUser = this.registry.get('currentUser')
+    if (currentUser) {
+      this.currentUserId = currentUser.id
+      this.currentPlayerName = currentUser.displayName || 'Player'
+    }
+
     // Check if we're loading a saved game
     const loadSaveData = this.registry.get('loadSaveData')
     if (loadSaveData) {
-      this.currentPlayerName = loadSaveData.player_name
+      this.currentUserId = loadSaveData.user_id
+      this.currentPlayerName = loadSaveData.player_name || this.currentPlayerName
       this.currentSaveSlot = loadSaveData.save_slot
       this.saveManager.applySaveData(loadSaveData, this.player, this.shopManager)
+
+      // Set floor manager to the correct floor (convert old stage_number to floor)
+      if (loadSaveData.stage_number) {
+        this.floorManager.setFloor(loadSaveData.stage_number)
+      }
+
       this.registry.remove('loadSaveData') // Clear the registry
     } else {
       // Apply initial shop bonuses for new game
@@ -138,11 +173,14 @@ export default class GameSceneV3 extends Phaser.Scene {
     // CREATIVE EXPANSION: Create bosses group!
     this.bosses = this.add.group()
 
+    // Create item drops group
+    this.itemDrops = this.add.group()
+
     // Create persistent UI
     this.createPersistentUI()
 
-    // Spawn initial stage enemies
-    this.startStage()
+    // Spawn initial floor (DotSlayer procedural system!)
+    this.loadFloor()
 
     // Camera setup
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1)
@@ -161,9 +199,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     // UI updates
     this.updateUI()
 
-    // Welcome message
-    this.addKillFeedMessage('🎮 CRIME CITY V3 - All systems online!', '#2ecc71', 5000)
-    this.showStageIntro()
+    // Welcome message - DotSlayer!
+    this.addKillFeedMessage('⚡ DOTSLAYER - Systems Online!', '#00d9ff', 5000)
+    this.addKillFeedMessage('Hold mouse to auto-fire • Press B for Shop • Press T for Skills', '#88c0d0', 6000)
   }
 
   private abilityHotbarUI: any[] = []
@@ -742,6 +780,15 @@ export default class GameSceneV3 extends Phaser.Scene {
       undefined,
       this
     )
+
+    // Player collects item drops
+    this.physics.add.overlap(
+      this.player,
+      this.itemDrops,
+      this.collectItemDrop as any,
+      undefined,
+      this
+    )
   }
 
   update(time: number, delta: number) {
@@ -767,6 +814,11 @@ export default class GameSceneV3 extends Phaser.Scene {
         if (this.player.currentAmmo <= 0) {
           this.player.reload()
         }
+      }
+
+      // Auto-fire on mouse hold
+      if (this.input.activePointer.isDown && this.input.activePointer.leftButtonDown()) {
+        this.player.shoot(this.input.activePointer.worldX, this.input.activePointer.worldY)
       }
     }
 
@@ -897,6 +949,207 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.addKillFeedMessage(`Stage ${this.stageManager.getCurrentStageNumber()}: ${stage.name}`, '#f39c12', 5000)
   }
 
+  // DOTSLAYER: Load procedurally generated floor
+  private loadFloor() {
+    const floor = this.floorManager.getCurrentFloor()
+    const floorNum = this.floorManager.getCurrentFloorNumber()
+
+    // Clear everything
+    this.enemies.clear(true, true)
+    this.bosses.clear(true, true)
+    this.itemDrops.clear(true, true)
+    this.floorGraphics.forEach(g => g.destroy())
+    this.floorGraphics = []
+    this.shopNPCs.forEach(npc => npc.destroy())
+    this.shopNPCs = []
+    this.treasureChests.forEach(chest => chest.destroy())
+    this.treasureChests = []
+
+    // Reset counters
+    this.enemiesKilled = 0
+    this.totalEnemies = floor.enemyCount
+    this.bossSpawned = false
+    this.stageCompleted = false
+
+    // Render floor visually
+    this.renderFloorLayout(floor)
+
+    // Spawn enemies in rooms
+    this.spawnFloorEnemies(floor)
+
+    // Create special room objects
+    this.createRoomObjects(floor)
+
+    // Announce floor
+    const modifier = floor.specialModifier
+    let message = `Floor ${floorNum}`
+    let color = '#00d9ff'
+
+    if (modifier === 'boss_floor') {
+      message += ' - BOSS FLOOR!'
+      color = '#ff0266'
+    } else if (modifier === 'elite_floor') {
+      message += ' - Elite Enemies'
+      color = '#ff6b00'
+    } else if (modifier === 'treasure_floor') {
+      message += ' - Treasure Floor!'
+      color = '#ffd700'
+    }
+
+    this.addKillFeedMessage(message, color, 5000)
+
+    // Update background color based on floor
+    this.createFloorBackground(floorNum)
+  }
+
+  private renderFloorLayout(floor: FloorConfig) {
+    // Floor layout is generated but NOT rendered visually
+    // Rooms exist for enemy spawning logic but players see open space
+    // Clean, simple gameplay without visual clutter!
+  }
+
+  private spawnFloorEnemies(floor: FloorConfig) {
+    const { enemyTypes, enemyCount, difficultyMultiplier } = floor
+
+    // Spawn enemies in open world (simple and reliable!)
+    for (let i = 0; i < enemyCount; i++) {
+      const x = Phaser.Math.Between(200, this.worldWidth - 200)
+      const y = Phaser.Math.Between(200, this.worldHeight - 200)
+
+      // Don't spawn too close to player
+      const distToPlayer = Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y)
+      if (distToPlayer < 400) {
+        i--
+        continue
+      }
+
+      // Pick random enemy type from floor's allowed types
+      const type = Phaser.Math.RND.pick(enemyTypes)
+      const enemy = new AdvancedEnemy(this, x, y, type)
+
+      // Apply difficulty multiplier based on floor
+      if (difficultyMultiplier > 1) {
+        enemy.health *= difficultyMultiplier
+        enemy.maxHealth = enemy.health
+      }
+
+      this.enemies.add(enemy)
+    }
+  }
+
+  private createRoomObjects(floor: FloorConfig) {
+    // Spawn shop NPCs in random locations (1 per 20 floors)
+    if (floor.floorNumber % 20 === 0 || floor.floorNumber === 5) {
+      const shopX = Phaser.Math.Between(400, this.worldWidth - 400)
+      const shopY = Phaser.Math.Between(400, this.worldHeight - 400)
+      this.createShopNPC(shopX, shopY)
+    }
+
+    // Spawn legendary treasure items (1 per 15 floors)
+    if (floor.floorNumber % 15 === 0 || floor.specialModifier === 'treasure_floor') {
+      const treasureX = Phaser.Math.Between(400, this.worldWidth - 400)
+      const treasureY = Phaser.Math.Between(400, this.worldHeight - 400)
+      this.createTreasureChest(treasureX, treasureY)
+    }
+
+    // Spawn boss on boss floors
+    if (floor.specialModifier === 'boss_floor') {
+      const bossX = Phaser.Math.Between(600, this.worldWidth - 600)
+      const bossY = Phaser.Math.Between(600, this.worldHeight - 600)
+      this.spawnFloorBoss(bossX, bossY, floor.floorNumber)
+    }
+  }
+
+  private createShopNPC(x: number, y: number) {
+    // Create a glowing shop NPC (green circle with $ sign)
+    const npc = this.add.circle(x, y, 30, 0x2ecc71)
+    const dollarSign = this.add.text(x, y, '$', {
+      fontSize: '48px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5)
+
+    // Pulsing animation
+    this.tweens.add({
+      targets: [npc, dollarSign],
+      scale: { from: 1, to: 1.2 },
+      duration: 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    })
+
+    // Interaction
+    npc.setInteractive({ useHandCursor: true })
+    npc.on('pointerdown', () => {
+      this.shopUI.toggleShop()
+    })
+
+    this.shopNPCs.push(npc as any)
+  }
+
+  private createTreasureChest(x: number, y: number) {
+    // Just spawn legendary items directly - no interaction needed!
+    const legendaryItems = ITEM_POOL.filter(item => item.rarity === ItemRarity.LEGENDARY)
+    const item = Phaser.Math.RND.pick(legendaryItems)
+
+    if (item) {
+      const itemDrop = new ItemDrop(this, x, y, item)
+      this.itemDrops.add(itemDrop)
+
+      // Show treasure message
+      this.addKillFeedMessage('✨ LEGENDARY TREASURE! ✨', '#ffd700', 4000)
+    }
+  }
+
+  private spawnFloorBoss(x: number, y: number, floorNumber: number) {
+    // Determine boss type based on floor
+    let bossType: BossType
+    if (floorNumber >= 80) {
+      bossType = 'mega'
+    } else if (floorNumber >= 60) {
+      bossType = 'healer'
+    } else if (floorNumber >= 40) {
+      bossType = 'sniper'
+    } else if (floorNumber >= 20) {
+      bossType = 'speed'
+    } else {
+      bossType = 'tank'
+    }
+
+    const boss = new Boss(this, x, y, bossType)
+
+    // Scale boss health with floor number
+    const healthMultiplier = 1 + (floorNumber * 0.15)
+    boss.health *= healthMultiplier
+    boss.maxHealth = boss.health
+
+    this.bosses.add(boss)
+    this.bossSpawned = true
+
+    this.addKillFeedMessage(`💀 FLOOR ${floorNumber} BOSS! 💀`, '#ff0266', 5000)
+  }
+
+  private createFloorBackground(floorNumber: number) {
+    // Change background hue based on floor depth
+    const bgGraphics = this.add.graphics()
+
+    // Deep space gradient - gets darker as you descend
+    const darkness = Math.min(0.5, floorNumber / 200)
+    const baseColor = Phaser.Display.Color.ValueToColor(0x0a1929)
+    const darkenedColor = Phaser.Display.Color.GetColor(
+      Math.floor(baseColor.red * (1 - darkness)),
+      Math.floor(baseColor.green * (1 - darkness)),
+      Math.floor(baseColor.blue * (1 - darkness))
+    )
+
+    bgGraphics.fillStyle(darkenedColor, 1)
+    bgGraphics.fillRect(0, 0, this.worldWidth, this.worldHeight)
+    bgGraphics.setDepth(-100)
+  }
+
   private spawnEnemies(count: number, types: EnemyType[]) {
     for (let i = 0; i < count; i++) {
       const x = Phaser.Math.Between(200, this.worldWidth - 200)
@@ -1001,6 +1254,15 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // Drop power-up chance
       this.powerUpManager.tryDropPowerUp(enemy.x, enemy.y)
+
+      // Drop item chance (DotSlayer loot system!)
+      const currentFloor = this.floorManager.getCurrentFloorNumber()
+      const dropChance = this.floorManager.getCurrentFloor().itemDropChance
+      const item = rollItemDrop(currentFloor, dropChance)
+      if (item) {
+        const itemDrop = new ItemDrop(this, enemy.x, enemy.y, item)
+        this.itemDrops.add(itemDrop)
+      }
 
       // Create explosion effect
       this.createExplosion(enemy.x, enemy.y, enemy.isBoss())
@@ -1119,6 +1381,86 @@ export default class GameSceneV3 extends Phaser.Scene {
     powerUp.collect(player)
   }
 
+  private collectItemDrop(player: any, itemDrop: any) {
+    // Play collect sound
+    this.audioManager.playSound('upgrade')
+
+    // Track item collection
+    this.itemsCollectedThisRun++
+    if (itemDrop.getItem().rarity === ItemRarity.LEGENDARY) {
+      this.legendariesCollectedThisRun++
+
+      // Enhanced particles for legendary drops!
+      this.createLegendaryParticles(itemDrop.x, itemDrop.y)
+    }
+
+    // Collect the item (applies effect and shows message)
+    itemDrop.collect(player)
+
+    // Check achievements after collecting
+    this.checkAchievementsProgress()
+  }
+
+  private createLegendaryParticles(x: number, y: number) {
+    // Epic particle burst for legendary items!
+    const colors = [0xffd700, 0xff0266, 0x00d9ff, 0xff6b00, 0x00ff00]
+
+    // Big explosion
+    for (let i = 0; i < 50; i++) {
+      const angle = (Math.PI * 2 * i) / 50
+      const speed = 200 + Math.random() * 100
+      const color = Phaser.Math.RND.pick(colors)
+
+      const particle = this.add.circle(x, y, 8, color)
+      particle.setBlendMode(Phaser.BlendModes.ADD)
+
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        alpha: 0,
+        scale: 0,
+        duration: 1500,
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy()
+      })
+    }
+
+    // Shockwave ring
+    const ring = this.add.circle(x, y, 10, 0xffd700, 0)
+    ring.setStrokeStyle(4, 0xffd700, 1)
+    ring.setBlendMode(Phaser.BlendModes.ADD)
+
+    this.tweens.add({
+      targets: ring,
+      radius: 150,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    })
+
+    // Star particles
+    for (let i = 0; i < 20; i++) {
+      const starText = this.add.text(x, y, '✨', {
+        fontSize: '24px'
+      })
+
+      const angle = Math.random() * Math.PI * 2
+      const distance = 100 + Math.random() * 100
+
+      this.tweens.add({
+        targets: starText,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance - 50,
+        alpha: 0,
+        duration: 2000,
+        ease: 'Cubic.easeOut',
+        onComplete: () => starText.destroy()
+      })
+    }
+  }
+
   // TESTING: Helper for auto-click
   private getNearestEnemy(): any {
     let nearest = null
@@ -1148,49 +1490,188 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private checkStageCompletion() {
-    const stage = this.stageManager.getCurrentStage()
-
-    // FAST-PACED: Spawn boss at 60% completion instead of 95%!
-    const bossSpawnThreshold = Math.floor(this.totalEnemies * 0.6)
-    if (stage.bossEnabled && !this.bossSpawned && this.enemiesKilled >= bossSpawnThreshold) {
-      this.spawnBoss()
-    }
-
-    // Stage complete
-    if (this.enemiesKilled >= this.totalEnemies) {
-      this.completeStage()
+    // Check floor completion
+    if (this.enemiesKilled >= this.totalEnemies && this.bosses.children.size === 0) {
+      this.completeFloor()
     }
   }
 
-  private completeStage() {
-    if (this.stageCompleted) return // FIX: Prevent multiple calls
+  private completeFloor() {
+    if (this.stageCompleted) return // Prevent multiple calls
     this.stageCompleted = true
 
-    const stage = this.stageManager.getCurrentStage()
+    const floorNum = this.floorManager.getCurrentFloorNumber()
 
-    // ROGUELIKE: Track stages completed
-    this.runStats.stagesCompleted++
+    // ROGUELIKE: Track floors completed
+    this.runStats.stagesCompleted = floorNum
 
-    // Rewards
-    this.player.addMoney(stage.moneyReward)
-    this.player.addXP(stage.xpReward)
+    // Floor completion rewards (scaled by floor)
+    const moneyReward = 100 + (floorNum * 50)
+    const xpReward = 50 + (floorNum * 25)
+
+    this.player.addMoney(moneyReward)
+    this.player.addXP(xpReward)
 
     // ROGUELIKE: Track money earned
-    this.runStats.totalMoney += stage.moneyReward
+    this.runStats.totalMoney += moneyReward
 
-    this.addKillFeedMessage(`Stage Complete! +$${stage.moneyReward} +${stage.xpReward}XP`, '#2ecc71', 6000)
+    this.addKillFeedMessage(`Floor ${floorNum} Complete! +$${moneyReward} +${xpReward}XP`, '#2ecc71', 6000)
 
-    // Check if more stages
-    if (this.stageManager.nextStage()) {
-      // Next stage
+    // Check for achievements
+    this.checkAchievementsProgress()
+
+    // Check if more floors
+    if (this.floorManager.nextFloor()) {
+      // Next floor
       this.time.delayedCall(3000, () => {
-        this.startStage()
-        this.showStageIntro()
+        this.loadFloor()
+        this.showFloorIntro()
       })
     } else {
-      // GAME WON!
+      // GAME WON! Beat all 100 floors!
       this.gameWon()
     }
+  }
+
+  private showFloorIntro() {
+    const floorNum = this.floorManager.getCurrentFloorNumber()
+    const floor = this.floorManager.getCurrentFloor()
+
+    let message = `FLOOR ${floorNum}`
+    let subtitle = `${floor.enemyCount} enemies`
+
+    if (floor.specialModifier === 'boss_floor') {
+      subtitle = 'BOSS FLOOR - Prepare yourself!'
+      // Play boss music!
+      this.playBossMusic()
+    } else if (floor.specialModifier === 'elite_floor') {
+      subtitle = 'Elite enemies ahead...'
+    } else if (floor.specialModifier === 'treasure_floor') {
+      subtitle = 'Treasure awaits!'
+    }
+
+    this.showBigPopup(message, '#00d9ff')
+    this.time.delayedCall(1000, () => {
+      this.addKillFeedMessage(subtitle, '#88c0d0', 4000)
+    })
+  }
+
+  private playBossMusic() {
+    // Switch to dramatic boss music
+    this.audioManager.playMusic('boss')
+  }
+
+  private checkAchievementsProgress() {
+    const stats: AchievementStats = {
+      floorsCompleted: this.floorManager.getCurrentFloorNumber(),
+      totalKills: this.runStats.totalKills,
+      totalMoney: this.runStats.totalMoney,
+      highestCombo: this.runStats.highestCombo,
+      itemsCollected: this.itemsCollectedThisRun,
+      legendariesCollected: this.legendariesCollectedThisRun,
+      bossesKilled: this.runStats.bossesKilled,
+      deathCount: 0, // TODO: Track deaths
+      totalPlayTime: Math.floor((Date.now() - this.startTime) / 1000)
+    }
+
+    this.achievementManager.checkAchievements(stats)
+  }
+
+  private showAchievementUnlock(achievement: any) {
+    // Play achievement sound
+    this.audioManager.playSound('upgrade')
+
+    // Create achievement popup
+    const centerX = this.cameras.main.worldView.centerX
+    const centerY = this.cameras.main.worldView.centerY
+
+    const container = this.add.container(centerX, centerY - 200).setScrollFactor(0).setDepth(10000)
+
+    // Background
+    const bg = this.add.rectangle(0, 0, 500, 150, 0x1a2332, 0.95)
+    bg.setStrokeStyle(4, achievement.color, 1)
+
+    // Icon
+    const icon = this.add.text(-180, 0, achievement.icon, {
+      fontSize: '64px'
+    }).setOrigin(0.5)
+
+    // Title
+    const title = this.add.text(-20, -30, 'ACHIEVEMENT UNLOCKED!', {
+      fontSize: '20px',
+      color: `#${achievement.color.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5)
+
+    // Achievement name
+    const name = this.add.text(-20, 0, achievement.name, {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0, 0.5)
+
+    // Description
+    const desc = this.add.text(-20, 30, achievement.description, {
+      fontSize: '16px',
+      color: '#88c0d0'
+    }).setOrigin(0, 0.5)
+
+    // Tier badge
+    const tierText = achievement.tier.toUpperCase()
+    const tierBadge = this.add.text(200, -50, tierText, {
+      fontSize: '14px',
+      color: `#${achievement.color.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5)
+
+    container.add([bg, icon, title, name, desc, tierBadge])
+
+    // Slide in animation
+    container.setY(centerY - 400)
+    container.setAlpha(0)
+
+    this.tweens.add({
+      targets: container,
+      y: centerY - 200,
+      alpha: 1,
+      duration: 500,
+      ease: 'Back.easeOut'
+    })
+
+    // Particle burst
+    for (let i = 0; i < 30; i++) {
+      const angle = (Math.PI * 2 * i) / 30
+      const particle = this.add.circle(
+        centerX,
+        centerY - 200,
+        6,
+        achievement.color
+      ).setScrollFactor(0).setDepth(9999).setBlendMode(Phaser.BlendModes.ADD)
+
+      this.tweens.add({
+        targets: particle,
+        x: centerX + Math.cos(angle) * 150,
+        y: centerY - 200 + Math.sin(angle) * 150,
+        alpha: 0,
+        duration: 1500,
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy()
+      })
+    }
+
+    // Auto-hide after 5 seconds
+    this.time.delayedCall(5000, () => {
+      this.tweens.add({
+        targets: container,
+        y: centerY - 400,
+        alpha: 0,
+        duration: 500,
+        ease: 'Back.easeIn',
+        onComplete: () => container.destroy()
+      })
+    })
   }
 
   // PAUSE MENU
@@ -1343,11 +1824,18 @@ export default class GameSceneV3 extends Phaser.Scene {
         // Quick save to current slot (or slot 1 if new game)
         const saveSlot = this.currentSaveSlot || 1
         this.currentSaveSlot = saveSlot // Track it for future saves
+
+        // Check if user is authenticated
+        if (!this.currentUserId) {
+          saveLabel.setText('❌ Not logged in')
+          return
+        }
+
         const result = await this.saveManager.saveGame(
-          this.currentPlayerName,
+          this.currentUserId,
           saveSlot,
           this.player,
-          this.stageManager.getCurrentStageNumber(),
+          this.floorManager.getCurrentFloorNumber(),
           this.shopManager
         )
 
@@ -1470,14 +1958,16 @@ export default class GameSceneV3 extends Phaser.Scene {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
   }
 
-  private createStageBackground() {
-    const stage = this.stageManager.getCurrentStage()
-    const graphics = this.add.graphics().setDepth(-1)
+  private createInitialBackground() {
+    // DotSlayer sci-fi background
+    const graphics = this.add.graphics().setDepth(-100)
 
-    graphics.fillStyle(stage.backgroundColor, 1)
+    // Deep space blue background
+    graphics.fillStyle(0x0a1929, 1)
     graphics.fillRect(0, 0, this.worldWidth, this.worldHeight)
 
-    graphics.lineStyle(1, stage.gridColor, 0.5)
+    // Cyan grid
+    graphics.lineStyle(1, 0x05878a, 0.3)
     const gridSize = 64
 
     for (let x = 0; x <= this.worldWidth; x += gridSize) {
@@ -1487,6 +1977,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     for (let y = 0; y <= this.worldHeight; y += gridSize) {
       graphics.lineBetween(0, y, this.worldWidth, y)
     }
+  }
+
+  private createStageBackground() {
+    // Legacy function - no longer used
   }
 
   private showStageIntro() {
@@ -1977,10 +2471,22 @@ export default class GameSceneV3 extends Phaser.Scene {
       bestCombo,
     }
 
-    const stage = this.stageManager.getCurrentStage()
+    // DotSlayer floor system!
+    const floorNum = this.floorManager.getCurrentFloorNumber()
+    const floor = this.floorManager.getCurrentFloor()
+    let floorType = 'Standard Floor'
+
+    if (floor.specialModifier === 'boss_floor') {
+      floorType = 'BOSS FLOOR'
+    } else if (floor.specialModifier === 'elite_floor') {
+      floorType = 'Elite Floor'
+    } else if (floor.specialModifier === 'treasure_floor') {
+      floorType = 'Treasure Floor'
+    }
+
     const mission = {
-      title: `STAGE ${stage.stageNumber}: ${stage.name}`,
-      objective: 'Eliminate all enemies',
+      title: `FLOOR ${floorNum} - ${floorType}`,
+      objective: 'Clear all enemies to proceed',
       progress: `${this.enemiesKilled} / ${this.totalEnemies} enemies`,
     }
 
@@ -2029,8 +2535,8 @@ export default class GameSceneV3 extends Phaser.Scene {
   // Show leaderboard after game over/victory with name input
   private async showLeaderboardPrompt(victory: boolean) {
     // Mark save as dead if playing from a save slot
-    if (this.currentSaveSlot !== null) {
-      await this.saveManager.markSaveDead(this.currentPlayerName, this.currentSaveSlot)
+    if (this.currentSaveSlot !== null && this.currentUserId) {
+      await this.saveManager.markSaveDead(this.currentUserId, this.currentSaveSlot)
     }
 
     const screenWidth = this.scale.width
@@ -2107,8 +2613,10 @@ export default class GameSceneV3 extends Phaser.Scene {
       // Calculate time played in seconds
       const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
 
-      // Submit to leaderboard
+      // Submit to leaderboard (use current user ID and entered name as display name)
+      const userId = this.currentUserId || 'anonymous'
       await this.leaderboardService.submitScore(
+        userId,
         playerName,
         score,
         this.runStats.stagesCompleted,
