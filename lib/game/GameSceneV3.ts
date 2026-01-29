@@ -10,6 +10,8 @@ import { SkillTreeManager, SKILLS } from './SkillTree'
 import { ShopManager, ShopUI } from './ShopSystem'
 import Boss, { BossType, BOSS_CONFIGS } from './Boss'
 import { AudioManager } from './AudioManager'
+import { SaveManager } from '../supabase/SaveManager'
+import { LeaderboardService } from '../supabase/LeaderboardService'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
@@ -24,6 +26,8 @@ export default class GameSceneV3 extends Phaser.Scene {
   private shopManager!: ShopManager
   private shopUI!: ShopUI
   private audioManager!: AudioManager
+  private saveManager!: SaveManager
+  private leaderboardService!: LeaderboardService
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: any
@@ -90,6 +94,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.powerUpManager = new PowerUpManager(this)
     this.shopManager = new ShopManager()
     this.audioManager = AudioManager.getInstance()
+    this.saveManager = SaveManager.getInstance()
+    this.leaderboardService = LeaderboardService.getInstance()
 
     // Start background music (after user interaction)
     this.input.once('pointerdown', () => {
@@ -984,9 +990,6 @@ export default class GameSceneV3 extends Phaser.Scene {
       // Drop power-up chance
       this.powerUpManager.tryDropPowerUp(enemy.x, enemy.y)
 
-      // FIX V6: FLASH SCREEN + BIG EXPLOSION! (Reduced flash duration)
-      this.cameras.main.flash(enemy.isBoss() ? 80 : 30, 255, 100, 0)
-
       // Create explosion effect
       this.createExplosion(enemy.x, enemy.y, enemy.isBoss())
 
@@ -1310,8 +1313,50 @@ export default class GameSceneV3 extends Phaser.Scene {
         muteSfxLabel.setText(muted ? '🔔 SFX: OFF' : '🔔 SFX: ON')
       })
 
+    // Cloud features title
+    const cloudTitle = this.add.text(centerX, centerY + 360, '☁️ CLOUD FEATURES', {
+      fontSize: '20px',
+      color: '#16a085',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
+
+    // Save Game button
+    const saveBg = this.add.rectangle(centerX - 160, centerY + 415, 140, 45, 0x1abc9c)
+      .setScrollFactor(0).setDepth(15001)
+    const saveLabel = this.add.text(centerX - 160, centerY + 415, '💾 Save Game', {
+      fontSize: '16px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    saveBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => saveBg.setFillStyle(0x16a085))
+      .on('pointerout', () => saveBg.setFillStyle(0x1abc9c))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.closePauseMenu()
+        this.showSaveMenu()
+      })
+
+    // Load Game button
+    const loadBg = this.add.rectangle(centerX + 160, centerY + 415, 140, 45, 0x3498db)
+      .setScrollFactor(0).setDepth(15001)
+    const loadLabel = this.add.text(centerX + 160, centerY + 415, '📂 Load Game', {
+      fontSize: '16px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    loadBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => loadBg.setFillStyle(0x2980b9))
+      .on('pointerout', () => loadBg.setFillStyle(0x3498db))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.closePauseMenu()
+        this.showLoadMenu()
+      })
+
     this.pauseMenuUI = [overlay, title, stats, resumeBg, resumeLabel, restartBg, restartLabel,
-      audioTitle, muteAllBg, muteAllLabel, muteMusicBg, muteMusicLabel, muteSfxBg, muteSfxLabel]
+      audioTitle, muteAllBg, muteAllLabel, muteMusicBg, muteMusicLabel, muteSfxBg, muteSfxLabel,
+      cloudTitle, saveBg, saveLabel, loadBg, loadLabel]
   }
 
   private closePauseMenu() {
@@ -1329,7 +1374,13 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.addKillFeedMessage('💀 GAME OVER 💀', '#e74c3c', 3000)
     this.showRunStats(false)
-    this.time.delayedCall(8000, () => {
+
+    // Submit to leaderboard
+    this.time.delayedCall(2000, () => {
+      this.showLeaderboardPrompt(false)
+    })
+
+    this.time.delayedCall(12000, () => {
       this.scene.restart()
     })
   }
@@ -1337,7 +1388,13 @@ export default class GameSceneV3 extends Phaser.Scene {
   private gameWon() {
     this.addKillFeedMessage('🏆 YOU WON! ALL STAGES CLEARED! 🏆', '#2ecc71', 6000)
     this.showRunStats(true)
-    this.time.delayedCall(10000, () => {
+
+    // Submit to leaderboard
+    this.time.delayedCall(2000, () => {
+      this.showLeaderboardPrompt(true)
+    })
+
+    this.time.delayedCall(14000, () => {
       this.scene.restart()
     })
   }
@@ -1942,6 +1999,296 @@ export default class GameSceneV3 extends Phaser.Scene {
       duration: 1500,
       ease: 'Cubic.easeOut',
       onComplete: () => popup.destroy()
+    })
+  }
+
+  // Cloud save menu
+  private async showSaveMenu() {
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.8)
+      .setOrigin(0).setScrollFactor(0).setDepth(16000).setInteractive()
+
+    const title = this.add.text(centerX, centerY - 150, '💾 SAVE GAME', {
+      fontSize: '48px',
+      color: '#1abc9c',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    // Player name input prompt
+    const namePrompt = this.add.text(centerX, centerY - 70, 'Enter Player Name:', {
+      fontSize: '24px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    const nameInputBg = this.add.rectangle(centerX, centerY - 20, 400, 50, 0x2c3e50)
+      .setScrollFactor(0).setDepth(16001)
+
+    const nameInputText = this.add.text(centerX, centerY - 20, 'YourName', {
+      fontSize: '24px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+    // Save slot buttons
+    const slotPrompt = this.add.text(centerX, centerY + 40, 'Select Save Slot:', {
+      fontSize: '24px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    const uiElements = [overlay, title, namePrompt, nameInputBg, nameInputText, slotPrompt]
+
+    // Create 3 save slot buttons
+    for (let slot = 1; slot <= 3; slot++) {
+      const slotBg = this.add.rectangle(centerX - 200 + (slot - 1) * 200, centerY + 100, 160, 60, 0x16a085)
+        .setScrollFactor(0).setDepth(16001)
+      const slotLabel = this.add.text(centerX - 200 + (slot - 1) * 200, centerY + 100, `Slot ${slot}`, {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+      slotBg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => slotBg.setFillStyle(0x1abc9c))
+        .on('pointerout', () => slotBg.setFillStyle(0x16a085))
+        .on('pointerdown', async (pointer: any, x: number, y: number, event: any) => {
+          event.stopPropagation()
+
+          const playerName = nameInputText.text
+          const result = await this.saveManager.saveGame(
+            playerName,
+            slot,
+            this.player,
+            this.stageManager.getCurrentStageNumber(),
+            this.shopManager
+          )
+
+          // Show result message
+          const msg = this.add.text(centerX, centerY + 180, result.message, {
+            fontSize: '20px',
+            color: result.success ? '#2ecc71' : '#e74c3c',
+            fontStyle: 'bold',
+          }).setOrigin(0.5).setScrollFactor(0).setDepth(16003)
+
+          this.time.delayedCall(2000, () => {
+            uiElements.forEach(el => el.destroy())
+            msg.destroy()
+          })
+        })
+
+      uiElements.push(slotBg, slotLabel)
+    }
+
+    // Cancel button
+    const cancelBg = this.add.rectangle(centerX, centerY + 200, 200, 50, 0xe74c3c)
+      .setScrollFactor(0).setDepth(16001)
+    const cancelLabel = this.add.text(centerX, centerY + 200, 'Cancel', {
+      fontSize: '20px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+    cancelBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => cancelBg.setFillStyle(0xc0392b))
+      .on('pointerout', () => cancelBg.setFillStyle(0xe74c3c))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        uiElements.forEach(el => el.destroy())
+        cancelBg.destroy()
+        cancelLabel.destroy()
+      })
+
+    uiElements.push(cancelBg, cancelLabel)
+
+    // Allow typing player name (simple implementation)
+    nameInputBg.setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        const newName = prompt('Enter your player name:', nameInputText.text)
+        if (newName) {
+          nameInputText.setText(newName)
+        }
+      })
+  }
+
+  // Cloud load menu
+  private async showLoadMenu() {
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.8)
+      .setOrigin(0).setScrollFactor(0).setDepth(16000).setInteractive()
+
+    const title = this.add.text(centerX, centerY - 150, '📂 LOAD GAME', {
+      fontSize: '48px',
+      color: '#3498db',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    // Player name input prompt
+    const namePrompt = this.add.text(centerX, centerY - 70, 'Enter Player Name:', {
+      fontSize: '24px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    const nameInputBg = this.add.rectangle(centerX, centerY - 20, 400, 50, 0x2c3e50)
+      .setScrollFactor(0).setDepth(16001)
+
+    const nameInputText = this.add.text(centerX, centerY - 20, 'YourName', {
+      fontSize: '24px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+    // Load slot buttons
+    const slotPrompt = this.add.text(centerX, centerY + 40, 'Select Save Slot to Load:', {
+      fontSize: '24px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    const uiElements = [overlay, title, namePrompt, nameInputBg, nameInputText, slotPrompt]
+
+    // Create 3 load slot buttons
+    for (let slot = 1; slot <= 3; slot++) {
+      const slotBg = this.add.rectangle(centerX - 200 + (slot - 1) * 200, centerY + 100, 160, 60, 0x2980b9)
+        .setScrollFactor(0).setDepth(16001)
+      const slotLabel = this.add.text(centerX - 200 + (slot - 1) * 200, centerY + 100, `Slot ${slot}`, {
+        fontSize: '24px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+      slotBg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => slotBg.setFillStyle(0x3498db))
+        .on('pointerout', () => slotBg.setFillStyle(0x2980b9))
+        .on('pointerdown', async (pointer: any, x: number, y: number, event: any) => {
+          event.stopPropagation()
+
+          const playerName = nameInputText.text
+          const result = await this.saveManager.loadGame(playerName, slot)
+
+          if (result.success && result.data) {
+            // Apply the loaded save data
+            this.saveManager.applySaveData(result.data, this.player, this.shopManager)
+
+            // Show success message
+            const msg = this.add.text(centerX, centerY + 180, result.message, {
+              fontSize: '20px',
+              color: '#2ecc71',
+              fontStyle: 'bold',
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(16003)
+
+            this.time.delayedCall(2000, () => {
+              uiElements.forEach(el => el.destroy())
+              msg.destroy()
+            })
+          } else {
+            // Show error message
+            const msg = this.add.text(centerX, centerY + 180, result.message, {
+              fontSize: '20px',
+              color: '#e74c3c',
+              fontStyle: 'bold',
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(16003)
+
+            this.time.delayedCall(2000, () => msg.destroy())
+          }
+        })
+
+      uiElements.push(slotBg, slotLabel)
+    }
+
+    // Cancel button
+    const cancelBg = this.add.rectangle(centerX, centerY + 200, 200, 50, 0xe74c3c)
+      .setScrollFactor(0).setDepth(16001)
+    const cancelLabel = this.add.text(centerX, centerY + 200, 'Cancel', {
+      fontSize: '20px',
+      color: '#ffffff',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+    cancelBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => cancelBg.setFillStyle(0xc0392b))
+      .on('pointerout', () => cancelBg.setFillStyle(0xe74c3c))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        uiElements.forEach(el => el.destroy())
+        cancelBg.destroy()
+        cancelLabel.destroy()
+      })
+
+    uiElements.push(cancelBg, cancelLabel)
+
+    // Allow typing player name
+    nameInputBg.setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        const newName = prompt('Enter your player name:', nameInputText.text)
+        if (newName) {
+          nameInputText.setText(newName)
+        }
+      })
+  }
+
+  // Show leaderboard after game over/victory
+  private async showLeaderboardPrompt(victory: boolean) {
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    // Prompt for player name
+    const playerName = prompt('Enter your name for the leaderboard:', 'Player') || 'Anonymous'
+
+    // Calculate score (money + kills * 100 + stage * 1000)
+    const score = this.runStats.totalMoney + this.runStats.totalKills * 100 + this.runStats.stagesCompleted * 1000
+
+    // Calculate time played in seconds
+    const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
+
+    // Submit to leaderboard
+    const result = await this.leaderboardService.submitScore(
+      playerName,
+      score,
+      this.runStats.stagesCompleted,
+      this.runStats.totalKills,
+      timePlayed
+    )
+
+    // Show result message
+    const resultText = this.add.text(centerX, centerY + 220, result.message, {
+      fontSize: '24px',
+      color: result.success ? '#2ecc71' : '#e74c3c',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(20001)
+
+    // Load and display top 10 leaderboard
+    this.time.delayedCall(1000, async () => {
+      const topScores = await this.leaderboardService.getTopScores(10)
+
+      if (topScores.length > 0) {
+        const lbTitle = this.add.text(centerX - 300, centerY - 250, '🏆 TOP 10 LEADERBOARD', {
+          fontSize: '28px',
+          color: '#f39c12',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 4
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
+
+        topScores.forEach((entry, index) => {
+          const rank = index + 1
+          const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
+          const text = `${medal} ${entry.player_name} - $${entry.score} (Stage ${entry.stage_reached})`
+
+          this.add.text(centerX - 300, centerY - 200 + index * 30, text, {
+            fontSize: '18px',
+            color: rank <= 3 ? '#f39c12' : '#ffffff',
+            fontStyle: rank <= 3 ? 'bold' : 'normal',
+            stroke: '#000000',
+            strokeThickness: 3
+          }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
+        })
+      }
     })
   }
 }

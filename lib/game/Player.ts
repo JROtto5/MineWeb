@@ -199,6 +199,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     return this.weapons[this.currentWeapon].name
   }
 
+  getCurrentWeapon(): number {
+    return this.currentWeapon
+  }
+
+  setCurrentWeapon(weaponIndex: number) {
+    this.currentWeapon = weaponIndex
+  }
+
   isDead(): boolean {
     return this.health <= 0
   }
