@@ -39,6 +39,7 @@ export class SaveManager {
           currentWeapon: player.getCurrentWeapon(),
         },
         stage_number: stageNumber,
+        is_alive: true,
       }
 
       // Check if save slot already exists
@@ -153,6 +154,33 @@ export class SaveManager {
       return {
         success: false,
         message: `Failed to delete: ${error.message}`,
+      }
+    }
+  }
+
+  // Mark a save as dead (player died)
+  async markSaveDead(
+    playerName: string,
+    saveSlot: number
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const { error } = await supabase
+        .from('saves')
+        .update({ is_alive: false })
+        .eq('player_name', playerName)
+        .eq('save_slot', saveSlot)
+
+      if (error) throw error
+
+      return {
+        success: true,
+        message: `Save slot ${saveSlot} marked as dead`,
+      }
+    } catch (error: any) {
+      console.error('Mark dead error:', error)
+      return {
+        success: false,
+        message: `Failed to mark dead: ${error.message}`,
       }
     }
   }

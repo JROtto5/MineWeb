@@ -278,49 +278,97 @@ export default class MenuScene extends Phaser.Scene {
     container.add([bg, slotLabel])
 
     if (saveData) {
-      // Display save info
       const pd = saveData.player_data
 
-      const levelText = this.add.text(0, -15, `Level ${pd.level}`, {
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      }).setOrigin(0.5)
+      // Check if save is dead
+      if (!saveData.is_alive) {
+        // Dead save - show skull and grayed out
+        bg.setFillStyle(0x2c1010, 0.9)
+        bg.setStrokeStyle(2, 0x8b0000, 0.7)
 
-      const moneyText = this.add.text(0, 5, `$${pd.money.toLocaleString()}`, {
-        fontSize: '16px',
-        color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
-      }).setOrigin(0.5)
+        const skullText = this.add.text(0, -20, '💀', {
+          fontSize: '40px',
+        }).setOrigin(0.5)
 
-      const stageText = this.add.text(0, 25, `Stage ${saveData.stage_number}`, {
-        fontSize: '14px',
-        color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      }).setOrigin(0.5)
+        const deadText = this.add.text(0, 15, 'DEAD', {
+          fontSize: '24px',
+          fontStyle: 'bold',
+          color: '#8b0000',
+        }).setOrigin(0.5)
 
-      container.add([levelText, moneyText, stageText])
+        const statsText = this.add.text(0, 35, `Lvl ${pd.level} | Stage ${saveData.stage_number}`, {
+          fontSize: '12px',
+          color: '#666666',
+        }).setOrigin(0.5)
 
-      // Continue button
-      bg.on('pointerover', () => {
-        bg.setStrokeStyle(3, COLORS.accent2, 1)
-        this.tweens.add({
-          targets: container,
-          scale: 1.05,
-          duration: 200,
+        container.add([skullText, deadText, statsText])
+
+        // Click to start new game in this slot
+        bg.on('pointerover', () => {
+          bg.setStrokeStyle(3, COLORS.highlight, 1)
+          this.tweens.add({
+            targets: container,
+            scale: 1.05,
+            duration: 200,
+          })
         })
-      })
 
-      bg.on('pointerout', () => {
-        bg.setStrokeStyle(2, COLORS.accent, 0.5)
-        this.tweens.add({
-          targets: container,
-          scale: 1,
-          duration: 200,
+        bg.on('pointerout', () => {
+          bg.setStrokeStyle(2, 0x8b0000, 0.7)
+          this.tweens.add({
+            targets: container,
+            scale: 1,
+            duration: 200,
+          })
         })
-      })
 
-      bg.on('pointerdown', () => {
-        this.continueGame(saveData)
-      })
+        bg.on('pointerdown', () => {
+          // Start new game (will overwrite dead save)
+          this.startNewGame()
+        })
+      } else {
+        // Alive save - display save info
+        const levelText = this.add.text(0, -15, `Level ${pd.level}`, {
+          fontSize: '18px',
+          fontStyle: 'bold',
+          color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0.5)
+
+        const moneyText = this.add.text(0, 5, `$${pd.money.toLocaleString()}`, {
+          fontSize: '16px',
+          color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0.5)
+
+        const stageText = this.add.text(0, 25, `Stage ${saveData.stage_number}`, {
+          fontSize: '14px',
+          color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+        }).setOrigin(0.5)
+
+        container.add([levelText, moneyText, stageText])
+
+        // Continue button
+        bg.on('pointerover', () => {
+          bg.setStrokeStyle(3, COLORS.accent2, 1)
+          this.tweens.add({
+            targets: container,
+            scale: 1.05,
+            duration: 200,
+          })
+        })
+
+        bg.on('pointerout', () => {
+          bg.setStrokeStyle(2, COLORS.accent, 0.5)
+          this.tweens.add({
+            targets: container,
+            scale: 1,
+            duration: 200,
+          })
+        })
+
+        bg.on('pointerdown', () => {
+          this.continueGame(saveData)
+        })
+      }
     } else {
       // Empty slot - New Game
       const newGameText = this.add.text(0, 0, 'NEW GAME', {

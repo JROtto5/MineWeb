@@ -22,6 +22,7 @@ export interface SaveData {
     currentWeapon: number
   }
   stage_number: number
+  is_alive: boolean
   timestamp?: string
 }
 

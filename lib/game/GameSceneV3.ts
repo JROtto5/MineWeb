@@ -29,6 +29,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   private saveManager!: SaveManager
   private leaderboardService!: LeaderboardService
 
+  private currentPlayerName: string = 'Player'
+  private currentSaveSlot: number | null = null
+
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys
   private wasd!: any
 
@@ -114,6 +117,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Check if we're loading a saved game
     const loadSaveData = this.registry.get('loadSaveData')
     if (loadSaveData) {
+      this.currentPlayerName = loadSaveData.player_name
+      this.currentSaveSlot = loadSaveData.save_slot
       this.saveManager.applySaveData(loadSaveData, this.player, this.shopManager)
       this.registry.remove('loadSaveData') // Clear the registry
     } else {
@@ -1335,10 +1340,12 @@ export default class GameSceneV3 extends Phaser.Scene {
       .on('pointerdown', async (pointer: any, x: number, y: number, event: any) => {
         event.stopPropagation()
 
-        // Quick save to slot 1
+        // Quick save to current slot (or slot 1 if new game)
+        const saveSlot = this.currentSaveSlot || 1
+        this.currentSaveSlot = saveSlot // Track it for future saves
         const result = await this.saveManager.saveGame(
-          'Player',
-          1,
+          this.currentPlayerName,
+          saveSlot,
           this.player,
           this.stageManager.getCurrentStageNumber(),
           this.shopManager
@@ -2019,67 +2026,138 @@ export default class GameSceneV3 extends Phaser.Scene {
     })
   }
 
-  // Show leaderboard after game over/victory (no blocking prompts)
+  // Show leaderboard after game over/victory with name input
   private async showLeaderboardPrompt(victory: boolean) {
-    // Auto-submit with default name to avoid blocking the game
-    const playerName = 'Player'
-
-    // Calculate score (money + kills * 100 + stage * 1000)
-    const score = this.runStats.totalMoney + this.runStats.totalKills * 100 + this.runStats.stagesCompleted * 1000
-
-    // Calculate time played in seconds
-    const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
-
-    // Submit to leaderboard
-    const result = await this.leaderboardService.submitScore(
-      playerName,
-      score,
-      this.runStats.stagesCompleted,
-      this.runStats.totalKills,
-      timePlayed
-    )
+    // Mark save as dead if playing from a save slot
+    if (this.currentSaveSlot !== null) {
+      await this.saveManager.markSaveDead(this.currentPlayerName, this.currentSaveSlot)
+    }
 
     const screenWidth = this.scale.width
     const screenHeight = this.scale.height
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    // Show result message
-    const resultText = this.add.text(centerX, centerY + 220, result.message, {
-      fontSize: '24px',
-      color: result.success ? '#2ecc71' : '#e74c3c',
+    // Create overlay
+    const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.7)
+      .setOrigin(0).setScrollFactor(0).setDepth(20000)
+
+    // Title
+    const title = this.add.text(centerX, centerY - 200, '💀 ENTER YOUR NAME', {
+      fontSize: '32px',
+      color: '#e74c3c',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4
+      strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(20001)
 
-    // Load and display top 10 leaderboard
-    this.time.delayedCall(1000, async () => {
-      const topScores = await this.leaderboardService.getTopScores(10)
+    // Input field background
+    const inputBg = this.add.rectangle(centerX, centerY - 140, 400, 60, 0x2c3e50)
+      .setStrokeStyle(3, 0x3498db)
+      .setScrollFactor(0).setDepth(20001)
 
-      if (topScores.length > 0) {
-        const lbTitle = this.add.text(centerX - 300, centerY - 250, '🏆 TOP 10 LEADERBOARD', {
-          fontSize: '28px',
-          color: '#f39c12',
-          fontStyle: 'bold',
-          stroke: '#000000',
-          strokeThickness: 4
-        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
+    // Player name text
+    let playerName = this.currentPlayerName
+    const nameText = this.add.text(centerX, centerY - 140, playerName, {
+      fontSize: '28px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(20002)
 
-        topScores.forEach((entry, index) => {
-          const rank = index + 1
-          const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
-          const text = `${medal} ${entry.player_name} - $${entry.score} (Stage ${entry.stage_reached})`
-
-          this.add.text(centerX - 300, centerY - 200 + index * 30, text, {
-            fontSize: '18px',
-            color: rank <= 3 ? '#f39c12' : '#ffffff',
-            fontStyle: rank <= 3 ? 'bold' : 'normal',
-            stroke: '#000000',
-            strokeThickness: 3
-          }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
-        })
+    // Keyboard input
+    const keyboard = this.input.keyboard!
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Backspace') {
+        playerName = playerName.slice(0, -1)
+        nameText.setText(playerName || '_')
+      } else if (event.key === 'Enter' && playerName.length > 0) {
+        submitScore()
+      } else if (event.key.length === 1 && playerName.length < 20) {
+        playerName += event.key
+        nameText.setText(playerName)
       }
-    })
+    }
+    keyboard.on('keydown', handleKeyPress)
+
+    // Submit function
+    const submitScore = async () => {
+      keyboard.off('keydown', handleKeyPress)
+      submitBtn.disableInteractive()
+
+      // Calculate score (money + kills * 100 + stage * 1000)
+      const score = this.runStats.totalMoney + this.runStats.totalKills * 100 + this.runStats.stagesCompleted * 1000
+
+      // Calculate time played in seconds
+      const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
+
+      // Submit to leaderboard
+      const result = await this.leaderboardService.submitScore(
+        playerName,
+        score,
+        this.runStats.stagesCompleted,
+        this.runStats.totalKills,
+        timePlayed
+      )
+
+      // Show result message
+      const resultText = this.add.text(centerX, centerY - 70, result.message, {
+        fontSize: '20px',
+        color: result.success ? '#2ecc71' : '#e74c3c',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(20001)
+
+      // Hide input UI
+      title.destroy()
+      inputBg.destroy()
+      nameText.destroy()
+      submitBtn.destroy()
+      submitLabel.destroy()
+
+      // Load and display top 10 leaderboard
+      this.time.delayedCall(1000, async () => {
+        const topScores = await this.leaderboardService.getTopScores(10)
+
+        if (topScores.length > 0) {
+          const lbTitle = this.add.text(centerX - 300, centerY - 250, '🏆 TOP 10 LEADERBOARD', {
+            fontSize: '28px',
+            color: '#f39c12',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+          }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
+
+          topScores.forEach((entry, index) => {
+            const rank = index + 1
+            const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
+            const text = `${medal} ${entry.player_name} - $${entry.score} (Stage ${entry.stage_reached})`
+
+            this.add.text(centerX - 300, centerY - 200 + index * 30, text, {
+              fontSize: '18px',
+              color: rank <= 3 ? '#f39c12' : '#ffffff',
+              fontStyle: rank <= 3 ? 'bold' : 'normal',
+              stroke: '#000000',
+              strokeThickness: 3
+            }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(20001)
+          })
+        }
+      })
+    }
+
+    // Submit button
+    const submitBtn = this.add.rectangle(centerX, centerY - 60, 200, 50, 0x27ae60)
+      .setInteractive({ useHandCursor: true })
+      .setScrollFactor(0).setDepth(20001)
+
+    submitBtn.on('pointerover', () => submitBtn.setFillStyle(0x2ecc71))
+    submitBtn.on('pointerout', () => submitBtn.setFillStyle(0x27ae60))
+    submitBtn.on('pointerdown', submitScore)
+
+    const submitLabel = this.add.text(centerX, centerY - 60, 'SUBMIT', {
+      fontSize: '24px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(20002)
   }
 }
