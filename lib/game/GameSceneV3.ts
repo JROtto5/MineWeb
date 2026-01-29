@@ -1321,10 +1321,10 @@ export default class GameSceneV3 extends Phaser.Scene {
       })
 
     // Save Game button
-    const saveBg = this.add.rectangle(centerX, centerY + 360, 300, 60, 0x1abc9c)
+    const saveBg = this.add.rectangle(centerX - 160, centerY + 360, 280, 55, 0x1abc9c)
       .setScrollFactor(0).setDepth(15001)
-    const saveLabel = this.add.text(centerX, centerY + 360, '💾 Save Game', {
-      fontSize: '24px',
+    const saveLabel = this.add.text(centerX - 160, centerY + 360, '💾 Save', {
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
@@ -1348,16 +1348,16 @@ export default class GameSceneV3 extends Phaser.Scene {
         saveLabel.setText(result.success ? '✅ Saved!' : '❌ Failed')
         this.time.delayedCall(2000, () => {
           if (this.pauseMenuUI.includes(saveLabel)) {
-            saveLabel.setText('💾 Save Game')
+            saveLabel.setText('💾 Save')
           }
         })
       })
 
     // Return to Menu button
-    const menuBg = this.add.rectangle(centerX, centerY + 440, 300, 60, 0x9b59b6)
+    const menuBg = this.add.rectangle(centerX + 160, centerY + 360, 280, 55, 0x9b59b6)
       .setScrollFactor(0).setDepth(15001)
-    const menuLabel = this.add.text(centerX, centerY + 440, '🏠 Return to Menu', {
-      fontSize: '24px',
+    const menuLabel = this.add.text(centerX + 160, centerY + 360, '🏠 Menu', {
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
