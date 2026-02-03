@@ -47,7 +47,7 @@ export default class GameSceneV3 extends Phaser.Scene {
   // NEW AWESOME SYSTEMS
   private visualEffects!: VisualEffects
   private floorThemeRenderer!: FloorThemeRenderer
-  private minimap!: Minimap
+  private minimap: Minimap | null = null  // Disabled - conflicts with React HUD
 
   private currentUserId: string | null = null
   private currentPlayerName: string = 'Player'
@@ -191,16 +191,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create item drops group
     this.itemDrops = this.add.group()
 
-    // Initialize minimap (after groups are created) - positioned top-right to avoid React UI
-    this.minimap = new Minimap(this, {
-      x: -1,  // -1 means auto-position to top-right
-      y: 100, // Below any top UI elements
-      width: 160,
-      height: 100,
-      worldWidth: this.worldWidth,
-      worldHeight: this.worldHeight
-    })
-    this.minimap.setTrackables(this.player, this.enemies, this.bosses, this.itemDrops)
+    // Minimap disabled - conflicts with React HUD overlay
+    // The React UI covers top-left (stats), top-right (money/mission),
+    // bottom-left (controls), bottom-right (weapon)
+    // TODO: Add minimap as React component instead if needed
 
     // Create persistent UI
     this.createPersistentUI()
