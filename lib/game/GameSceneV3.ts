@@ -219,14 +219,22 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Collisions
     this.setupCollisions()
 
-    // Listen for player shot events (muzzle flash)
+    // Listen for player shot events (muzzle flash) - with safety check
     this.events.on('playerShot', (data: { x: number; y: number; angle: number }) => {
-      this.visualEffects.createMuzzleFlash(data.x, data.y, data.angle)
+      try {
+        if (this.visualEffects) this.visualEffects.createMuzzleFlash(data.x, data.y, data.angle)
+      } catch (e) {
+        // Silently ignore visual effect errors
+      }
     })
 
     // Listen for orbital strike events
     this.events.on('orbitalStrike', (data: { x: number; y: number }) => {
-      this.createOrbitalStrikeEffect(data.x, data.y)
+      try {
+        this.createOrbitalStrikeEffect(data.x, data.y)
+      } catch (e) {
+        // Silently ignore effect errors
+      }
     })
 
     // Create casino zones
@@ -895,12 +903,22 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Update UI
     this.updateUI()
 
-    // Update minimap
-    this.minimap.update()
+    // Update minimap (with safety check)
+    try {
+      if (this.minimap) this.minimap.update()
+    } catch (e) {
+      console.warn('Minimap update error:', e)
+    }
 
-    // Update low health vignette effect
-    const healthPercent = this.player.health / this.player.maxHealth
-    this.visualEffects.updateLowHealthVignette(healthPercent)
+    // Update low health vignette effect (with safety check)
+    try {
+      if (this.visualEffects && this.player) {
+        const healthPercent = this.player.health / this.player.maxHealth
+        this.visualEffects.updateLowHealthVignette(healthPercent)
+      }
+    } catch (e) {
+      console.warn('Visual effects update error:', e)
+    }
 
     // ROGUELIKE: Update enemy locators
     this.updateEnemyLocators()
@@ -1023,11 +1041,22 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create special room objects
     this.createRoomObjects(floor)
 
-    // Apply floor theme (NEW VISUAL VARIETY!)
-    const theme = this.floorThemeRenderer.applyTheme(floorNum, this.worldWidth, this.worldHeight)
+    // Apply floor theme (NEW VISUAL VARIETY!) - with safety check
+    let theme: any = { name: 'DotSlayer' }
+    try {
+      if (this.floorThemeRenderer) {
+        theme = this.floorThemeRenderer.applyTheme(floorNum, this.worldWidth, this.worldHeight)
+      }
+    } catch (e) {
+      console.warn('Floor theme error:', e)
+    }
 
-    // Update minimap floor display
-    this.minimap.setFloor(floorNum)
+    // Update minimap floor display - with safety check
+    try {
+      if (this.minimap) this.minimap.setFloor(floorNum)
+    } catch (e) {
+      console.warn('Minimap setFloor error:', e)
+    }
 
     // Announce floor with theme name
     const modifier = floor.specialModifier
@@ -1047,8 +1076,12 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.addKillFeedMessage(message, color, 5000)
 
-    // Show epic floor transition effect
-    this.visualEffects.createFloorTransition(floorNum)
+    // Show epic floor transition effect - with safety check
+    try {
+      if (this.visualEffects) this.visualEffects.createFloorTransition(floorNum)
+    } catch (e) {
+      console.warn('Floor transition effect error:', e)
+    }
   }
 
   private renderFloorLayout(floor: FloorConfig) {
@@ -1262,10 +1295,16 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Crit visual if damage is high (weapons deal more damage when upgraded)
     const isCrit = damage > 80 || Math.random() < 0.15
 
-    // Visual feedback - hit sparks and damage number
-    this.visualEffects.createHitSparks(enemy.x, enemy.y, 0xffff00, 6)
-    this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, isCrit)
-    this.visualEffects.createBloodSplatter(enemy.x, enemy.y, 0.5)
+    // Visual feedback - hit sparks and damage number (with safety checks)
+    try {
+      if (this.visualEffects) {
+        this.visualEffects.createHitSparks(enemy.x, enemy.y, 0xffff00, 6)
+        this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, isCrit)
+        this.visualEffects.createBloodSplatter(enemy.x, enemy.y, 0.5)
+      }
+    } catch (e) {
+      // Silently ignore visual effect errors
+    }
 
     bullet.destroy()
 
@@ -1322,19 +1361,25 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.itemDrops.add(itemDrop)
       }
 
-      // ENHANCED DEATH EFFECTS - using new visual effects system!
-      const enemyType = enemy.enemyType as EnemyType
-      const enemyColor = (enemyType && ENEMY_STATS[enemyType]?.color) || 0xff0000
-      this.visualEffects.createDeathExplosion(enemy.x, enemy.y, enemyColor, enemy.isBoss() ? 1.5 : 1)
-      this.visualEffects.showMoneyGain(enemy.x, enemy.y - 20, money)
-      this.visualEffects.showXPGain(enemy.x + 30, enemy.y - 20, xp)
+      // ENHANCED DEATH EFFECTS - using new visual effects system! (with safety checks)
+      try {
+        if (this.visualEffects) {
+          const enemyType = enemy.enemyType as EnemyType
+          const enemyColor = (enemyType && ENEMY_STATS[enemyType]?.color) || 0xff0000
+          this.visualEffects.createDeathExplosion(enemy.x, enemy.y, enemyColor, enemy.isBoss() ? 1.5 : 1)
+          this.visualEffects.showMoneyGain(enemy.x, enemy.y - 20, money)
+          this.visualEffects.showXPGain(enemy.x + 30, enemy.y - 20, xp)
 
-      // Check combo milestones
-      this.visualEffects.showComboMilestone(combo.combo)
+          // Check combo milestones
+          this.visualEffects.showComboMilestone(combo.combo)
 
-      // Screen shake on kill
-      if (combo.combo >= 10) {
-        this.visualEffects.shakeScreen('light')
+          // Screen shake on kill
+          if (combo.combo >= 10) {
+            this.visualEffects.shakeScreen('light')
+          }
+        }
+      } catch (e) {
+        // Silently ignore visual effect errors
       }
 
       // Legacy effects (keeping for backwards compatibility)
@@ -1395,11 +1440,17 @@ export default class GameSceneV3 extends Phaser.Scene {
     const damage = this.player.getCurrentWeaponDamage()
     const isCrit = damage > 100 // Boss crits are special
 
-    // EPIC hit feedback for bosses
-    const bossType = boss.getBossType() as BossType
-    this.visualEffects.createHitSparks(boss.x, boss.y, (bossType && BOSS_CONFIGS[bossType]?.color) || 0xff00ff, 12)
-    this.visualEffects.showDamageNumber(boss.x, boss.y, damage, isCrit)
-    this.visualEffects.createBloodSplatter(boss.x, boss.y, 1)
+    // EPIC hit feedback for bosses (with safety checks)
+    try {
+      if (this.visualEffects) {
+        const bossType = boss.getBossType() as BossType
+        this.visualEffects.createHitSparks(boss.x, boss.y, (bossType && BOSS_CONFIGS[bossType]?.color) || 0xff00ff, 12)
+        this.visualEffects.showDamageNumber(boss.x, boss.y, damage, isCrit)
+        this.visualEffects.createBloodSplatter(boss.x, boss.y, 1)
+      }
+    } catch (e) {
+      // Silently ignore visual effect errors
+    }
 
     bullet.destroy()
 
@@ -1434,19 +1485,29 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.player.skillPoints++
       this.audioManager.playSound('levelUp')
 
-      // EPIC boss death effects!
-      const bossDeathType = boss.getBossType() as BossType
-      const bossColor = (bossDeathType && BOSS_CONFIGS[bossDeathType]?.color) || 0xff00ff
-      this.visualEffects.createBossDeathExplosion(boss.x, boss.y, bossColor)
-      this.visualEffects.showMoneyGain(boss.x, boss.y - 40, money)
-      this.visualEffects.showXPGain(boss.x + 50, boss.y - 40, xp)
+      // EPIC boss death effects! (with safety checks)
+      try {
+        if (this.visualEffects) {
+          const bossDeathType = boss.getBossType() as BossType
+          const bossColor = (bossDeathType && BOSS_CONFIGS[bossDeathType]?.color) || 0xff00ff
+          this.visualEffects.createBossDeathExplosion(boss.x, boss.y, bossColor)
+          this.visualEffects.showMoneyGain(boss.x, boss.y - 40, money)
+          this.visualEffects.showXPGain(boss.x + 50, boss.y - 40, xp)
+        }
+      } catch (e) {
+        // Silently ignore visual effect errors
+      }
 
       // Epic kill feed message
       this.addKillFeedMessage(`💀 BOSS DEFEATED! 💀`, '#ff0000', 5000)
       this.addKillFeedMessage(`+$${money} +${xp}XP +1 SKILL POINT`, '#ffd700', 5000)
 
-      // Ping boss death location on minimap
-      this.minimap.ping(boss.x, boss.y, 'BOSS DOWN!')
+      // Ping boss death location on minimap (with safety check)
+      try {
+        if (this.minimap) this.minimap.ping(boss.x, boss.y, 'BOSS DOWN!')
+      } catch (e) {
+        // Silently ignore minimap errors
+      }
 
       // The boss death explosion already handles camera shake
 

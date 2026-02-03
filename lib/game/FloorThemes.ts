@@ -254,6 +254,9 @@ export class FloorThemeRenderer {
         theme.fogIntensity
       ).setScrollFactor(0).setDepth(4500)
 
+      // IMPORTANT: Disable input on fog so it doesn't block clicks
+      this.fogOverlay.disableInteractive()
+
       // Pulsing fog effect
       this.scene.tweens.add({
         targets: this.fogOverlay,
