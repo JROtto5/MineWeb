@@ -22,10 +22,10 @@ export interface MinimapConfig {
 }
 
 const DEFAULT_CONFIG: MinimapConfig = {
-  x: 20,
+  x: -1,  // -1 means auto-position to top-right
   y: 20,
-  width: 200,
-  height: 150,
+  width: 180,
+  height: 120,
   worldWidth: 3000,
   worldHeight: 2000,
   scale: 1,
@@ -62,8 +62,14 @@ export class Minimap {
     this.scene = scene
     this.config = { ...DEFAULT_CONFIG, ...config }
 
-    // Create container
-    this.container = scene.add.container(this.config.x, this.config.y)
+    // Auto-position to top-right if x is -1
+    let posX = this.config.x
+    if (posX === -1) {
+      posX = scene.scale.width - this.config.width - 20
+    }
+
+    // Create container in top-right corner
+    this.container = scene.add.container(posX, this.config.y)
       .setScrollFactor(0)
       .setDepth(8000)
 

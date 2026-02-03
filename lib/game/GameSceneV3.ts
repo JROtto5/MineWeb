@@ -191,12 +191,12 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create item drops group
     this.itemDrops = this.add.group()
 
-    // Initialize minimap (after groups are created)
+    // Initialize minimap (after groups are created) - positioned top-right to avoid React UI
     this.minimap = new Minimap(this, {
-      x: 20,
-      y: 20,
-      width: 180,
-      height: 120,
+      x: -1,  // -1 means auto-position to top-right
+      y: 100, // Below any top UI elements
+      width: 160,
+      height: 100,
       worldWidth: this.worldWidth,
       worldHeight: this.worldHeight
     })

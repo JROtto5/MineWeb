@@ -55,14 +55,6 @@ export default class MenuScene extends Phaser.Scene {
     this.loadAndDisplayLeaderboard()
     this.loadAndDisplaySaveSlots()
     this.startAutoRefresh()
-
-    // Add resize handler for responsive layout
-    this.scale.on('resize', this.handleResize, this)
-  }
-
-  private handleResize() {
-    // Refresh UI on resize
-    this.scene.restart()
   }
 
   private initServices() {
