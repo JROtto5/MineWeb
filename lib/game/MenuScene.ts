@@ -55,6 +55,14 @@ export default class MenuScene extends Phaser.Scene {
     this.loadAndDisplayLeaderboard()
     this.loadAndDisplaySaveSlots()
     this.startAutoRefresh()
+
+    // Add resize handler for responsive layout
+    this.scale.on('resize', this.handleResize, this)
+  }
+
+  private handleResize() {
+    // Refresh UI on resize
+    this.scene.restart()
   }
 
   private initServices() {
@@ -133,23 +141,25 @@ export default class MenuScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centerX = width / 2
     const centerY = height / 2
+    const isSmallScreen = width < 600
 
-    // Leaderboard panel background
-    const panelWidth = Math.min(800, width * 0.7)
-    const panelHeight = 420
+    // Leaderboard panel background - responsive sizing
+    const panelWidth = Math.min(700, width * 0.9)
+    const panelHeight = Math.min(380, height * 0.45)
     const panelX = centerX
-    const panelY = centerY - 50
+    const panelY = centerY - 30
 
     const panel = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, COLORS.panel, 0.9)
     panel.setStrokeStyle(2, COLORS.accent, 0.5)
 
-    // Header
-    const header = this.add.text(panelX, panelY - panelHeight/2 + 30, '🏆 GLOBAL LEADERBOARD', {
-      fontSize: '36px',
+    // Header - responsive font size
+    const headerFontSize = isSmallScreen ? '24px' : '32px'
+    const header = this.add.text(panelX, panelY - panelHeight/2 + 25, '🏆 LEADERBOARD', {
+      fontSize: headerFontSize,
       fontStyle: 'bold',
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 3,
     }).setOrigin(0.5)
 
     // Container for leaderboard entries
@@ -168,17 +178,22 @@ export default class MenuScene extends Phaser.Scene {
     const { width, height } = this.scale
     const centerX = width / 2
     const centerY = height / 2
-    const startY = centerY - 50 - 420/2 + 80
+    const isSmallScreen = width < 600
+    const panelHeight = Math.min(380, height * 0.45)
+    const startY = centerY - 30 - panelHeight/2 + 60
+    const entrySpacing = isSmallScreen ? 28 : 32
 
     try {
-      const topScores = await this.leaderboardService.getTopScores(10)
+      // Limit entries on small screens
+      const maxEntries = isSmallScreen ? 8 : 10
+      const topScores = await this.leaderboardService.getTopScores(maxEntries)
 
       // Check if scene is still active after async operation
       if (!this.scene || !this.scene.isActive() || !this.add) return
 
       if (topScores.length === 0) {
-        const noScoresText = this.add.text(centerX, centerY - 20, 'No scores yet! Be the first to play!', {
-          fontSize: '20px',
+        const noScoresText = this.add.text(centerX, centerY - 20, 'No scores yet!', {
+          fontSize: isSmallScreen ? '16px' : '20px',
           color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
         }).setOrigin(0.5)
         this.leaderboardContainer.add(noScoresText)
@@ -186,7 +201,7 @@ export default class MenuScene extends Phaser.Scene {
       }
 
       topScores.forEach((entry, index) => {
-        const entryY = startY + index * 32
+        const entryY = startY + index * entrySpacing
         this.createLeaderboardEntry(entry, index + 1, entryY)
       })
     } catch (error) {
@@ -195,8 +210,8 @@ export default class MenuScene extends Phaser.Scene {
       // Check if scene is still active before showing error
       if (!this.scene || !this.scene.isActive() || !this.add) return
 
-      const errorText = this.add.text(centerX, centerY - 20, 'Failed to load leaderboard', {
-        fontSize: '20px',
+      const errorText = this.add.text(centerX, centerY - 20, 'Failed to load', {
+        fontSize: isSmallScreen ? '16px' : '20px',
         color: `#${COLORS.highlight.toString(16).padStart(6, '0')}`,
       }).setOrigin(0.5)
       this.leaderboardContainer.add(errorText)
@@ -206,7 +221,8 @@ export default class MenuScene extends Phaser.Scene {
   private createLeaderboardEntry(entry: LeaderboardEntry, rank: number, y: number) {
     const { width } = this.scale
     const centerX = width / 2
-    const panelWidth = Math.min(800, width * 0.7)
+    const panelWidth = Math.min(700, width * 0.85)
+    const isSmallScreen = width < 600
 
     const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
     let textColor = COLORS.text
@@ -215,31 +231,42 @@ export default class MenuScene extends Phaser.Scene {
     else if (rank === 2) textColor = COLORS.silver
     else if (rank === 3) textColor = COLORS.bronze
 
+    // Font sizes based on screen size
+    const fontSize = isSmallScreen ? '14px' : '18px'
+    const smallFontSize = isSmallScreen ? '12px' : '16px'
+
     // Rank/medal
-    const rankText = this.add.text(centerX - panelWidth/2 + 40, y, medal, {
-      fontSize: '20px',
+    const rankText = this.add.text(centerX - panelWidth/2 + 20, y, medal, {
+      fontSize: fontSize,
       color: `#${textColor.toString(16).padStart(6, '0')}`,
       fontStyle: rank <= 3 ? 'bold' : 'normal',
     }).setOrigin(0, 0.5)
 
     // Player name (use display_name, fallback to player_name for backward compatibility)
-    const nameText = this.add.text(centerX - panelWidth/2 + 100, y, entry.display_name || entry.player_name || 'Anonymous', {
-      fontSize: '18px',
+    // Truncate long names
+    let playerName = entry.display_name || entry.player_name || 'Anonymous'
+    const maxNameLength = isSmallScreen ? 8 : 12
+    if (playerName.length > maxNameLength) {
+      playerName = playerName.substring(0, maxNameLength) + '...'
+    }
+    const nameText = this.add.text(centerX - panelWidth/2 + 60, y, playerName, {
+      fontSize: fontSize,
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
     }).setOrigin(0, 0.5)
 
-    // Score
-    const scoreText = this.add.text(centerX + 50, y, `$${entry.score.toLocaleString()}`, {
-      fontSize: '18px',
+    // Score - positioned relative to panel
+    const scoreX = isSmallScreen ? centerX + 20 : centerX + 30
+    const scoreText = this.add.text(scoreX, y, `$${entry.score.toLocaleString()}`, {
+      fontSize: fontSize,
       fontStyle: 'bold',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
     }).setOrigin(0, 0.5)
 
-    // Stage reached
-    const stageText = this.add.text(centerX + panelWidth/2 - 100, y, `Stage ${entry.stage_reached}`, {
-      fontSize: '16px',
+    // Stage reached - right aligned
+    const stageText = this.add.text(centerX + panelWidth/2 - 20, y, `F${entry.stage_reached}`, {
+      fontSize: smallFontSize,
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
-    }).setOrigin(0, 0.5)
+    }).setOrigin(1, 0.5)
 
     this.leaderboardContainer.add([rankText, nameText, scoreText, stageText])
   }
@@ -247,16 +274,20 @@ export default class MenuScene extends Phaser.Scene {
   private async loadAndDisplaySaveSlots() {
     const { width, height } = this.scale
     const centerX = width / 2
-    const bottomY = height - 240
+    const isSmallScreen = width < 600
+    const bottomY = height - (isSmallScreen ? 180 : 200)
 
-    // Save slots label
-    const label = this.add.text(centerX, bottomY - 60, 'SAVE SLOTS', {
-      fontSize: '24px',
+    // Save slots label - responsive
+    const label = this.add.text(centerX, bottomY - 50, 'SAVE SLOTS', {
+      fontSize: isSmallScreen ? '18px' : '24px',
       fontStyle: 'bold',
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: 3,
     }).setOrigin(0.5)
+
+    // Responsive slot spacing
+    const slotSpacing = isSmallScreen ? Math.min(180, width / 3.5) : 220
 
     try {
       // Check if user is authenticated
@@ -264,7 +295,7 @@ export default class MenuScene extends Phaser.Scene {
         console.error('No user ID available - user not authenticated')
         // Still create empty slots for UI
         for (let slot = 1; slot <= 3; slot++) {
-          const slotX = centerX + (slot - 2) * 250
+          const slotX = centerX + (slot - 2) * slotSpacing
           const slotY = bottomY
           this.createSaveSlot(slot, slotX, slotY, undefined)
         }
@@ -281,7 +312,7 @@ export default class MenuScene extends Phaser.Scene {
 
       // Create 3 save slots
       for (let slot = 1; slot <= 3; slot++) {
-        const slotX = centerX + (slot - 2) * 250
+        const slotX = centerX + (slot - 2) * slotSpacing
         const slotY = bottomY
         const saveData = savesBySlot.get(slot)
 
@@ -293,16 +324,21 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   private createSaveSlot(slot: number, x: number, y: number, saveData?: SaveData) {
+    const { width } = this.scale
+    const isSmallScreen = width < 600
     const container = this.add.container(x, y)
 
-    // Slot background
-    const bg = this.add.rectangle(0, 0, 220, 120, COLORS.panel, 0.9)
+    // Slot background - responsive sizing
+    const slotWidth = isSmallScreen ? 160 : 200
+    const slotHeight = isSmallScreen ? 90 : 110
+    const bg = this.add.rectangle(0, 0, slotWidth, slotHeight, COLORS.panel, 0.9)
     bg.setStrokeStyle(2, COLORS.accent, 0.5)
     bg.setInteractive({ useHandCursor: true })
 
-    // Slot label
-    const slotLabel = this.add.text(0, -45, `SLOT ${slot}`, {
-      fontSize: '16px',
+    // Slot label - responsive
+    const labelY = isSmallScreen ? -35 : -42
+    const slotLabel = this.add.text(0, labelY, `SLOT ${slot}`, {
+      fontSize: isSmallScreen ? '12px' : '14px',
       fontStyle: 'bold',
       color: `#${COLORS.accent.toString(16).padStart(6, '0')}`,
     }).setOrigin(0.5)

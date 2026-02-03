@@ -30,9 +30,9 @@ const DEFAULT_CONFIG: MinimapConfig = {
   worldHeight: 2000,
   scale: 1,
   borderColor: 0x00d9ff,
-  backgroundColor: 0x000000,
-  playerColor: 0x3498db,
-  enemyColor: 0xe74c3c,
+  backgroundColor: 0x0a1929,  // Darker blue instead of pure black for better visibility
+  playerColor: 0x00ff00,      // Bright green for player (easier to see)
+  enemyColor: 0xff4444,       // Bright red for enemies
   bossColor: 0xff00ff,
   itemColor: 0xf1c40f,
   npcColor: 0x2ecc71
@@ -67,27 +67,27 @@ export class Minimap {
       .setScrollFactor(0)
       .setDepth(8000)
 
-    // Background
+    // Background - more visible with higher alpha
     this.background = scene.add.rectangle(
       0, 0,
       this.config.width, this.config.height,
-      this.config.backgroundColor, 0.7
+      this.config.backgroundColor, 0.9
     ).setOrigin(0, 0)
 
-    // Border
+    // Border - thicker and brighter
     this.border = scene.add.rectangle(
       0, 0,
       this.config.width, this.config.height
     ).setOrigin(0, 0)
-      .setStrokeStyle(2, this.config.borderColor)
+      .setStrokeStyle(3, this.config.borderColor, 1)
       .setFillStyle(0x000000, 0)
 
     // Map graphics for dynamic elements
     this.mapGraphics = scene.add.graphics()
 
-    // Player dot (always visible, pulsing)
-    this.playerDot = scene.add.arc(0, 0, 6, 0, 360, false, this.config.playerColor)
-      .setStrokeStyle(2, 0xffffff)
+    // Player dot (always visible, pulsing) - larger for visibility
+    this.playerDot = scene.add.arc(0, 0, 8, 0, 360, false, this.config.playerColor)
+      .setStrokeStyle(3, 0xffffff)
 
     // Viewport rectangle (shows camera bounds)
     this.viewportRect = scene.add.rectangle(0, 0, 50, 40)

@@ -284,6 +284,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.repositionAbilityHotbar()
     // Reposition enemy tracker
     this.repositionEnemyTracker()
+    // Ensure minimap stays visible
+    if (this.minimap) {
+      this.minimap.setVisible(true)
+    }
   }
 
   private repositionAbilityHotbar() {
