@@ -87,8 +87,8 @@ export const BOSS_CONFIGS: Record<BossType, BossConfig> = {
 }
 
 export default class Boss extends Phaser.Physics.Arcade.Sprite {
-  private health: number
-  private maxHealth: number
+  public health: number
+  public maxHealth: number
   private speed: number
   private attackRange = 500
   private healthBar!: Phaser.GameObjects.Graphics

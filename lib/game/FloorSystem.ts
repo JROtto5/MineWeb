@@ -57,42 +57,58 @@ export class FloorManager {
   }
 
   private calculateEnemyCount(): number {
-    // Start with 15 enemies, add 2 per floor
-    // Floor 1: 15 enemies
-    // Floor 50: 113 enemies
-    // Floor 100: 213 enemies
-    return 15 + (this.currentFloor * 2)
+    // REBALANCED: More enemies, scaling curve
+    // Floor 1: 20 enemies
+    // Floor 25: 70 enemies
+    // Floor 50: 145 enemies
+    // Floor 75: 245 enemies
+    // Floor 100: 370 enemies
+    const base = 20
+    const linearScale = this.currentFloor * 2
+    const exponentialScale = Math.floor(Math.pow(this.currentFloor / 10, 1.5) * 10)
+    return base + linearScale + exponentialScale
   }
 
   private getEnemyTypes(): EnemyType[] {
     const floor = this.currentFloor
 
-    // Gradually introduce tougher enemies
+    // REBALANCED: Gradual enemy type introduction with new types!
     if (floor < 10) {
       // Early floors: Only grunts and scouts
       return [EnemyType.GRUNT, EnemyType.SCOUT]
-    } else if (floor < 25) {
+    } else if (floor < 20) {
       // Introduce tanks
       return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK]
-    } else if (floor < 50) {
-      // Introduce snipers
-      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER]
-    } else if (floor < 75) {
-      // Introduce berserkers, phase out grunts
-      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER]
+    } else if (floor < 30) {
+      // Introduce snipers and shielders
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.SHIELDER]
+    } else if (floor < 45) {
+      // Introduce berserkers and bombers
+      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.BOMBER, EnemyType.SHIELDER]
+    } else if (floor < 60) {
+      // Introduce assassins and healers
+      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.HEALER]
+    } else if (floor < 80) {
+      // Elite mix - no more grunts
+      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER]
     } else {
-      // Late game: Only elite enemies
-      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.BOSS]
+      // Late game: All elites, mini-bosses included
+      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.BOSS]
     }
   }
 
   private getDifficultyMultiplier(): number {
-    // Scale difficulty: +10% per floor
+    // REBALANCED: Steeper curve for late-game challenge
     // Floor 1: 1.0x
-    // Floor 10: 2.0x
-    // Floor 50: 6.0x
-    // Floor 100: 11.0x
-    return 1 + (this.currentFloor * 0.1)
+    // Floor 10: 1.5x
+    // Floor 25: 2.5x
+    // Floor 50: 5.0x
+    // Floor 75: 9.0x
+    // Floor 100: 15.0x
+    const floor = this.currentFloor
+    const linearPart = floor * 0.05
+    const exponentialPart = Math.pow(floor / 20, 2)
+    return 1 + linearPart + exponentialPart
   }
 
   private getItemDropChance(): number {

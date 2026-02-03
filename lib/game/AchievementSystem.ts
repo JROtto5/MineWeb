@@ -283,7 +283,7 @@ export class AchievementManager {
 
   private saveUnlockedAchievements() {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('dotslayer_achievements', JSON.stringify([...this.unlockedAchievements]))
+      localStorage.setItem('dotslayer_achievements', JSON.stringify(Array.from(this.unlockedAchievements)))
     }
   }
 

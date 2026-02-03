@@ -8,6 +8,11 @@ export enum EnemyType {
   SNIPER = 'sniper',
   BERSERKER = 'berserker',
   BOSS = 'boss',
+  // NEW ENEMY TYPES
+  ASSASSIN = 'assassin',
+  BOMBER = 'bomber',
+  HEALER = 'healer',
+  SHIELDER = 'shielder',
 }
 
 export interface EnemyStats {
@@ -96,11 +101,60 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     size: 40,
     behavior: 'tank',
   },
+  // NEW ENEMY TYPES FOR VARIETY!
+  [EnemyType.ASSASSIN]: {
+    health: 60,
+    speed: 350, // ULTRA fast
+    damage: 40, // High damage
+    attackRange: 300,
+    attackSpeed: 800,
+    moneyDrop: [50, 100],
+    xpDrop: [30, 50],
+    color: 0x2c3e50, // Dark grey - stealthy
+    size: 14,
+    behavior: 'fast', // Dart in and out
+  },
+  [EnemyType.BOMBER]: {
+    health: 80,
+    speed: 180,
+    damage: 60, // Explodes on contact!
+    attackRange: 500,
+    attackSpeed: 3000,
+    moneyDrop: [35, 70],
+    xpDrop: [25, 45],
+    color: 0xff9500, // Orange - explosive
+    size: 18,
+    behavior: 'chase', // Rushes player to explode
+  },
+  [EnemyType.HEALER]: {
+    health: 120,
+    speed: 140,
+    damage: 8,
+    attackRange: 400,
+    attackSpeed: 2000,
+    moneyDrop: [60, 120],
+    xpDrop: [40, 80],
+    color: 0x2ecc71, // Green - healer
+    size: 20,
+    behavior: 'ranged', // Stays back, heals allies
+  },
+  [EnemyType.SHIELDER]: {
+    health: 300,
+    speed: 100,
+    damage: 12,
+    attackRange: 350,
+    attackSpeed: 1500,
+    moneyDrop: [45, 90],
+    xpDrop: [35, 65],
+    color: 0x3498db, // Blue - protective
+    size: 26,
+    behavior: 'tank', // Protects other enemies
+  },
 }
 
 export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
-  private health: number
-  private maxHealth: number
+  public health: number
+  public maxHealth: number
   private speed: number
   private damage: number
   private attackRange: number
@@ -148,13 +202,17 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
     this.healthBar = scene.add.graphics()
 
     // Create name tag
-    const typeNames = {
+    const typeNames: Record<EnemyType, string> = {
       [EnemyType.GRUNT]: 'Grunt',
       [EnemyType.SCOUT]: 'Scout',
       [EnemyType.TANK]: 'Tank',
       [EnemyType.SNIPER]: 'Sniper',
       [EnemyType.BERSERKER]: 'Berserker',
       [EnemyType.BOSS]: '💀 BOSS 💀',
+      [EnemyType.ASSASSIN]: '🗡️ Assassin',
+      [EnemyType.BOMBER]: '💣 Bomber',
+      [EnemyType.HEALER]: '💚 Healer',
+      [EnemyType.SHIELDER]: '🛡️ Shielder',
     }
 
     this.nameTag = scene.add.text(x, y - 35, typeNames[type], {

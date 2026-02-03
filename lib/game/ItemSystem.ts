@@ -89,8 +89,8 @@ export const ITEM_POOL: ItemDefinition[] = [
     name: 'Precision Chip',
     rarity: ItemRarity.RARE,
     effect: (player) => {
-      if (player.shopCritChance !== undefined) {
-        player.shopCritChance += 10
+      if (player.shopCritBonus !== undefined) {
+        player.shopCritBonus += 0.1
       }
     },
     description: '+10% Crit Chance',
@@ -101,11 +101,11 @@ export const ITEM_POOL: ItemDefinition[] = [
     name: 'Critical Matrix',
     rarity: ItemRarity.EPIC,
     effect: (player) => {
-      if (player.shopCritDamage !== undefined) {
-        player.shopCritDamage += 0.5
+      if (player.shopCritBonus !== undefined) {
+        player.shopCritBonus += 0.25
       }
     },
-    description: '+50% Crit Damage',
+    description: '+25% Crit Boost',
     color: 0xe67e22
   },
 
@@ -167,10 +167,8 @@ export const ITEM_POOL: ItemDefinition[] = [
     name: 'Expanded Magazine',
     rarity: ItemRarity.COMMON,
     effect: (player) => {
-      const currentWeapon = player.weapons[player.currentWeapon]
-      if (currentWeapon) {
-        currentWeapon.maxAmmo += 10
-        player.currentAmmo += 10
+      if (player.shopAmmoBonus !== undefined) {
+        player.shopAmmoBonus += 10
       }
     },
     description: '+10 Max Ammo',
@@ -181,12 +179,13 @@ export const ITEM_POOL: ItemDefinition[] = [
     name: 'Ammo Pack',
     rarity: ItemRarity.UNCOMMON,
     effect: (player) => {
-      const currentWeapon = player.weapons[player.currentWeapon]
-      if (currentWeapon) {
-        player.currentAmmo = currentWeapon.maxAmmo
+      // Refill ammo using shop bonus
+      if (player.shopAmmoBonus !== undefined) {
+        player.shopAmmoBonus += 5
       }
+      player.heal(0) // Triggers stat refresh
     },
-    description: 'Full Ammo Refill',
+    description: '+5 Max Ammo Bonus',
     color: 0x95a5a6
   },
 
@@ -277,15 +276,17 @@ export class ItemDrop extends Phaser.Physics.Arcade.Sprite {
     // Different shapes for different rarities
     switch (this.item.rarity) {
       case ItemRarity.LEGENDARY:
-        // Star shape
-        graphics.fillStar(size, size, 8, size, size * 0.5)
+        // Glowing diamond shape
+        graphics.fillCircle(size, size, size)
         // Outer glow
         graphics.lineStyle(3, this.item.color, 0.5)
         graphics.strokeCircle(size, size, size * 1.5)
+        graphics.lineStyle(2, 0xffffff, 0.3)
+        graphics.strokeCircle(size, size, size * 0.6)
         break
       case ItemRarity.EPIC:
-        // 5-pointed star
-        graphics.fillStar(size, size, 5, size, size * 0.5)
+        // Glowing circle
+        graphics.fillCircle(size, size, size)
         graphics.lineStyle(2, this.item.color, 0.5)
         graphics.strokeCircle(size, size, size * 1.3)
         break

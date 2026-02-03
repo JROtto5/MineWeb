@@ -15,6 +15,12 @@ import { LeaderboardService } from '../supabase/LeaderboardService'
 import { FloorManager, FloorConfig } from './FloorSystem'
 import { ItemDrop, rollItemDrop, ItemRarity, ITEM_POOL } from './ItemSystem'
 import { AchievementManager, GameStats as AchievementStats } from './AchievementSystem'
+// NEW SYSTEMS - Making the game awesome!
+import { VisualEffects } from './VisualEffects'
+import { FloorThemeRenderer, getThemeForFloor } from './FloorThemes'
+import { Minimap } from './Minimap'
+import { EnemyAIController, AI_PRESETS, AIBehavior } from './EnemyAI'
+import { StatusEffectManager, StatusType, STATUS_CONFIGS } from './StatusEffects'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
@@ -37,6 +43,11 @@ export default class GameSceneV3 extends Phaser.Scene {
   private itemsCollectedThisRun = 0
   private legendariesCollectedThisRun = 0
   private startTime = 0
+
+  // NEW AWESOME SYSTEMS
+  private visualEffects!: VisualEffects
+  private floorThemeRenderer!: FloorThemeRenderer
+  private minimap!: Minimap
 
   private currentUserId: string | null = null
   private currentPlayerName: string = 'Player'
@@ -116,6 +127,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.achievementManager = new AchievementManager()
     this.startTime = Date.now()
 
+    // NEW AWESOME SYSTEMS
+    this.visualEffects = new VisualEffects(this)
+    this.floorThemeRenderer = new FloorThemeRenderer(this)
+
     // Setup achievement unlock notifications
     this.achievementManager.onUnlock((achievement) => {
       this.showAchievementUnlock(achievement)
@@ -176,6 +191,17 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create item drops group
     this.itemDrops = this.add.group()
 
+    // Initialize minimap (after groups are created)
+    this.minimap = new Minimap(this, {
+      x: 20,
+      y: 20,
+      width: 180,
+      height: 120,
+      worldWidth: this.worldWidth,
+      worldHeight: this.worldHeight
+    })
+    this.minimap.setTrackables(this.player, this.enemies, this.bosses, this.itemDrops)
+
     // Create persistent UI
     this.createPersistentUI()
 
@@ -192,6 +218,16 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Collisions
     this.setupCollisions()
+
+    // Listen for player shot events (muzzle flash)
+    this.events.on('playerShot', (data: { x: number; y: number; angle: number }) => {
+      this.visualEffects.createMuzzleFlash(data.x, data.y, data.angle)
+    })
+
+    // Listen for orbital strike events
+    this.events.on('orbitalStrike', (data: { x: number; y: number }) => {
+      this.createOrbitalStrikeEffect(data.x, data.y)
+    })
 
     // Create casino zones
     this.createCasinoZones()
@@ -859,6 +895,13 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Update UI
     this.updateUI()
 
+    // Update minimap
+    this.minimap.update()
+
+    // Update low health vignette effect
+    const healthPercent = this.player.health / this.player.maxHealth
+    this.visualEffects.updateLowHealthVignette(healthPercent)
+
     // ROGUELIKE: Update enemy locators
     this.updateEnemyLocators()
   }
@@ -980,26 +1023,32 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create special room objects
     this.createRoomObjects(floor)
 
-    // Announce floor
+    // Apply floor theme (NEW VISUAL VARIETY!)
+    const theme = this.floorThemeRenderer.applyTheme(floorNum, this.worldWidth, this.worldHeight)
+
+    // Update minimap floor display
+    this.minimap.setFloor(floorNum)
+
+    // Announce floor with theme name
     const modifier = floor.specialModifier
-    let message = `Floor ${floorNum}`
+    let message = `Floor ${floorNum} - ${theme.name}`
     let color = '#00d9ff'
 
     if (modifier === 'boss_floor') {
-      message += ' - BOSS FLOOR!'
+      message = `Floor ${floorNum} - BOSS FLOOR!`
       color = '#ff0266'
     } else if (modifier === 'elite_floor') {
-      message += ' - Elite Enemies'
+      message = `Floor ${floorNum} - Elite ${theme.name}`
       color = '#ff6b00'
     } else if (modifier === 'treasure_floor') {
-      message += ' - Treasure Floor!'
+      message = `Floor ${floorNum} - Treasure ${theme.name}!`
       color = '#ffd700'
     }
 
     this.addKillFeedMessage(message, color, 5000)
 
-    // Update background color based on floor
-    this.createFloorBackground(floorNum)
+    // Show epic floor transition effect
+    this.visualEffects.createFloorTransition(floorNum)
   }
 
   private renderFloorLayout(floor: FloorConfig) {
@@ -1084,7 +1133,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Interaction
     npc.setInteractive({ useHandCursor: true })
     npc.on('pointerdown', () => {
-      this.shopUI.toggleShop()
+      this.shopUI.toggle()
     })
 
     this.shopNPCs.push(npc as any)
@@ -1209,9 +1258,18 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private bulletHitEnemy(bullet: any, enemy: any) {
+    const damage = this.player.getCurrentWeaponDamage()
+    // Crit visual if damage is high (weapons deal more damage when upgraded)
+    const isCrit = damage > 80 || Math.random() < 0.15
+
+    // Visual feedback - hit sparks and damage number
+    this.visualEffects.createHitSparks(enemy.x, enemy.y, 0xffff00, 6)
+    this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, isCrit)
+    this.visualEffects.createBloodSplatter(enemy.x, enemy.y, 0.5)
+
     bullet.destroy()
 
-    const killed = enemy.takeDamage(this.player.getCurrentWeaponDamage())
+    const killed = enemy.takeDamage(damage)
 
     if (killed) {
       this.enemiesKilled++
@@ -1264,10 +1322,23 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.itemDrops.add(itemDrop)
       }
 
-      // Create explosion effect
-      this.createExplosion(enemy.x, enemy.y, enemy.isBoss())
+      // ENHANCED DEATH EFFECTS - using new visual effects system!
+      const enemyType = enemy.enemyType as EnemyType
+      const enemyColor = (enemyType && ENEMY_STATS[enemyType]?.color) || 0xff0000
+      this.visualEffects.createDeathExplosion(enemy.x, enemy.y, enemyColor, enemy.isBoss() ? 1.5 : 1)
+      this.visualEffects.showMoneyGain(enemy.x, enemy.y - 20, money)
+      this.visualEffects.showXPGain(enemy.x + 30, enemy.y - 20, xp)
 
-      // FIX V6: Add extra kill particles!
+      // Check combo milestones
+      this.visualEffects.showComboMilestone(combo.combo)
+
+      // Screen shake on kill
+      if (combo.combo >= 10) {
+        this.visualEffects.shakeScreen('light')
+      }
+
+      // Legacy effects (keeping for backwards compatibility)
+      this.createExplosion(enemy.x, enemy.y, enemy.isBoss())
       this.createKillParticles(enemy.x, enemy.y, enemy.isBoss())
 
       enemy.destroy()
@@ -1321,9 +1392,18 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   // CREATIVE EXPANSION: Boss collision handlers!
   private bulletHitBoss(bullet: any, boss: any) {
+    const damage = this.player.getCurrentWeaponDamage()
+    const isCrit = damage > 100 // Boss crits are special
+
+    // EPIC hit feedback for bosses
+    const bossType = boss.getBossType() as BossType
+    this.visualEffects.createHitSparks(boss.x, boss.y, (bossType && BOSS_CONFIGS[bossType]?.color) || 0xff00ff, 12)
+    this.visualEffects.showDamageNumber(boss.x, boss.y, damage, isCrit)
+    this.visualEffects.createBloodSplatter(boss.x, boss.y, 1)
+
     bullet.destroy()
 
-    const killed = boss.takeDamage(this.player.getCurrentWeaponDamage())
+    const killed = boss.takeDamage(damage)
 
     if (killed) {
       // Boss defeated! Count as enemy kill
@@ -1354,12 +1434,21 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.player.skillPoints++
       this.audioManager.playSound('levelUp')
 
+      // EPIC boss death effects!
+      const bossDeathType = boss.getBossType() as BossType
+      const bossColor = (bossDeathType && BOSS_CONFIGS[bossDeathType]?.color) || 0xff00ff
+      this.visualEffects.createBossDeathExplosion(boss.x, boss.y, bossColor)
+      this.visualEffects.showMoneyGain(boss.x, boss.y - 40, money)
+      this.visualEffects.showXPGain(boss.x + 50, boss.y - 40, xp)
+
       // Epic kill feed message
       this.addKillFeedMessage(`💀 BOSS DEFEATED! 💀`, '#ff0000', 5000)
       this.addKillFeedMessage(`+$${money} +${xp}XP +1 SKILL POINT`, '#ffd700', 5000)
 
-      // Camera shake for epic feel (reduced)
-      this.cameras.main.shake(150, 0.003)
+      // Ping boss death location on minimap
+      this.minimap.ping(boss.x, boss.y, 'BOSS DOWN!')
+
+      // The boss death explosion already handles camera shake
 
       // Check if stage complete (boss was last enemy)
       this.checkStageCompletion()
@@ -1558,7 +1647,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private playBossMusic() {
     // Switch to dramatic boss music
-    this.audioManager.playMusic('boss')
+    this.audioManager.playBossMusic()
   }
 
   private checkAchievementsProgress() {
@@ -2043,6 +2132,105 @@ export default class GameSceneV3 extends Phaser.Scene {
     if (isBig) {
       this.cameras.main.shake(150, 0.003)
     }
+  }
+
+  // EPIC ORBITAL STRIKE EFFECT!
+  private createOrbitalStrikeEffect(x: number, y: number) {
+    // Warning indicator
+    const warning = this.add.circle(x, y, 100, 0xff0000, 0.3)
+    warning.setStrokeStyle(4, 0xff0000, 0.8)
+
+    // Pulsing warning
+    this.tweens.add({
+      targets: warning,
+      scale: { from: 0.5, to: 1.2 },
+      alpha: { from: 0.5, to: 0.1 },
+      duration: 300,
+      repeat: 3,
+      onComplete: () => {
+        warning.destroy()
+
+        // IMPACT!
+        this.visualEffects.screenFlash(0xff6600, 0.6, 200)
+        this.visualEffects.shakeScreen('extreme')
+
+        // Create massive explosion
+        for (let wave = 0; wave < 5; wave++) {
+          this.time.delayedCall(wave * 100, () => {
+            const waveRadius = 50 + wave * 40
+            const ring = this.add.circle(x, y, waveRadius, 0xff6600, 0)
+              .setStrokeStyle(8 - wave, 0xff6600, 1 - wave * 0.15)
+              .setDepth(5000)
+
+            this.tweens.add({
+              targets: ring,
+              scale: 3,
+              alpha: 0,
+              duration: 500,
+              ease: 'Cubic.easeOut',
+              onComplete: () => ring.destroy()
+            })
+          })
+        }
+
+        // Particle explosion
+        for (let i = 0; i < 50; i++) {
+          const angle = (i / 50) * Math.PI * 2
+          const speed = Phaser.Math.Between(100, 300)
+          const colors = [0xff6600, 0xff0000, 0xffff00, 0xffffff]
+
+          const particle = this.add.circle(x, y, Phaser.Math.Between(4, 12), Phaser.Math.RND.pick(colors))
+            .setDepth(5000)
+
+          this.tweens.add({
+            targets: particle,
+            x: x + Math.cos(angle) * speed,
+            y: y + Math.sin(angle) * speed,
+            alpha: 0,
+            scale: 0,
+            duration: Phaser.Math.Between(500, 1000),
+            ease: 'Cubic.easeOut',
+            onComplete: () => particle.destroy()
+          })
+        }
+
+        // Damage enemies in radius
+        const damageRadius = 200
+        const strikeDamage = 500
+
+        this.enemies.children.entries.forEach((enemy: any) => {
+          if (enemy.active) {
+            const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y)
+            if (dist < damageRadius) {
+              const falloff = 1 - (dist / damageRadius)
+              const damage = Math.floor(strikeDamage * falloff)
+              enemy.takeDamage(damage)
+              this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, true)
+
+              if (enemy.isDead()) {
+                this.enemiesKilled++
+                this.runStats.totalKills++
+                enemy.destroy()
+              }
+            }
+          }
+        })
+
+        this.bosses.children.entries.forEach((boss: any) => {
+          if (boss.active) {
+            const dist = Phaser.Math.Distance.Between(x, y, boss.x, boss.y)
+            if (dist < damageRadius) {
+              const falloff = 1 - (dist / damageRadius)
+              const damage = Math.floor(strikeDamage * falloff)
+              boss.takeDamage(damage)
+              this.visualEffects.showDamageNumber(boss.x, boss.y, damage, true)
+            }
+          }
+        })
+
+        this.addKillFeedMessage('☄️ ORBITAL STRIKE!', '#ff6600', 3000)
+      }
+    })
   }
 
   private createCasinoZones() {

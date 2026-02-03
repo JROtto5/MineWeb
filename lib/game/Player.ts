@@ -21,15 +21,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   public skillTree: SkillTreeManager
   private shopManager: ShopManager | null = null
 
-  // Shop bonuses (cached for performance)
-  private shopDamageBonus = 0
-  private shopFireRateBonus = 0
-  private shopAmmoBonus = 0
-  private shopHealthBonus = 0
-  private shopSpeedBonus = 0
-  private shopCritBonus = 0
-  private shopMoneyBonus = 0
-  private shopXPBonus = 0
+  // Shop bonuses (cached for performance) - public for item effects
+  public shopDamageBonus = 0
+  public shopFireRateBonus = 0
+  public shopAmmoBonus = 0
+  public shopHealthBonus = 0
+  public shopSpeedBonus = 0
+  public shopCritBonus = 0
+  public shopMoneyBonus = 0
+  public shopXPBonus = 0
 
   // Abilities
   private hasDash = false
@@ -433,6 +433,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Calculate direction
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY)
     const damage = this.getCurrentDamage()
+
+    // Emit shot event for visual effects (muzzle flash)
+    this.scene.events.emit('playerShot', { x: this.x, y: this.y, angle })
 
     // Multi-shot power-up
     if (this.multiShotActive) {
