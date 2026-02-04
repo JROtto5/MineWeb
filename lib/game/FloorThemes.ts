@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 
 /**
  * FloorThemes - Handles visual variety for different floor ranges

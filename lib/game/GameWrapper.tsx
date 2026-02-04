@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 import MenuScene from './MenuScene'
 import GameSceneV3 from './GameSceneV3'
 import { useAuth } from '../context/AuthContext'

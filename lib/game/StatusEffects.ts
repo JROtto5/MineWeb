@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 
 /**
  * StatusEffects - Handles damage over time, buffs, debuffs, and combat modifiers

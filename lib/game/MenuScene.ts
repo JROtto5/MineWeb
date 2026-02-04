@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 import { SaveManager } from '../supabase/SaveManager'
 import { LeaderboardService } from '../supabase/LeaderboardService'
 import { SaveData, LeaderboardEntry } from '../supabase/client'

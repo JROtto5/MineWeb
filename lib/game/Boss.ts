@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 import Player from './Player'
 import Enemy from './Enemy'
 

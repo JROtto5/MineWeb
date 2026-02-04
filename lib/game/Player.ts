@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 import { WeaponSystem, WeaponType } from './Weapon'
 import { SkillTreeManager } from './SkillTree'
 import { ShopManager } from './ShopSystem'

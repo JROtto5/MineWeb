@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 import { CasinoManager } from './Casino'
 import Player from './Player'
 

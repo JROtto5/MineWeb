@@ -95,6 +95,7 @@ export interface ClickerSave {
   buildings: Array<{ id: string; owned: number }>
   upgrades: Array<{ id: string; purchased: boolean }>
   achievements: Array<{ id: string; unlocked: boolean }>
+  prestige_upgrades: Array<{ id: string; purchased: boolean }>
 
   // Statistics
   stats: {

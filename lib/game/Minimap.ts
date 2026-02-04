@@ -1,4 +1,4 @@
-import Phaser from 'phaser'
+import * as Phaser from 'phaser'
 
 /**
  * Minimap - A real-time minimap showing player, enemies, and items

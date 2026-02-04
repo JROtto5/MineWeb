@@ -1,5 +1,10 @@
 import { supabase, ClickerSave, SlayerProgress } from './client'
 
+export interface PrestigeUpgradeState {
+  id: string
+  purchased: boolean
+}
+
 export interface ClickerGameState {
   dots: number
   totalDots: number
@@ -15,6 +20,7 @@ export interface ClickerGameState {
   buildings: Array<{ id: string; owned: number }>
   upgrades: Array<{ id: string; purchased: boolean }>
   achievements: Array<{ id: string; unlocked: boolean }>
+  prestigeUpgrades: Array<PrestigeUpgradeState>
   lastSave: number
   startTime: number
   combo: number
@@ -66,6 +72,7 @@ export class ClickerSyncService {
         buildings: gameState.buildings.map(b => ({ id: b.id, owned: b.owned })),
         upgrades: gameState.upgrades.map(u => ({ id: u.id, purchased: u.purchased })),
         achievements: gameState.achievements.map(a => ({ id: a.id, unlocked: a.unlocked })),
+        prestige_upgrades: gameState.prestigeUpgrades?.map(u => ({ id: u.id, purchased: u.purchased })) || [],
         stats: {
           totalGoldenClicks: gameState.totalGoldenClicks,
           totalCrits: gameState.totalCrits,
@@ -143,6 +150,7 @@ export class ClickerSyncService {
         buildings: data.buildings || [],
         upgrades: data.upgrades || [],
         achievements: data.achievements || [],
+        prestigeUpgrades: data.prestige_upgrades || [],
         lastSave: new Date(data.last_save || data.updated_at).getTime(),
         startTime: data.stats?.startTime || Date.now(),
         combo: 0,
