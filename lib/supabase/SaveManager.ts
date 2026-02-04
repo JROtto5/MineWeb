@@ -199,12 +199,13 @@ export class SaveManager {
     player.skillPoints = pd.skillPoints
     player.setCurrentWeapon(pd.currentWeapon)
 
-    // Restore skills
+    // Restore skills (use setSkillLevel to avoid spending points again)
     Object.entries(pd.skills).forEach(([skillId, level]) => {
-      for (let i = 0; i < level; i++) {
-        player.skillTree.upgradeSkill(skillId)
-      }
+      player.skillTree.setSkillLevel(skillId, level as number)
     })
+
+    // Sync skill points to skill tree manager
+    player.skillTree.setSkillPoints(pd.skillPoints)
 
     // Restore shop items
     Object.entries(pd.shopItems).forEach(([itemId, level]) => {

@@ -149,6 +149,14 @@ export class SkillTreeManager {
     return this.skills.get(skillId) || 0
   }
 
+  // Set skill level directly (for loading saves - doesn't spend points)
+  setSkillLevel(skillId: string, level: number) {
+    const skill = SKILLS[skillId]
+    if (skill) {
+      this.skills.set(skillId, Math.min(level, skill.maxLevel))
+    }
+  }
+
   canUpgradeSkill(skillId: string): boolean {
     const skill = SKILLS[skillId]
     if (!skill) return false
