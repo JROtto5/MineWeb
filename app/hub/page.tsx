@@ -418,6 +418,8 @@ export default function GameHub() {
           font-family: 'Segoe UI', system-ui, sans-serif;
           position: relative;
           overflow-x: hidden;
+          overflow-y: auto;
+          padding-bottom: 50px;
         }
 
         .mesh-bg {

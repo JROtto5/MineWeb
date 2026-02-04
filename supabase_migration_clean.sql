@@ -150,9 +150,11 @@ CREATE POLICY "Users can update own slayer progress" ON slayer_progress FOR UPDA
 -- CLICKER SAVES
 ALTER TABLE clicker_saves ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view own clicker saves" ON clicker_saves;
+DROP POLICY IF EXISTS "Anyone can view clicker saves for leaderboard" ON clicker_saves;
 DROP POLICY IF EXISTS "Users can insert own clicker saves" ON clicker_saves;
 DROP POLICY IF EXISTS "Users can update own clicker saves" ON clicker_saves;
-CREATE POLICY "Users can view own clicker saves" ON clicker_saves FOR SELECT USING (auth.uid() = user_id);
+-- Allow anyone to view clicker saves (needed for leaderboards)
+CREATE POLICY "Anyone can view clicker saves for leaderboard" ON clicker_saves FOR SELECT USING (true);
 CREATE POLICY "Users can insert own clicker saves" ON clicker_saves FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own clicker saves" ON clicker_saves FOR UPDATE USING (auth.uid() = user_id);
 
