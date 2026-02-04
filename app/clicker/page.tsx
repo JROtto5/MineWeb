@@ -295,74 +295,135 @@ const INITIAL_BUILDINGS: Building[] = [
   { id: 'mine', name: 'Dot Mine', description: 'Extracts rare dots', baseCost: 12000, baseDps: 47, owned: 0, icon: '⛏️', color: '#f39c12', unlockAt: 5000 },
   { id: 'lab', name: 'Dot Lab', description: 'Researches dot science', baseCost: 130000, baseDps: 260, owned: 0, icon: '🔬', color: '#9b59b6', unlockAt: 50000 },
   { id: 'temple', name: 'Dot Temple', description: 'Worships the ancient dot', baseCost: 1400000, baseDps: 1400, owned: 0, icon: '🏛️', color: '#e74c3c', unlockAt: 500000 },
+  { id: 'wizard', name: 'Dot Wizard Tower', description: 'Magical dot conjuring', baseCost: 8000000, baseDps: 5500, owned: 0, icon: '🧙', color: '#8e44ad', unlockAt: 2000000 },
   { id: 'portal', name: 'Dot Portal', description: 'Imports dots from other dimensions', baseCost: 20000000, baseDps: 7800, owned: 0, icon: '🌀', color: '#1abc9c', unlockAt: 5000000 },
+  { id: 'shipyard', name: 'Dot Shipyard', description: 'Builds ships to harvest space dots', baseCost: 100000000, baseDps: 25000, owned: 0, icon: '🚀', color: '#34495e', unlockAt: 20000000 },
   { id: 'singularity', name: 'Dot Singularity', description: 'Creates dots from nothing', baseCost: 330000000, baseDps: 44000, owned: 0, icon: '🕳️', color: '#2c3e50', unlockAt: 50000000 },
+  { id: 'alchemy', name: 'Alchemy Chamber', description: 'Transmutes matter into dots', baseCost: 1500000000, baseDps: 150000, owned: 0, icon: '⚗️', color: '#d35400', unlockAt: 200000000 },
   { id: 'quantum', name: 'Quantum Generator', description: 'Infinite dot potential', baseCost: 5100000000, baseDps: 260000, owned: 0, icon: '⚛️', color: '#00d9ff', unlockAt: 500000000 },
+  { id: 'ai', name: 'Dot AI Network', description: 'Self-improving dot production', baseCost: 25000000000, baseDps: 900000, owned: 0, icon: '🤖', color: '#16a085', unlockAt: 2000000000 },
   { id: 'timemachine', name: 'Time Machine', description: 'Harvests dots from the future', baseCost: 75000000000, baseDps: 1600000, owned: 0, icon: '⏰', color: '#e056fd', unlockAt: 5000000000 },
+  { id: 'dyson', name: 'Dyson Sphere', description: 'Harnesses star energy for dots', baseCost: 400000000000, baseDps: 6000000, owned: 0, icon: '☀️', color: '#f1c40f', unlockAt: 25000000000 },
   { id: 'antimatter', name: 'Antimatter Condenser', description: 'Condenses antimatter into dots', baseCost: 1000000000000, baseDps: 10000000, owned: 0, icon: '💫', color: '#ff6b6b', unlockAt: 50000000000 },
+  { id: 'dimension', name: 'Dimension Ripper', description: 'Tears holes in reality for dots', baseCost: 5000000000000, baseDps: 40000000, owned: 0, icon: '🌌', color: '#5b2c6f', unlockAt: 200000000000 },
   { id: 'prism', name: 'Prism', description: 'Converts light into dots', baseCost: 14000000000000, baseDps: 65000000, owned: 0, icon: '🔮', color: '#a29bfe', unlockAt: 500000000000 },
+  { id: 'universe', name: 'Universe Factory', description: 'Creates pocket universes of dots', baseCost: 100000000000000, baseDps: 300000000, owned: 0, icon: '🌐', color: '#1e3799', unlockAt: 5000000000000 },
+  { id: 'multiverse', name: 'Multiverse Engine', description: 'Infinite realities = infinite dots', baseCost: 1000000000000000, baseDps: 2000000000, owned: 0, icon: '♾️', color: '#6c3483', unlockAt: 50000000000000 },
+  { id: 'godforge', name: 'God Forge', description: 'Divine dot creation', baseCost: 10000000000000000, baseDps: 15000000000, owned: 0, icon: '⚡', color: '#ffd700', unlockAt: 500000000000000 },
 ]
 
 const INITIAL_UPGRADES: Upgrade[] = [
-  // Click upgrades
+  // Click upgrades - MANY MORE!
   { id: 'click1', name: 'Reinforced Finger', description: '+1 dot per click', cost: 100, multiplier: 1, type: 'click', purchased: false, icon: '👆', unlockAt: 0 },
   { id: 'click2', name: 'Iron Finger', description: 'Double click power', cost: 500, multiplier: 2, type: 'click', purchased: false, icon: '🦾', unlockAt: 100 },
   { id: 'click3', name: 'Golden Touch', description: 'Triple click power', cost: 5000, multiplier: 3, type: 'click', purchased: false, icon: '✨', unlockAt: 1000 },
   { id: 'click4', name: 'Diamond Hands', description: '5x click power', cost: 50000, multiplier: 5, type: 'click', purchased: false, icon: '💎', unlockAt: 10000 },
   { id: 'click5', name: 'Quantum Fingers', description: '10x click power', cost: 500000, multiplier: 10, type: 'click', purchased: false, icon: '🌌', unlockAt: 100000 },
   { id: 'click6', name: 'Cosmic Touch', description: '25x click power', cost: 5000000, multiplier: 25, type: 'click', purchased: false, icon: '🪐', unlockAt: 1000000 },
+  { id: 'click7', name: 'Stellar Poke', description: '50x click power', cost: 50000000, multiplier: 50, type: 'click', purchased: false, icon: '⭐', unlockAt: 10000000 },
+  { id: 'click8', name: 'Galactic Tap', description: '100x click power', cost: 500000000, multiplier: 100, type: 'click', purchased: false, icon: '🌀', unlockAt: 100000000 },
+  { id: 'click9', name: 'Universal Jab', description: '250x click power', cost: 5000000000, multiplier: 250, type: 'click', purchased: false, icon: '🔮', unlockAt: 1000000000 },
+  { id: 'click10', name: 'Omnipotent Click', description: '500x click power', cost: 50000000000, multiplier: 500, type: 'click', purchased: false, icon: '👑', unlockAt: 10000000000 },
 
-  // Crit upgrades
+  // Crit upgrades - MORE!
   { id: 'crit1', name: 'Lucky Finger', description: '+5% crit chance', cost: 1000, multiplier: 0.05, type: 'crit', purchased: false, icon: '🍀', unlockAt: 200 },
   { id: 'crit2', name: 'Super Lucky', description: '+10% crit chance', cost: 10000, multiplier: 0.10, type: 'crit', purchased: false, icon: '🎰', unlockAt: 2000 },
   { id: 'crit3', name: 'Critical Master', description: '+15% crit chance', cost: 100000, multiplier: 0.15, type: 'crit', purchased: false, icon: '💥', unlockAt: 20000 },
   { id: 'crit4', name: 'Crit Lord', description: '+20% crit chance', cost: 1000000, multiplier: 0.20, type: 'crit', purchased: false, icon: '⚡', unlockAt: 200000 },
+  { id: 'crit5', name: 'Crit Emperor', description: '+15% crit chance', cost: 10000000, multiplier: 0.15, type: 'crit', purchased: false, icon: '🎯', unlockAt: 2000000 },
+  { id: 'crit6', name: 'Crit God', description: '+10% crit chance', cost: 100000000, multiplier: 0.10, type: 'crit', purchased: false, icon: '🌟', unlockAt: 20000000 },
 
-  // Golden dot upgrades
+  // Golden dot upgrades - MORE!
   { id: 'golden1', name: 'Golden Vision', description: '+2% golden dot chance', cost: 5000, multiplier: 0.02, type: 'golden', purchased: false, icon: '👁️', unlockAt: 1000 },
   { id: 'golden2', name: 'Midas Touch', description: '+5% golden dot chance', cost: 50000, multiplier: 0.05, type: 'golden', purchased: false, icon: '🏆', unlockAt: 10000 },
   { id: 'golden3', name: 'Golden Aura', description: '+10% golden dot chance', cost: 500000, multiplier: 0.10, type: 'golden', purchased: false, icon: '👑', unlockAt: 100000 },
+  { id: 'golden4', name: 'Gold Magnet', description: '+8% golden dot chance', cost: 5000000, multiplier: 0.08, type: 'golden', purchased: false, icon: '🧲', unlockAt: 1000000 },
+  { id: 'golden5', name: 'Golden Shower', description: '+12% golden dot chance', cost: 50000000, multiplier: 0.12, type: 'golden', purchased: false, icon: '🌧️', unlockAt: 10000000 },
 
-  // Combo upgrades
+  // Combo upgrades - MORE!
   { id: 'combo1', name: 'Combo Starter', description: '+50% combo bonus', cost: 2000, multiplier: 0.5, type: 'combo', purchased: false, icon: '🔥', unlockAt: 500 },
   { id: 'combo2', name: 'Combo Master', description: '+100% combo bonus', cost: 20000, multiplier: 1.0, type: 'combo', purchased: false, icon: '💪', unlockAt: 5000 },
   { id: 'combo3', name: 'Combo God', description: '+200% combo bonus', cost: 200000, multiplier: 2.0, type: 'combo', purchased: false, icon: '🌟', unlockAt: 50000 },
+  { id: 'combo4', name: 'Combo Titan', description: '+300% combo bonus', cost: 2000000, multiplier: 3.0, type: 'combo', purchased: false, icon: '💫', unlockAt: 500000 },
+  { id: 'combo5', name: 'Combo Overlord', description: '+500% combo bonus', cost: 20000000, multiplier: 5.0, type: 'combo', purchased: false, icon: '👊', unlockAt: 5000000 },
 
-  // Offline upgrades
+  // Offline upgrades - MORE!
   { id: 'offline1', name: 'Dream Dots', description: '+25% offline earnings', cost: 10000, multiplier: 0.25, type: 'offline', purchased: false, icon: '😴', unlockAt: 5000 },
   { id: 'offline2', name: 'Sleep Worker', description: '+50% offline earnings', cost: 100000, multiplier: 0.50, type: 'offline', purchased: false, icon: '🛏️', unlockAt: 50000 },
   { id: 'offline3', name: 'Passive Master', description: '+100% offline earnings', cost: 1000000, multiplier: 1.0, type: 'offline', purchased: false, icon: '🧘', unlockAt: 500000 },
+  { id: 'offline4', name: 'Hibernate Pro', description: '+75% offline earnings', cost: 10000000, multiplier: 0.75, type: 'offline', purchased: false, icon: '🐻', unlockAt: 5000000 },
+  { id: 'offline5', name: 'Eternal Sleep', description: '+100% offline earnings', cost: 100000000, multiplier: 1.0, type: 'offline', purchased: false, icon: '💤', unlockAt: 50000000 },
 
-  // Building upgrades - Cursors
+  // Building upgrades - Cursors (3 upgrades)
   { id: 'cursor_up1', name: 'Faster Cursors', description: 'Cursors 2x effective', cost: 200, multiplier: 2, type: 'building', targetBuilding: 'cursor', purchased: false, icon: '⚡', unlockAt: 50 },
   { id: 'cursor_up2', name: 'Ambidextrous', description: 'Cursors 2x effective', cost: 5000, multiplier: 2, type: 'building', targetBuilding: 'cursor', purchased: false, icon: '🤲', unlockAt: 1000 },
   { id: 'cursor_up3', name: 'Thousand Hands', description: 'Cursors 2x effective', cost: 500000, multiplier: 2, type: 'building', targetBuilding: 'cursor', purchased: false, icon: '🙌', unlockAt: 100000 },
 
-  // Building upgrades - Farms
+  // Building upgrades - Farms (3 upgrades)
   { id: 'farm_up1', name: 'Fertilizer', description: 'Farms 2x effective', cost: 1000, multiplier: 2, type: 'building', targetBuilding: 'farm', purchased: false, icon: '💧', unlockAt: 500 },
   { id: 'farm_up2', name: 'Irrigation', description: 'Farms 2x effective', cost: 50000, multiplier: 2, type: 'building', targetBuilding: 'farm', purchased: false, icon: '🚿', unlockAt: 10000 },
   { id: 'farm_up3', name: 'GMO Dots', description: 'Farms 2x effective', cost: 5000000, multiplier: 2, type: 'building', targetBuilding: 'farm', purchased: false, icon: '🧬', unlockAt: 1000000 },
 
-  // Building upgrades - Factories
+  // Building upgrades - Factories (3 upgrades)
   { id: 'factory_up1', name: 'Automation', description: 'Factories 2x effective', cost: 10000, multiplier: 2, type: 'building', targetBuilding: 'factory', purchased: false, icon: '🤖', unlockAt: 5000 },
-  { id: 'factory_up2', name: 'Assembly Line', description: 'Factories 2x effective', cost: 500000, multiplier: 2, type: 'building', targetBuilding: 'factory', purchased: false, icon: '�icing', unlockAt: 100000 },
+  { id: 'factory_up2', name: 'Assembly Line', description: 'Factories 2x effective', cost: 500000, multiplier: 2, type: 'building', targetBuilding: 'factory', purchased: false, icon: '🔧', unlockAt: 100000 },
+  { id: 'factory_up3', name: 'Nano Factories', description: 'Factories 2x effective', cost: 50000000, multiplier: 2, type: 'building', targetBuilding: 'factory', purchased: false, icon: '🔬', unlockAt: 10000000 },
 
-  // Building upgrades - Mines
+  // Building upgrades - Mines (3 upgrades)
   { id: 'mine_up1', name: 'Deeper Shafts', description: 'Mines 2x effective', cost: 100000, multiplier: 2, type: 'building', targetBuilding: 'mine', purchased: false, icon: '🕳️', unlockAt: 50000 },
   { id: 'mine_up2', name: 'Diamond Drills', description: 'Mines 2x effective', cost: 10000000, multiplier: 2, type: 'building', targetBuilding: 'mine', purchased: false, icon: '💎', unlockAt: 5000000 },
+  { id: 'mine_up3', name: 'Core Excavation', description: 'Mines 2x effective', cost: 1000000000, multiplier: 2, type: 'building', targetBuilding: 'mine', purchased: false, icon: '🌋', unlockAt: 500000000 },
 
-  // Building upgrades - Labs
+  // Building upgrades - Labs (3 upgrades)
   { id: 'lab_up1', name: 'Better Beakers', description: 'Labs 2x effective', cost: 1000000, multiplier: 2, type: 'building', targetBuilding: 'lab', purchased: false, icon: '🧪', unlockAt: 500000 },
+  { id: 'lab_up2', name: 'Gene Splicing', description: 'Labs 2x effective', cost: 100000000, multiplier: 2, type: 'building', targetBuilding: 'lab', purchased: false, icon: '🧬', unlockAt: 50000000 },
+  { id: 'lab_up3', name: 'Quantum Research', description: 'Labs 2x effective', cost: 10000000000, multiplier: 2, type: 'building', targetBuilding: 'lab', purchased: false, icon: '⚛️', unlockAt: 5000000000 },
 
-  // Building upgrades - Temples
+  // Building upgrades - Temples (3 upgrades)
   { id: 'temple_up1', name: 'Holy Dots', description: 'Temples 2x effective', cost: 10000000, multiplier: 2, type: 'building', targetBuilding: 'temple', purchased: false, icon: '✝️', unlockAt: 5000000 },
+  { id: 'temple_up2', name: 'Divine Prayer', description: 'Temples 2x effective', cost: 1000000000, multiplier: 2, type: 'building', targetBuilding: 'temple', purchased: false, icon: '🙏', unlockAt: 500000000 },
+  { id: 'temple_up3', name: 'Celestial Blessing', description: 'Temples 2x effective', cost: 100000000000, multiplier: 2, type: 'building', targetBuilding: 'temple', purchased: false, icon: '👼', unlockAt: 50000000000 },
 
-  // Global upgrades
+  // Building upgrades - Wizard Tower (3 upgrades)
+  { id: 'wizard_up1', name: 'Arcane Focus', description: 'Wizard Towers 2x effective', cost: 50000000, multiplier: 2, type: 'building', targetBuilding: 'wizard', purchased: false, icon: '🔮', unlockAt: 10000000 },
+  { id: 'wizard_up2', name: 'Spell Mastery', description: 'Wizard Towers 2x effective', cost: 5000000000, multiplier: 2, type: 'building', targetBuilding: 'wizard', purchased: false, icon: '📜', unlockAt: 1000000000 },
+  { id: 'wizard_up3', name: 'Reality Warp', description: 'Wizard Towers 2x effective', cost: 500000000000, multiplier: 2, type: 'building', targetBuilding: 'wizard', purchased: false, icon: '🌀', unlockAt: 100000000000 },
+
+  // Building upgrades - Portals (3 upgrades)
+  { id: 'portal_up1', name: 'Wider Gates', description: 'Portals 2x effective', cost: 100000000, multiplier: 2, type: 'building', targetBuilding: 'portal', purchased: false, icon: '🚪', unlockAt: 25000000 },
+  { id: 'portal_up2', name: 'Dimensional Rift', description: 'Portals 2x effective', cost: 10000000000, multiplier: 2, type: 'building', targetBuilding: 'portal', purchased: false, icon: '🌌', unlockAt: 2500000000 },
+  { id: 'portal_up3', name: 'Multiverse Access', description: 'Portals 2x effective', cost: 1000000000000, multiplier: 2, type: 'building', targetBuilding: 'portal', purchased: false, icon: '♾️', unlockAt: 250000000000 },
+
+  // Building upgrades - Shipyard (3 upgrades)
+  { id: 'shipyard_up1', name: 'Faster Ships', description: 'Shipyards 2x effective', cost: 500000000, multiplier: 2, type: 'building', targetBuilding: 'shipyard', purchased: false, icon: '🛸', unlockAt: 100000000 },
+  { id: 'shipyard_up2', name: 'Warp Drive', description: 'Shipyards 2x effective', cost: 50000000000, multiplier: 2, type: 'building', targetBuilding: 'shipyard', purchased: false, icon: '💫', unlockAt: 10000000000 },
+  { id: 'shipyard_up3', name: 'Galactic Fleet', description: 'Shipyards 2x effective', cost: 5000000000000, multiplier: 2, type: 'building', targetBuilding: 'shipyard', purchased: false, icon: '🌟', unlockAt: 1000000000000 },
+
+  // Building upgrades - Singularity (2 upgrades)
+  { id: 'singularity_up1', name: 'Denser Core', description: 'Singularities 2x effective', cost: 2000000000, multiplier: 2, type: 'building', targetBuilding: 'singularity', purchased: false, icon: '🌑', unlockAt: 500000000 },
+  { id: 'singularity_up2', name: 'Hawking Radiation', description: 'Singularities 2x effective', cost: 200000000000, multiplier: 2, type: 'building', targetBuilding: 'singularity', purchased: false, icon: '☢️', unlockAt: 50000000000 },
+
+  // Building upgrades - Quantum (2 upgrades)
+  { id: 'quantum_up1', name: 'Superposition', description: 'Quantum Generators 2x effective', cost: 30000000000, multiplier: 2, type: 'building', targetBuilding: 'quantum', purchased: false, icon: '🔀', unlockAt: 5000000000 },
+  { id: 'quantum_up2', name: 'Entanglement', description: 'Quantum Generators 2x effective', cost: 3000000000000, multiplier: 2, type: 'building', targetBuilding: 'quantum', purchased: false, icon: '🔗', unlockAt: 500000000000 },
+
+  // Building upgrades - Time Machine (2 upgrades)
+  { id: 'timemachine_up1', name: 'Paradox Engine', description: 'Time Machines 2x effective', cost: 500000000000, multiplier: 2, type: 'building', targetBuilding: 'timemachine', purchased: false, icon: '⏳', unlockAt: 50000000000 },
+  { id: 'timemachine_up2', name: 'Temporal Loop', description: 'Time Machines 2x effective', cost: 50000000000000, multiplier: 2, type: 'building', targetBuilding: 'timemachine', purchased: false, icon: '🔄', unlockAt: 5000000000000 },
+
+  // Building upgrades - AI Network (2 upgrades)
+  { id: 'ai_up1', name: 'Neural Upgrade', description: 'AI Networks 2x effective', cost: 150000000000, multiplier: 2, type: 'building', targetBuilding: 'ai', purchased: false, icon: '🧠', unlockAt: 25000000000 },
+  { id: 'ai_up2', name: 'Singularity Protocol', description: 'AI Networks 2x effective', cost: 15000000000000, multiplier: 2, type: 'building', targetBuilding: 'ai', purchased: false, icon: '🤯', unlockAt: 2500000000000 },
+
+  // Global upgrades - MORE!
   { id: 'global1', name: 'Efficiency I', description: '+10% all production', cost: 10000, multiplier: 1.1, type: 'global', purchased: false, icon: '📈', unlockAt: 5000 },
   { id: 'global2', name: 'Efficiency II', description: '+25% all production', cost: 100000, multiplier: 1.25, type: 'global', purchased: false, icon: '📊', unlockAt: 50000 },
   { id: 'global3', name: 'Efficiency III', description: '+50% all production', cost: 1000000, multiplier: 1.5, type: 'global', purchased: false, icon: '🚀', unlockAt: 500000 },
   { id: 'global4', name: 'Efficiency IV', description: '+100% all production', cost: 10000000, multiplier: 2.0, type: 'global', purchased: false, icon: '🌠', unlockAt: 5000000 },
   { id: 'global5', name: 'Efficiency V', description: '+200% all production', cost: 100000000, multiplier: 3.0, type: 'global', purchased: false, icon: '🎇', unlockAt: 50000000 },
+  { id: 'global6', name: 'Efficiency VI', description: '+300% all production', cost: 1000000000, multiplier: 4.0, type: 'global', purchased: false, icon: '💥', unlockAt: 500000000 },
+  { id: 'global7', name: 'Efficiency VII', description: '+500% all production', cost: 10000000000, multiplier: 6.0, type: 'global', purchased: false, icon: '⚡', unlockAt: 5000000000 },
+  { id: 'global8', name: 'Efficiency VIII', description: '+1000% all production', cost: 100000000000, multiplier: 11.0, type: 'global', purchased: false, icon: '🌈', unlockAt: 50000000000 },
 ]
 
 const INITIAL_ACHIEVEMENTS: Achievement[] = [
@@ -1168,7 +1229,17 @@ export default function DotClicker() {
     <div className={`clicker-container ${frenzyMode ? 'frenzy' : ''}`}>
       {/* Header */}
       <header className="header">
-        <Link href="/hub" className="back-btn">← Hub</Link>
+        <button
+          className="back-btn"
+          onClick={async () => {
+            // Auto-save to cloud before navigating
+            if (gameState && user) {
+              saveGameLocal()
+              await saveGameCloud(false)
+            }
+            router.push('/hub')
+          }}
+        >← Hub</button>
         <div className="title">
           <span className="dot-icon">●</span> DOT CLICKER
           {frenzyMode && <span className="frenzy-badge">🔥 FRENZY {frenzyTimer}s</span>}

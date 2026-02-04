@@ -35,28 +35,37 @@ export class FloorGenerator {
     // Reset RNG for consistent generation per floor
     this.rng = this.seededRandom(this.seed + floorNumber)
 
-    // Generate 6-12 rooms per floor
-    const roomCount = 6 + Math.floor(this.rng() * 7)
+    // Generate 3-6 rooms per floor (smaller, tighter maps for faster action)
+    const roomCount = 3 + Math.floor(this.rng() * 4)
     const rooms: Room[] = []
 
-    // World dimensions
-    const worldWidth = 3000
-    const worldHeight = 2000
+    // SMALLER world for faster, more intense gameplay
+    // Start small, expand slightly as floors progress
+    const baseWidth = 1200
+    const baseHeight = 800
+    const expansionPerFloor = 15  // Grows slightly each floor
+    const maxExpansion = 1000     // Cap the expansion
+
+    const expansion = Math.min(floorNumber * expansionPerFloor, maxExpansion)
+    const worldWidth = baseWidth + expansion
+    const worldHeight = baseHeight + Math.floor(expansion * 0.67)
 
     // Use BSP (Binary Space Partitioning) algorithm
     const spaces = this.generateSpaces(worldWidth, worldHeight, roomCount)
 
-    // Create rooms within spaces
+    // Create rooms within spaces - SMALLER rooms for intense combat!
     spaces.forEach((space, index) => {
-      const minRoomSize = 400
-      const maxRoomSize = 700
+      // Rooms start SMALL and grow slightly with floor progression
+      const floorScale = 1 + Math.min(floorNumber * 0.02, 0.5) // Up to 50% larger by floor 25
+      const minRoomSize = Math.floor(250 * floorScale)
+      const maxRoomSize = Math.floor(400 * floorScale)
 
       const roomWidth = Math.min(
-        space.width - 100,
+        space.width - 50,
         minRoomSize + Math.floor(this.rng() * (maxRoomSize - minRoomSize))
       )
       const roomHeight = Math.min(
-        space.height - 100,
+        space.height - 50,
         minRoomSize + Math.floor(this.rng() * (maxRoomSize - minRoomSize))
       )
 

@@ -16,6 +16,102 @@ const COLORS = {
   bronze: 0x5e81ac,
 }
 
+// PLAYER CLASSES - Different starting weapons and stats!
+export interface PlayerClass {
+  id: string
+  name: string
+  description: string
+  icon: string
+  color: number
+  startingWeapon: number // weapon index
+  bonusHealth: number    // extra health %
+  bonusDamage: number    // extra damage %
+  bonusSpeed: number     // extra speed %
+  bonusFireRate: number  // extra fire rate %
+  special: string        // unique ability description
+}
+
+export const PLAYER_CLASSES: PlayerClass[] = [
+  {
+    id: 'soldier',
+    name: 'SOLDIER',
+    description: 'Balanced fighter. Good all-around stats.',
+    icon: '🎖️',
+    color: 0x3498db,
+    startingWeapon: 0,  // Pistol
+    bonusHealth: 10,
+    bonusDamage: 10,
+    bonusSpeed: 0,
+    bonusFireRate: 0,
+    special: '+10% HP & Damage'
+  },
+  {
+    id: 'gunslinger',
+    name: 'GUNSLINGER',
+    description: 'Fast shooter with rapid fire. Low health.',
+    icon: '🔫',
+    color: 0xf39c12,
+    startingWeapon: 1,  // SMG
+    bonusHealth: -20,
+    bonusDamage: 0,
+    bonusSpeed: 15,
+    bonusFireRate: 30,
+    special: '+30% Fire Rate, -20% HP'
+  },
+  {
+    id: 'tank',
+    name: 'TANK',
+    description: 'Heavy armor, slow but powerful.',
+    icon: '🛡️',
+    color: 0x27ae60,
+    startingWeapon: 2,  // Shotgun
+    bonusHealth: 50,
+    bonusDamage: 25,
+    bonusSpeed: -20,
+    bonusFireRate: -15,
+    special: '+50% HP, +25% Damage'
+  },
+  {
+    id: 'assassin',
+    name: 'ASSASSIN',
+    description: 'Glass cannon. Extreme damage, fragile.',
+    icon: '🗡️',
+    color: 0x9b59b6,
+    startingWeapon: 3,  // Sniper
+    bonusHealth: -30,
+    bonusDamage: 75,
+    bonusSpeed: 25,
+    bonusFireRate: -10,
+    special: '+75% Damage, -30% HP'
+  },
+  {
+    id: 'berserker',
+    name: 'BERSERKER',
+    description: 'Gets stronger as health drops!',
+    icon: '🔥',
+    color: 0xe74c3c,
+    startingWeapon: 0,  // Pistol
+    bonusHealth: 0,
+    bonusDamage: 0,
+    bonusSpeed: 10,
+    bonusFireRate: 10,
+    special: 'Damage +50% when below 50% HP'
+  },
+  {
+    id: 'vampire',
+    name: 'VAMPIRE',
+    description: 'Heals from kills. Start weak, grow strong.',
+    icon: '🧛',
+    color: 0x8e44ad,
+    startingWeapon: 1,  // SMG
+    bonusHealth: -10,
+    bonusDamage: -10,
+    bonusSpeed: 15,
+    bonusFireRate: 20,
+    special: 'Heal 3% HP per kill'
+  }
+]
+
 export default class MenuScene extends Phaser.Scene {
   private leaderboardService!: LeaderboardService
   private saveManager!: SaveManager
@@ -25,6 +121,10 @@ export default class MenuScene extends Phaser.Scene {
   private refreshTimer?: Phaser.Time.TimerEvent
   private userId: string | null = null // Authenticated user ID
   private playerName: string = 'Player' // Default player name
+
+  // Class selection
+  private classSelectionContainer: Phaser.GameObjects.Container | null = null
+  private selectedClass: PlayerClass = PLAYER_CLASSES[0]
 
   constructor() {
     super({ key: 'MenuScene' })
@@ -475,8 +575,177 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   private startNewGame() {
-    // Fade out with purple flash
-    this.cameras.main.flash(300, 187, 134, 252, false)
+    // Show class selection UI
+    this.showClassSelection()
+  }
+
+  private showClassSelection() {
+    const { width, height } = this.scale
+    const centerX = width / 2
+    const centerY = height / 2
+
+    // Create container for class selection
+    this.classSelectionContainer = this.add.container(0, 0)
+
+    // Dark overlay
+    const overlay = this.add.rectangle(0, 0, width * 2, height * 2, 0x000000, 0.85)
+    overlay.setOrigin(0)
+    this.classSelectionContainer.add(overlay)
+
+    // Title
+    const title = this.add.text(centerX, 60, 'CHOOSE YOUR CLASS', {
+      fontSize: '36px',
+      fontStyle: 'bold',
+      color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
+      stroke: '#000000',
+      strokeThickness: 4,
+    }).setOrigin(0.5)
+    this.classSelectionContainer.add(title)
+
+    // Subtitle
+    const subtitle = this.add.text(centerX, 100, 'Each class has unique bonuses and starting weapons', {
+      fontSize: '16px',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+    }).setOrigin(0.5)
+    this.classSelectionContainer.add(subtitle)
+
+    // Create class cards - 3 per row
+    const cardWidth = 180
+    const cardHeight = 200
+    const cardsPerRow = 3
+    const spacing = 20
+    const startX = centerX - ((cardWidth + spacing) * (cardsPerRow - 1)) / 2
+    const startY = 150
+
+    PLAYER_CLASSES.forEach((playerClass, index) => {
+      const row = Math.floor(index / cardsPerRow)
+      const col = index % cardsPerRow
+      const x = startX + col * (cardWidth + spacing)
+      const y = startY + row * (cardHeight + spacing)
+
+      this.createClassCard(playerClass, x, y, cardWidth, cardHeight)
+    })
+
+    // Back button
+    const backBtn = this.add.rectangle(centerX - 100, height - 60, 150, 45, COLORS.panel, 0.9)
+    backBtn.setStrokeStyle(2, COLORS.accent, 0.5)
+    backBtn.setInteractive({ useHandCursor: true })
+
+    const backText = this.add.text(centerX - 100, height - 60, '← BACK', {
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
+    }).setOrigin(0.5)
+
+    backBtn.on('pointerover', () => backBtn.setStrokeStyle(3, COLORS.highlight, 1))
+    backBtn.on('pointerout', () => backBtn.setStrokeStyle(2, COLORS.accent, 0.5))
+    backBtn.on('pointerdown', () => this.hideClassSelection())
+
+    this.classSelectionContainer.add([backBtn, backText])
+
+    // Start button
+    const startBtn = this.add.rectangle(centerX + 100, height - 60, 150, 45, COLORS.accent, 0.9)
+    startBtn.setStrokeStyle(2, COLORS.accent2, 1)
+    startBtn.setInteractive({ useHandCursor: true })
+
+    const startText = this.add.text(centerX + 100, height - 60, 'START →', {
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+    }).setOrigin(0.5)
+
+    startBtn.on('pointerover', () => {
+      startBtn.setFillStyle(COLORS.accent2, 1)
+      this.tweens.add({ targets: startBtn, scale: 1.05, duration: 100 })
+    })
+    startBtn.on('pointerout', () => {
+      startBtn.setFillStyle(COLORS.accent, 0.9)
+      this.tweens.add({ targets: startBtn, scale: 1, duration: 100 })
+    })
+    startBtn.on('pointerdown', () => this.launchGameWithClass())
+
+    this.classSelectionContainer.add([startBtn, startText])
+  }
+
+  private createClassCard(playerClass: PlayerClass, x: number, y: number, width: number, height: number) {
+    if (!this.classSelectionContainer) return
+
+    const isSelected = this.selectedClass.id === playerClass.id
+
+    // Card background
+    const bg = this.add.rectangle(x, y, width, height, isSelected ? playerClass.color : COLORS.panel, 0.9)
+    bg.setStrokeStyle(isSelected ? 3 : 2, isSelected ? COLORS.highlight : COLORS.accent, isSelected ? 1 : 0.5)
+    bg.setInteractive({ useHandCursor: true })
+
+    // Icon
+    const icon = this.add.text(x, y - 60, playerClass.icon, {
+      fontSize: '40px',
+    }).setOrigin(0.5)
+
+    // Name
+    const name = this.add.text(x, y - 20, playerClass.name, {
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: isSelected ? '#ffffff' : `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
+    }).setOrigin(0.5)
+
+    // Description
+    const desc = this.add.text(x, y + 10, playerClass.description, {
+      fontSize: '11px',
+      color: isSelected ? '#dddddd' : `#${COLORS.text.toString(16).padStart(6, '0')}`,
+      wordWrap: { width: width - 20 },
+      align: 'center',
+    }).setOrigin(0.5, 0)
+
+    // Special ability
+    const special = this.add.text(x, y + 65, playerClass.special, {
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: isSelected ? '#ffff00' : `#${COLORS.gold.toString(16).padStart(6, '0')}`,
+      wordWrap: { width: width - 10 },
+      align: 'center',
+    }).setOrigin(0.5)
+
+    this.classSelectionContainer.add([bg, icon, name, desc, special])
+
+    // Click handler
+    bg.on('pointerdown', () => {
+      this.selectedClass = playerClass
+      this.hideClassSelection()
+      this.showClassSelection() // Refresh to show new selection
+    })
+
+    bg.on('pointerover', () => {
+      if (!isSelected) {
+        bg.setStrokeStyle(3, COLORS.highlight, 0.8)
+        this.tweens.add({ targets: [bg, icon, name, desc, special], scale: 1.02, duration: 100 })
+      }
+    })
+
+    bg.on('pointerout', () => {
+      if (!isSelected) {
+        bg.setStrokeStyle(2, COLORS.accent, 0.5)
+        this.tweens.add({ targets: [bg, icon, name, desc, special], scale: 1, duration: 100 })
+      }
+    })
+  }
+
+  private hideClassSelection() {
+    if (this.classSelectionContainer) {
+      this.classSelectionContainer.destroy()
+      this.classSelectionContainer = null
+    }
+  }
+
+  private launchGameWithClass() {
+    // Store selected class in registry
+    this.registry.set('selectedClass', this.selectedClass)
+
+    // Fade out with class color flash
+    const r = (this.selectedClass.color >> 16) & 0xff
+    const g = (this.selectedClass.color >> 8) & 0xff
+    const b = this.selectedClass.color & 0xff
+    this.cameras.main.flash(300, r, g, b, false)
 
     this.time.delayedCall(300, () => {
       this.scene.start('GameSceneV3')

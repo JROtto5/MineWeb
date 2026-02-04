@@ -15,7 +15,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   public skillPoints = 0
 
   private baseSpeed = 250 // FAST: Increased from 200
-  private speed = 250
+  public speed = 250
   private readonly MAX_SPEED = 800 // Absolute max speed cap to prevent velocity bugs
   private currentWeapon = 2 // ROGUELIKE: Always shotgun!
   private weaponSystem: WeaponSystem
@@ -34,6 +34,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   // Cross-game synergy bonus from Dot Clicker
   public clickerSynergyBonus = 0
+
+  // Class bonuses
+  public classDamageBonus = 0
+  public classFireRateBonus = 0
+  public playerClass: any = null
+  public currentWeaponIndex = 0
 
   // Abilities
   private hasDash = false
@@ -73,10 +79,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   private hasOrbitalStrike = false
   private orbitalStrikeCooldown = 0
 
-  private weapons: WeaponType[] = [
+  public weapons: WeaponType[] = [
     { name: 'Pistol', damage: 20, fireRate: 300, ammo: 30, maxAmmo: 30 },
     { name: 'SMG', damage: 15, fireRate: 100, ammo: 50, maxAmmo: 50 },
     { name: 'Shotgun', damage: 40, fireRate: 600, ammo: 8, maxAmmo: 8 },
+    { name: 'Sniper', damage: 150, fireRate: 1200, ammo: 5, maxAmmo: 5 },
   ]
 
   // Power-up states
@@ -393,12 +400,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     const skillDamageBonus = this.skillTree.getTotalBonus('damage')
     damage *= (1 + skillDamageBonus + this.shopDamageBonus)
 
+    // Apply class damage bonus
+    damage *= (1 + this.classDamageBonus)
+
     // Apply cross-game synergy bonus from Dot Clicker
     damage *= (1 + this.clickerSynergyBonus)
 
     // Apply power-up bonus
     if (this.damageBoostActive) {
       damage *= 2
+    }
+
+    // BERSERKER CLASS: +50% damage when below 50% HP
+    if (this.playerClass?.id === 'berserker' && this.health < this.maxHealth * 0.5) {
+      damage *= 1.5
     }
 
     // Shield protection visual
@@ -422,7 +437,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Apply skill bonus (cap total bonus at 80% reduction)
     const skillFireRateBonus = this.skillTree.getTotalBonus('fireRate')
-    const totalBonus = Math.min(skillFireRateBonus + this.shopFireRateBonus, 0.8)
+    const totalBonus = Math.min(skillFireRateBonus + this.shopFireRateBonus + this.classFireRateBonus, 0.8)
     fireRate *= (1 - totalBonus)
 
     // Apply rapid fire power-up
@@ -438,6 +453,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // IMPORTANT: Cap minimum fire rate at 30ms to prevent insane shooting
     const MIN_FIRE_RATE = 30
     return Math.max(fireRate, MIN_FIRE_RATE)
+  }
+
+  // VAMPIRE CLASS: Heal on kill
+  onKillEnemy(): void {
+    if (this.playerClass?.id === 'vampire') {
+      const healAmount = Math.floor(this.maxHealth * 0.03) // 3% of max HP
+      this.health = Math.min(this.health + healAmount, this.maxHealth)
+    }
   }
 
   applyLuckBonus(amount: number): number {

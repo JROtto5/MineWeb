@@ -152,6 +152,13 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create player
     this.player = new Player(this, this.worldWidth / 2, this.worldHeight / 2, this.weaponSystem)
 
+    // Apply class bonuses if selected
+    const selectedClass = this.registry.get('selectedClass')
+    if (selectedClass) {
+      this.applyClassBonuses(selectedClass)
+      this.registry.remove('selectedClass')
+    }
+
     // Load cross-game synergy from Dot Clicker
     this.player.loadClickerSynergy()
     if (this.player.clickerSynergyBonus > 0) {
@@ -252,6 +259,47 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Welcome message - DotSlayer!
     this.addKillFeedMessage('⚡ DOTSLAYER - Systems Online!', '#00d9ff', 5000)
     this.addKillFeedMessage('Hold mouse to auto-fire • Press B for Shop • Press T for Skills', '#88c0d0', 6000)
+  }
+
+  private applyClassBonuses(playerClass: any) {
+    // Apply health bonus
+    if (playerClass.bonusHealth !== 0) {
+      const healthMult = 1 + (playerClass.bonusHealth / 100)
+      this.player.maxHealth = Math.floor(this.player.maxHealth * healthMult)
+      this.player.health = this.player.maxHealth
+    }
+
+    // Apply damage bonus
+    if (playerClass.bonusDamage !== 0) {
+      this.player.classDamageBonus = playerClass.bonusDamage / 100
+    }
+
+    // Apply speed bonus
+    if (playerClass.bonusSpeed !== 0) {
+      const speedMult = 1 + (playerClass.bonusSpeed / 100)
+      this.player.speed = Math.floor(this.player.speed * speedMult)
+    }
+
+    // Apply fire rate bonus
+    if (playerClass.bonusFireRate !== 0) {
+      this.player.classFireRateBonus = playerClass.bonusFireRate / 100
+    }
+
+    // Store class for special abilities
+    this.player.playerClass = playerClass
+
+    // Set starting weapon based on class
+    if (playerClass.startingWeapon > 0) {
+      this.player.currentWeaponIndex = Math.min(playerClass.startingWeapon, this.player.weapons.length - 1)
+    }
+
+    // Show class message
+    const className = playerClass.name || 'Unknown'
+    const special = playerClass.special || ''
+    this.time.delayedCall(500, () => {
+      this.addKillFeedMessage(`${playerClass.icon} Class: ${className}`, `#${playerClass.color.toString(16).padStart(6, '0')}`, 4000)
+      this.addKillFeedMessage(`Special: ${special}`, '#f39c12', 5000)
+    })
   }
 
   private abilityHotbarUI: any[] = []
@@ -1322,6 +1370,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     if (killed) {
       this.enemiesKilled++
+
+      // VAMPIRE CLASS: Heal on kill
+      this.player.onKillEnemy()
 
       // Play kill sound
       this.audioManager.playSound('kill')

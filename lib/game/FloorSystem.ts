@@ -57,15 +57,16 @@ export class FloorManager {
   }
 
   private calculateEnemyCount(): number {
-    // REBALANCED: More enemies, scaling curve
-    // Floor 1: 20 enemies
-    // Floor 25: 70 enemies
-    // Floor 50: 145 enemies
-    // Floor 75: 245 enemies
-    // Floor 100: 370 enemies
-    const base = 20
-    const linearScale = this.currentFloor * 2
-    const exponentialScale = Math.floor(Math.pow(this.currentFloor / 10, 1.5) * 10)
+    // AGGRESSIVE: Lots of enemies from the start for fast action!
+    // Floor 1: 35 enemies
+    // Floor 10: 75 enemies
+    // Floor 25: 150 enemies
+    // Floor 50: 300 enemies
+    // Floor 75: 500 enemies
+    // Floor 100: 750 enemies
+    const base = 35
+    const linearScale = this.currentFloor * 4
+    const exponentialScale = Math.floor(Math.pow(this.currentFloor / 8, 1.8) * 15)
     return base + linearScale + exponentialScale
   }
 
