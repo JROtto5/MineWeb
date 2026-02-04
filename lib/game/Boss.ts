@@ -280,7 +280,17 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
         break
 
       case 'mega':
-        // Create explosion effect (no camera shake)
+        // Summon minions around the boss!
+        this.summonMinions()
+        // Visual effect for summoning
+        const summonEffect = this.scene.add.circle(this.x, this.y, 80, 0xff0000, 0.4)
+        this.scene.tweens.add({
+          targets: summonEffect,
+          scale: 2.5,
+          alpha: 0,
+          duration: 800,
+          onComplete: () => summonEffect.destroy()
+        })
         break
     }
   }
@@ -325,9 +335,11 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
     this.healthBar.fillStyle(0x000000, 0.8)
     this.healthBar.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4)
 
-    // Health
+    // Health with proper color coding
     const healthPercent = this.health / this.maxHealth
-    const healthColor = healthPercent > 0.5 ? 0xff0000 : 0xff0000
+    let healthColor = 0xe74c3c // Red for low health
+    if (healthPercent > 0.6) healthColor = 0x2ecc71 // Green
+    else if (healthPercent > 0.3) healthColor = 0xf39c12 // Orange
     this.healthBar.fillStyle(healthColor, 1)
     this.healthBar.fillRect(barX, barY, barWidth * healthPercent, barHeight)
 
@@ -404,5 +416,19 @@ export default class Boss extends Phaser.Physics.Arcade.Sprite {
 
   getMaxHealth(): number {
     return this.maxHealth
+  }
+
+  // Mega Boss ability: Summon minions
+  private summonMinions() {
+    // Emit event for GameScene to handle spawning minions
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('bossSummonMinions', {
+        detail: {
+          x: this.x,
+          y: this.y,
+          count: 3 + Math.floor(Math.random() * 3) // 3-5 minions
+        }
+      }))
+    }
   }
 }

@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { WeaponSystem, WeaponType } from './Weapon'
 import { SkillTreeManager } from './SkillTree'
 import { ShopManager } from './ShopSystem'
+import { crossGameSynergy } from './CrossGameSynergy'
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   public health = 100
@@ -332,20 +333,29 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.recalculateSpeed()
   }
 
-  // CROSS-GAME SYNERGY: Load bonus from Dot Clicker
+  // CROSS-GAME SYNERGY: Load bonus from Dot Clicker using unified synergy service
   loadClickerSynergy() {
     try {
-      if (typeof localStorage !== 'undefined') {
-        const clickerSave = localStorage.getItem('dotclicker_save')
-        if (clickerSave) {
-          const save = JSON.parse(clickerSave)
-          const prestiges = save.totalPrestiges || 0
-          // 5% damage bonus per prestige
-          this.clickerSynergyBonus = prestiges * 0.05
-        }
+      const bonuses = crossGameSynergy.calculateBonuses()
+
+      // Apply damage bonus (capped at 100%)
+      this.clickerSynergyBonus = bonuses.slayerDamageBonus
+
+      // Apply health bonus
+      if (bonuses.slayerHealthBonus > 0) {
+        this.maxHealth += bonuses.slayerHealthBonus
+        this.health = this.maxHealth
       }
+
+      // Apply starting money
+      if (bonuses.slayerStartingMoney > 0) {
+        this.money += bonuses.slayerStartingMoney
+      }
+
+      // Store XP bonus for later use
+      this.shopXPBonus += bonuses.slayerXPBonus
     } catch (e) {
-      console.warn('Failed to load clicker synergy:', e)
+      console.warn('Failed to load cross-game synergy:', e)
     }
   }
 

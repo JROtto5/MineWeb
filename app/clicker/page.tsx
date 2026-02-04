@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../lib/context/AuthContext'
 import { clickerSyncService, ClickerGameState } from '../../lib/supabase'
+import { crossGameSynergy } from '../../lib/game/CrossGameSynergy'
 import Link from 'next/link'
 
 // ============= DUBSTEP MUSIC SYSTEM =============
@@ -776,24 +777,33 @@ export default function DotClicker() {
         }
       }
 
-      // Load cross-game synergy
+      // Load cross-game synergy from unified service
       try {
         const synergy = await clickerSyncService.getSlayerSynergy(user.id)
+        const bonuses = crossGameSynergy.calculateBonuses()
+
+        // Combine cloud synergy with local synergy bonuses
+        const totalSynergyBonus = synergy.synergyBonus + bonuses.clickerDPSBonus
+        const goldenBonus = bonuses.clickerGoldenChance
+
         mergedState = {
           ...mergedState,
-          slayerFloorsCleared: synergy.floorsCleared,
-          synergyBonus: synergy.synergyBonus
+          slayerFloorsCleared: Math.max(synergy.floorsCleared, bonuses.crossGameLevel),
+          synergyBonus: totalSynergyBonus,
+          goldenDotChance: mergedState.goldenDotChance + goldenBonus,
+          offlineMultiplier: mergedState.offlineMultiplier + bonuses.clickerOfflineBonus
         }
       } catch {
-        // Also try localStorage synergy
-        const slayerProgress = localStorage.getItem('dotslayer_progress')
-        if (slayerProgress) {
-          const progress = JSON.parse(slayerProgress)
-          mergedState = {
-            ...mergedState,
-            slayerFloorsCleared: progress.floorsCleared || 0,
-            synergyBonus: (progress.floorsCleared || 0) * 0.01
-          }
+        // Also try localStorage synergy via unified service
+        const bonuses = crossGameSynergy.calculateBonuses()
+        const slayerStats = crossGameSynergy.getSlayerStats()
+
+        mergedState = {
+          ...mergedState,
+          slayerFloorsCleared: slayerStats.highestFloor || 0,
+          synergyBonus: bonuses.clickerDPSBonus,
+          goldenDotChance: mergedState.goldenDotChance + bonuses.clickerGoldenChance,
+          offlineMultiplier: mergedState.offlineMultiplier + bonuses.clickerOfflineBonus
         }
       }
 
@@ -848,6 +858,15 @@ export default function DotClicker() {
         ...gameState,
         lastSave: Date.now()
       }))
+
+      // Update cross-game synergy stats
+      crossGameSynergy.saveClickerStats({
+        totalPrestiges: gameState.totalPrestiges,
+        totalDots: gameState.totalDots,
+        highestDPS: gameState.highestDps,
+        totalClicks: gameState.totalClicks,
+        totalPlaytime: Date.now() - gameState.startTime
+      })
     }
   }, [gameState])
 

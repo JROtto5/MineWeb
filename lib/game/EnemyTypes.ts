@@ -232,8 +232,14 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
   private behavior: string
   private healthBar!: Phaser.GameObjects.Graphics
   private nameTag!: Phaser.GameObjects.Text
-  private enemyType: EnemyType
+  public enemyType: EnemyType
   private enraged = false
+
+  // Special ability timers
+  private lastSpecialAbility = 0
+  private specialAbilityCooldown = 3000 // 3 seconds
+  private isPhased = false // For ghost
+  private teleportCooldown = 0
 
   constructor(
     scene: Phaser.Scene,
@@ -358,7 +364,7 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
     this.setTexture(textureName)
   }
 
-  update(player: Player, weaponSystem?: any) {
+  update(player: Player, weaponSystem?: any, allEnemies?: Phaser.GameObjects.Group) {
     if (!player || !player.active) return
 
     const distance = Phaser.Math.Distance.Between(
@@ -367,6 +373,9 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
       player.x,
       player.y
     )
+
+    // Special enemy type behaviors
+    this.handleSpecialBehaviors(player, allEnemies)
 
     // Behavior logic
     switch (this.behavior) {
@@ -390,6 +399,138 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
     // Update health bar and name tag
     this.updateHealthBar()
     this.nameTag.setPosition(this.x, this.y - (this.enemyType === EnemyType.BOSS ? 50 : 35))
+  }
+
+  // Handle special behaviors for each enemy type
+  private handleSpecialBehaviors(player: Player, allEnemies?: Phaser.GameObjects.Group) {
+    const currentTime = this.scene.time.now
+
+    switch (this.enemyType) {
+      case EnemyType.HEALER:
+        // Heal nearby allies every 3 seconds
+        if (currentTime - this.lastSpecialAbility > this.specialAbilityCooldown && allEnemies) {
+          this.healNearbyAllies(allEnemies)
+          this.lastSpecialAbility = currentTime
+        }
+        break
+
+      case EnemyType.TELEPORTER:
+        // Teleport when player gets too close
+        const distToPlayer = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y)
+        if (distToPlayer < 150 && currentTime > this.teleportCooldown) {
+          this.teleportAway(player)
+          this.teleportCooldown = currentTime + 2000
+        }
+        break
+
+      case EnemyType.GHOST:
+        // Phase in and out of visibility
+        if (currentTime - this.lastSpecialAbility > 4000) {
+          this.togglePhase()
+          this.lastSpecialAbility = currentTime
+        }
+        break
+
+      case EnemyType.VAMPIRE:
+        // Vampire visual effect (red glow when near player)
+        if (Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y) < 100) {
+          this.setTint(0xff0000)
+        } else {
+          this.clearTint()
+        }
+        break
+    }
+  }
+
+  // Healer: Heal nearby allies
+  private healNearbyAllies(allEnemies: Phaser.GameObjects.Group) {
+    const healRange = 200
+    const healAmount = 20
+
+    allEnemies.getChildren().forEach((enemy: any) => {
+      if (enemy !== this && enemy.active) {
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, enemy.x, enemy.y)
+        if (dist < healRange && enemy.health < enemy.maxHealth) {
+          enemy.health = Math.min(enemy.maxHealth, enemy.health + healAmount)
+
+          // Heal visual effect
+          const healEffect = this.scene.add.circle(enemy.x, enemy.y, 30, 0x2ecc71, 0.4)
+          this.scene.tweens.add({
+            targets: healEffect,
+            scale: 1.5,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => healEffect.destroy()
+          })
+        }
+      }
+    })
+
+    // Self heal effect
+    const selfHealEffect = this.scene.add.circle(this.x, this.y, 40, 0x2ecc71, 0.6)
+    this.scene.tweens.add({
+      targets: selfHealEffect,
+      scale: 2,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => selfHealEffect.destroy()
+    })
+  }
+
+  // Teleporter: Teleport away from player
+  private teleportAway(player: Player) {
+    // Create vanish effect at current location
+    const vanishEffect = this.scene.add.circle(this.x, this.y, 20, 0xaa00ff, 0.8)
+    this.scene.tweens.add({
+      targets: vanishEffect,
+      scale: 2,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => vanishEffect.destroy()
+    })
+
+    // Teleport to random location away from player
+    const angle = Math.random() * Math.PI * 2
+    const distance = 200 + Math.random() * 200
+    const newX = Phaser.Math.Clamp(
+      player.x + Math.cos(angle) * distance,
+      100,
+      3000 - 100
+    )
+    const newY = Phaser.Math.Clamp(
+      player.y + Math.sin(angle) * distance,
+      100,
+      2000 - 100
+    )
+
+    this.setPosition(newX, newY)
+
+    // Create appear effect at new location
+    const appearEffect = this.scene.add.circle(newX, newY, 30, 0xaa00ff, 0.6)
+    appearEffect.setScale(2)
+    this.scene.tweens.add({
+      targets: appearEffect,
+      scale: 1,
+      alpha: 0,
+      duration: 300,
+      onComplete: () => appearEffect.destroy()
+    })
+  }
+
+  // Ghost: Toggle phase state
+  private togglePhase() {
+    this.isPhased = !this.isPhased
+    if (this.isPhased) {
+      this.setAlpha(0.3)
+      // Ghost becomes immune to damage when phased
+    } else {
+      this.setAlpha(1)
+    }
+  }
+
+  // Check if ghost is phased (immune to damage)
+  isGhostPhased(): boolean {
+    return this.enemyType === EnemyType.GHOST && this.isPhased
   }
 
   private chasePlayer(player: Player, distance: number) {
@@ -483,6 +624,24 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount: number): boolean {
+    // Ghost is immune when phased
+    if (this.isGhostPhased()) {
+      // Visual feedback for blocked damage
+      const blockText = this.scene.add.text(this.x, this.y - 30, 'PHASED', {
+        fontSize: '12px',
+        color: '#ccccff',
+        fontStyle: 'bold'
+      }).setOrigin(0.5)
+      this.scene.tweens.add({
+        targets: blockText,
+        y: this.y - 60,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => blockText.destroy()
+      })
+      return false
+    }
+
     this.health -= amount
     if (this.health < 0) this.health = 0
 
@@ -500,8 +659,27 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
 
     this.updateHealthBar()
 
+    // Splitter: Spawn smaller enemies when killed
+    if (this.health <= 0 && this.enemyType === EnemyType.SPLITTER) {
+      this.onSplitterDeath()
+    }
+
     // Return true if killed
     return this.health <= 0
+  }
+
+  // Splitter: Spawn smaller enemies on death
+  private onSplitterDeath() {
+    // Emit event for GameScene to handle spawning split enemies
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('splitterDeath', {
+        detail: {
+          x: this.x,
+          y: this.y,
+          count: 2 + Math.floor(Math.random() * 2) // 2-3 smaller enemies
+        }
+      }))
+    }
   }
 
   isDead(): boolean {

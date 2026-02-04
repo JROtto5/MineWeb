@@ -21,6 +21,7 @@ import { FloorThemeRenderer, getThemeForFloor } from './FloorThemes'
 import { Minimap } from './Minimap'
 import { EnemyAIController, AI_PRESETS, AIBehavior } from './EnemyAI'
 import { StatusEffectManager, StatusType, STATUS_CONFIGS } from './StatusEffects'
+import { crossGameSynergy } from './CrossGameSynergy'
 
 export default class GameSceneV3 extends Phaser.Scene {
   private player!: Player
@@ -247,6 +248,29 @@ export default class GameSceneV3 extends Phaser.Scene {
       }
     })
 
+    // Listen for boss summon minions events (Mega Boss ability)
+    if (typeof window !== 'undefined') {
+      const summonHandler = (event: Event) => {
+        const customEvent = event as CustomEvent
+        const { x, y, count } = customEvent.detail
+        this.spawnMinionsAtLocation(x, y, count)
+      }
+      window.addEventListener('bossSummonMinions', summonHandler)
+
+      // Listen for splitter death events
+      const splitterHandler = (event: Event) => {
+        const customEvent = event as CustomEvent
+        const { x, y, count } = customEvent.detail
+        this.spawnSplitEnemies(x, y, count)
+      }
+      window.addEventListener('splitterDeath', splitterHandler)
+
+      this.events.on('destroy', () => {
+        window.removeEventListener('bossSummonMinions', summonHandler)
+        window.removeEventListener('splitterDeath', splitterHandler)
+      })
+    }
+
     // Create casino zones
     this.createCasinoZones()
 
@@ -304,6 +328,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private abilityHotbarUI: any[] = []
   private enemyTrackerUI: any = null
+  private floorDisplayUI: { container: Phaser.GameObjects.Container, floorText: Phaser.GameObjects.Text, subText: Phaser.GameObjects.Text } | null = null
 
   private createPersistentUI() {
     // Combo display (always visible when combo > 0)
@@ -323,6 +348,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Kill feed (top right, shows last 5 kills)
     this.killFeedContainer = this.add.container(0, 0).setDepth(5000).setScrollFactor(0)
 
+    // PROMINENT FLOOR DISPLAY (top center)
+    this.createFloorDisplay()
+
     // WOW-STYLE ABILITY HOTBAR (bottom center)
     this.createAbilityHotbar()
 
@@ -338,9 +366,71 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.repositionAbilityHotbar()
     // Reposition enemy tracker
     this.repositionEnemyTracker()
+    // Reposition floor display
+    this.repositionFloorDisplay()
     // Ensure minimap stays visible
     if (this.minimap) {
       this.minimap.setVisible(true)
+    }
+  }
+
+  // Create prominent floor display at top center
+  private createFloorDisplay() {
+    const screenWidth = this.scale.width
+    const container = this.add.container(screenWidth / 2, 50).setDepth(5000).setScrollFactor(0)
+
+    // Background
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.7)
+    bg.fillRoundedRect(-80, -30, 160, 60, 10)
+    bg.lineStyle(2, 0x00d9ff, 1)
+    bg.strokeRoundedRect(-80, -30, 160, 60, 10)
+
+    // Floor number text
+    const floorText = this.add.text(0, -8, 'FLOOR 1', {
+      fontSize: '28px',
+      color: '#00d9ff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5)
+
+    // Sub text (stage info)
+    const subText = this.add.text(0, 18, 'Stage 1/5', {
+      fontSize: '14px',
+      color: '#88c0d0',
+    }).setOrigin(0.5)
+
+    container.add([bg, floorText, subText])
+
+    this.floorDisplayUI = { container, floorText, subText }
+  }
+
+  private repositionFloorDisplay() {
+    if (!this.floorDisplayUI) return
+    const screenWidth = this.scale.width
+    this.floorDisplayUI.container.setPosition(screenWidth / 2, 50)
+  }
+
+  // Update the floor display
+  private updateFloorDisplay() {
+    if (!this.floorDisplayUI) return
+
+    const currentFloor = this.floorManager.getCurrentFloorNumber()
+    const currentStage = this.stageManager.getCurrentStageNumber()
+
+    this.floorDisplayUI.floorText.setText(`FLOOR ${currentFloor}`)
+    this.floorDisplayUI.subText.setText(`Stage ${currentStage % 5 || 5}/5`)
+
+    // Color coding based on floor difficulty
+    if (currentFloor >= 20) {
+      this.floorDisplayUI.floorText.setColor('#ff0000') // Red for danger
+    } else if (currentFloor >= 10) {
+      this.floorDisplayUI.floorText.setColor('#f39c12') // Orange for hard
+    } else if (currentFloor >= 5) {
+      this.floorDisplayUI.floorText.setColor('#ffd700') // Gold for medium
+    } else {
+      this.floorDisplayUI.floorText.setColor('#00d9ff') // Cyan for easy
     }
   }
 
@@ -927,10 +1017,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Weapon system
     this.weaponSystem.update(time, delta)
 
-    // Update enemies
+    // Update enemies (pass enemies group for healer behavior)
     this.enemies.children.entries.forEach((enemy: any) => {
       if (enemy.active) {
-        enemy.update(this.player, this.weaponSystem)
+        enemy.update(this.player, this.weaponSystem, this.enemies)
       }
     })
 
@@ -949,6 +1039,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.updateKillFeed()
     this.updateAbilityHotbar()
     this.updateEnemyTracker()
+    this.updateFloorDisplay()
 
     // Check stage completion
     if (!this.stageCompleted) {
@@ -1346,6 +1437,72 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.bosses.add(boss)
 
     this.addKillFeedMessage(`💀 ${BOSS_CONFIGS[bossType].icon} BOSS WAVE! 💀`, '#ff0000', 5000)
+  }
+
+  // Mega Boss ability: Spawn minions at location
+  private spawnMinionsAtLocation(x: number, y: number, count: number) {
+    const minionTypes = [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.BERSERKER]
+
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2
+      const distance = 100 + Math.random() * 50
+      const minionX = x + Math.cos(angle) * distance
+      const minionY = y + Math.sin(angle) * distance
+
+      // Clamp to world bounds
+      const clampedX = Phaser.Math.Clamp(minionX, 50, this.worldWidth - 50)
+      const clampedY = Phaser.Math.Clamp(minionY, 50, this.worldHeight - 50)
+
+      const type = Phaser.Math.RND.pick(minionTypes)
+      const minion = new AdvancedEnemy(this, clampedX, clampedY, type)
+      this.enemies.add(minion)
+      this.totalEnemies++
+
+      // Spawn animation
+      minion.setAlpha(0)
+      minion.setScale(0.5)
+      this.tweens.add({
+        targets: minion,
+        alpha: 1,
+        scale: 1,
+        duration: 300,
+        ease: 'Back.easeOut'
+      })
+    }
+
+    this.addKillFeedMessage(`👑 CRIME LORD summons ${count} minions!`, '#ff6600', 3000)
+  }
+
+  // Splitter enemy: Spawn smaller enemies on death
+  private spawnSplitEnemies(x: number, y: number, count: number) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2
+      const distance = 40 + Math.random() * 20
+      const splitX = x + Math.cos(angle) * distance
+      const splitY = y + Math.sin(angle) * distance
+
+      // Clamp to world bounds
+      const clampedX = Phaser.Math.Clamp(splitX, 50, this.worldWidth - 50)
+      const clampedY = Phaser.Math.Clamp(splitY, 50, this.worldHeight - 50)
+
+      // Spawn smaller SWARM type enemies
+      const splitEnemy = new AdvancedEnemy(this, clampedX, clampedY, EnemyType.SWARM)
+      this.enemies.add(splitEnemy)
+      this.totalEnemies++
+
+      // Spawn animation - burst outward
+      splitEnemy.setAlpha(0.5)
+      splitEnemy.setScale(0.3)
+      this.tweens.add({
+        targets: splitEnemy,
+        alpha: 1,
+        scale: 1,
+        x: clampedX + Math.cos(angle) * 30,
+        y: clampedY + Math.sin(angle) * 30,
+        duration: 200,
+        ease: 'Back.easeOut'
+      })
+    }
   }
 
   private bulletHitEnemy(bullet: any, enemy: any) {
@@ -2205,6 +2362,9 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.addKillFeedMessage('💀 GAME OVER 💀', '#e74c3c', 3000)
     this.showRunStats(false)
 
+    // Save cross-game synergy stats
+    this.saveSynergyStats(false)
+
     // Submit to leaderboard
     this.time.delayedCall(2000, () => {
       this.showLeaderboardPrompt(false)
@@ -2215,21 +2375,30 @@ export default class GameSceneV3 extends Phaser.Scene {
     })
   }
 
+  // Save stats to cross-game synergy service
+  private saveSynergyStats(victory: boolean) {
+    try {
+      const currentFloor = this.floorManager.getCurrentFloorNumber()
+      const existingStats = crossGameSynergy.getSlayerStats()
+
+      crossGameSynergy.saveSlayerStats({
+        highestFloor: Math.max(existingStats.highestFloor, currentFloor),
+        totalKills: existingStats.totalKills + this.runStats.totalKills,
+        bossesKilled: existingStats.bossesKilled + this.runStats.bossesKilled,
+        gamesWon: existingStats.gamesWon + (victory ? 1 : 0),
+        totalPlaytime: existingStats.totalPlaytime + (Date.now() - this.runStats.startTime)
+      })
+    } catch (e) {
+      console.warn('Failed to save synergy stats:', e)
+    }
+  }
+
   private gameWon() {
     this.addKillFeedMessage('🏆 YOU WON! ALL STAGES CLEARED! 🏆', '#2ecc71', 6000)
     this.showRunStats(true)
 
-    // Save progress for cross-game synergy - GAME WON!
-    try {
-      const currentProgress = JSON.parse(localStorage.getItem('dotslayer_progress') || '{"floorsCleared":0,"highestFloor":0}')
-      currentProgress.floorsCleared = 100
-      currentProgress.highestFloor = 100
-      currentProgress.gamesWon = (currentProgress.gamesWon || 0) + 1
-      currentProgress.lastPlayed = Date.now()
-      localStorage.setItem('dotslayer_progress', JSON.stringify(currentProgress))
-    } catch (e) {
-      console.warn('Failed to save cross-game progress:', e)
-    }
+    // Save cross-game synergy stats - VICTORY!
+    this.saveSynergyStats(true)
 
     // Submit to leaderboard
     this.time.delayedCall(2000, () => {
