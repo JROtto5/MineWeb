@@ -1,4 +1,4 @@
-// AudioManager - Simplified with Web Audio API for reliable browser audio
+// AudioManager - Improved with proper cleanup and better ambient music
 
 export class AudioManager {
   private static instance: AudioManager
@@ -6,12 +6,16 @@ export class AudioManager {
   private musicGain: GainNode | null = null
   private sfxGain: GainNode | null = null
 
-  private musicVolume = 0.15 // 15% volume for background music (quieter)
-  private sfxVolume = 0.3 // 30% volume for sound effects
+  private musicVolume = 0.12 // 12% volume for background music
+  private sfxVolume = 0.25 // 25% volume for sound effects
   private musicMuted = false
   private sfxMuted = false
   private musicPlaying = false
-  private oscillators: OscillatorNode[] = []
+
+  // Proper tracking for cleanup
+  private activeOscillators: Set<OscillatorNode> = new Set()
+  private musicInterval: ReturnType<typeof setInterval> | null = null
+  private chordIndex = 0
 
   private constructor() {
     // Audio context will be created on first user interaction
@@ -39,14 +43,14 @@ export class AudioManager {
       this.sfxGain.gain.value = this.sfxMuted ? 0 : this.sfxVolume
       this.sfxGain.connect(this.audioContext.destination)
 
-      console.log('✅ Audio system initialized!')
+      console.log('Audio system initialized')
     } catch (e) {
       console.error('Failed to initialize audio:', e)
     }
   }
 
   // Play a simple tone (for sound effects)
-  private playTone(frequency: number, duration: number, type: OscillatorType = 'sine') {
+  private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volumeMult = 1) {
     if (!this.audioContext || !this.sfxGain || this.sfxMuted) return
 
     try {
@@ -57,144 +61,216 @@ export class AudioManager {
       oscillator.frequency.value = frequency
 
       // Envelope for natural sound
-      gainNode.gain.setValueAtTime(0, this.audioContext.currentTime)
-      gainNode.gain.linearRampToValueAtTime(1, this.audioContext.currentTime + 0.01)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration)
+      const now = this.audioContext.currentTime
+      gainNode.gain.setValueAtTime(0, now)
+      gainNode.gain.linearRampToValueAtTime(volumeMult, now + 0.01)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration)
 
       oscillator.connect(gainNode)
       gainNode.connect(this.sfxGain)
 
-      oscillator.start(this.audioContext.currentTime)
-      oscillator.stop(this.audioContext.currentTime + duration)
+      oscillator.start(now)
+      oscillator.stop(now + duration)
     } catch (e) {
-      console.error('Failed to play tone:', e)
+      // Ignore audio errors
     }
   }
 
-  // Play a chord (for richer sounds)
-  private playChord(frequencies: number[], duration: number) {
-    frequencies.forEach(freq => this.playTone(freq, duration))
-  }
-
-  // Background Music - Simple ambient loop
-  playBackgroundMusic() {
-    if (!this.audioContext || this.musicMuted || this.musicPlaying) return
-
-    this.initializeAudioContext()
-    if (!this.audioContext || !this.musicGain) return
-
-    this.musicPlaying = true
-    this.playAmbientLoop()
-  }
-
-  private playAmbientLoop() {
+  // Play ambient music note with proper cleanup
+  private playMusicNote(frequency: number, duration: number) {
     if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
 
     try {
-      // Play a simple ambient chord progression
-      const chords = [
-        [261.63, 329.63, 392.00], // C major
-        [293.66, 369.99, 440.00], // D minor
-        [329.63, 392.00, 493.88], // E minor
-        [349.23, 440.00, 523.25], // F major
-      ]
+      const oscillator = this.audioContext.createOscillator()
+      const gainNode = this.audioContext.createGain()
 
-      const playChord = (chordIndex: number) => {
-        if (!this.musicPlaying || this.musicMuted) return
+      oscillator.type = 'sine'
+      oscillator.frequency.value = frequency
 
-        const chord = chords[chordIndex % chords.length]
-        chord.forEach(freq => {
-          if (!this.audioContext || !this.musicGain) return
+      const now = this.audioContext.currentTime
+      // Soft fade in/out for ambient feel
+      gainNode.gain.setValueAtTime(0, now)
+      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.3)
+      gainNode.gain.setValueAtTime(0.08, now + duration - 0.5)
+      gainNode.gain.linearRampToValueAtTime(0, now + duration)
 
-          const osc = this.audioContext.createOscillator()
-          const gain = this.audioContext.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(this.musicGain)
 
-          osc.type = 'sine'
-          osc.frequency.value = freq
-          gain.gain.value = 0.1 // Very quiet
+      // Track for cleanup
+      this.activeOscillators.add(oscillator)
 
-          osc.connect(gain)
-          gain.connect(this.musicGain)
-
-          osc.start(this.audioContext.currentTime)
-          osc.stop(this.audioContext.currentTime + 2)
-
-          this.oscillators.push(osc)
-        })
-
-        // Schedule next chord
-        setTimeout(() => playChord(chordIndex + 1), 2000)
+      oscillator.onended = () => {
+        this.activeOscillators.delete(oscillator)
       }
 
-      playChord(0)
+      oscillator.start(now)
+      oscillator.stop(now + duration)
     } catch (e) {
-      console.error('Failed to play background music:', e)
+      // Ignore audio errors
     }
   }
 
+  // Background Music - Ambient pad with chord progression
+  playBackgroundMusic() {
+    if (this.musicPlaying) return // Prevent multiple instances
+
+    this.initializeAudioContext()
+    if (!this.audioContext || !this.musicGain || this.musicMuted) return
+
+    this.musicPlaying = true
+    this.chordIndex = 0
+
+    // Ambient chord progression (darker, more atmospheric)
+    const chords = [
+      [130.81, 164.81, 196.00], // C3 chord (lower, ambient)
+      [146.83, 174.61, 220.00], // D3 minor
+      [164.81, 196.00, 246.94], // E3 minor
+      [174.61, 220.00, 261.63], // F3 major
+      [146.83, 174.61, 220.00], // D3 minor (repeat for flow)
+      [130.81, 164.81, 196.00], // C3 chord
+    ]
+
+    // Play chord every 3 seconds using interval (not recursive setTimeout)
+    const playNextChord = () => {
+      if (!this.musicPlaying || this.musicMuted) return
+
+      const chord = chords[this.chordIndex % chords.length]
+
+      // Play each note of the chord with slight delays for richness
+      chord.forEach((freq, i) => {
+        setTimeout(() => {
+          this.playMusicNote(freq, 3.5)
+          // Add subtle octave harmonic
+          this.playMusicNote(freq * 2, 2.5)
+        }, i * 100)
+      })
+
+      this.chordIndex++
+    }
+
+    // Play first chord immediately
+    playNextChord()
+
+    // Then play every 3 seconds
+    this.musicInterval = setInterval(playNextChord, 3000)
+  }
+
   playBossMusic() {
-    // For now, same as background but slightly different
-    this.playBackgroundMusic()
+    // Stop normal music first
+    this.stopMusic()
+
+    this.initializeAudioContext()
+    if (!this.audioContext || !this.musicGain || this.musicMuted) return
+
+    this.musicPlaying = true
+    this.chordIndex = 0
+
+    // More intense chord progression for boss fights
+    const chords = [
+      [98.00, 123.47, 146.83],   // G2 minor (tense)
+      [110.00, 130.81, 164.81],  // A2 minor
+      [87.31, 110.00, 130.81],   // F2 (darker)
+      [98.00, 123.47, 146.83],   // G2 minor
+    ]
+
+    const playNextChord = () => {
+      if (!this.musicPlaying || this.musicMuted) return
+
+      const chord = chords[this.chordIndex % chords.length]
+
+      chord.forEach((freq, i) => {
+        setTimeout(() => {
+          this.playMusicNote(freq, 2.0)
+          this.playMusicNote(freq * 2, 1.5)
+        }, i * 80)
+      })
+
+      this.chordIndex++
+    }
+
+    playNextChord()
+    this.musicInterval = setInterval(playNextChord, 2000) // Faster for boss
   }
 
   stopMusic() {
     this.musicPlaying = false
-    this.oscillators.forEach(osc => {
+
+    // Clear the interval
+    if (this.musicInterval) {
+      clearInterval(this.musicInterval)
+      this.musicInterval = null
+    }
+
+    // Stop all active oscillators
+    this.activeOscillators.forEach(osc => {
       try {
         osc.stop()
       } catch (e) {
         // Already stopped
       }
     })
-    this.oscillators = []
+    this.activeOscillators.clear()
+    this.chordIndex = 0
   }
 
   pauseMusic() {
-    this.musicPlaying = false
+    this.stopMusic()
   }
 
   resumeMusic() {
-    if (!this.musicMuted) {
+    if (!this.musicMuted && !this.musicPlaying) {
       this.playBackgroundMusic()
     }
   }
 
-  // Sound Effects using tones
+  // Sound Effects
   playSound(soundName: string) {
     if (!this.audioContext || this.sfxMuted) return
+    this.initializeAudioContext()
 
     switch (soundName) {
       case 'kill':
-        // Happy chime
-        this.playTone(523.25, 0.1) // C5
-        setTimeout(() => this.playTone(659.25, 0.1), 50) // E5
-        setTimeout(() => this.playTone(783.99, 0.15), 100) // G5
+        // Quick satisfying pop
+        this.playTone(600, 0.08, 'sine', 0.8)
+        setTimeout(() => this.playTone(800, 0.06, 'sine', 0.6), 40)
         break
 
       case 'death':
-        // Descending sad sound
-        this.playTone(440, 0.2, 'sawtooth') // A
-        setTimeout(() => this.playTone(392, 0.2, 'sawtooth'), 100) // G
-        setTimeout(() => this.playTone(349.23, 0.3, 'sawtooth'), 200) // F
+        // Descending tone
+        this.playTone(300, 0.15, 'sawtooth', 0.5)
+        setTimeout(() => this.playTone(220, 0.2, 'sawtooth', 0.4), 100)
+        setTimeout(() => this.playTone(150, 0.3, 'sawtooth', 0.3), 200)
         break
 
       case 'levelUp':
-        // Victory fanfare
-        this.playTone(523.25, 0.1) // C5
-        setTimeout(() => this.playTone(659.25, 0.1), 80) // E5
-        setTimeout(() => this.playTone(783.99, 0.1), 160) // G5
-        setTimeout(() => this.playTone(1046.50, 0.3), 240) // C6
+        // Ascending arpeggio
+        this.playTone(523, 0.1, 'sine', 0.7)
+        setTimeout(() => this.playTone(659, 0.1, 'sine', 0.7), 70)
+        setTimeout(() => this.playTone(784, 0.1, 'sine', 0.7), 140)
+        setTimeout(() => this.playTone(1047, 0.2, 'sine', 0.8), 210)
         break
 
       case 'shoot':
-        // Pew pew laser
-        this.playTone(880, 0.05, 'square')
+        // Quick blip
+        this.playTone(400, 0.03, 'square', 0.3)
         break
 
       case 'purchase':
-        // Cash register
-        this.playChord([523.25, 659.25, 783.99], 0.15)
-        setTimeout(() => this.playChord([587.33, 739.99, 880.00], 0.2), 100)
+        // Cash register ding
+        this.playTone(880, 0.1, 'sine', 0.6)
+        setTimeout(() => this.playTone(1100, 0.15, 'sine', 0.7), 80)
+        break
+
+      case 'upgrade':
+        // Sparkle sound
+        this.playTone(1200, 0.08, 'sine', 0.5)
+        setTimeout(() => this.playTone(1500, 0.1, 'sine', 0.6), 60)
+        break
+
+      case 'hit':
+        // Impact thud
+        this.playTone(150, 0.08, 'triangle', 0.6)
         break
     }
   }
@@ -221,9 +297,9 @@ export class AudioManager {
       this.musicGain.gain.value = this.musicMuted ? 0 : this.musicVolume
     }
     if (this.musicMuted) {
-      this.pauseMusic()
+      this.stopMusic()
     } else {
-      this.resumeMusic()
+      this.playBackgroundMusic()
     }
     return this.musicMuted
   }
@@ -249,9 +325,9 @@ export class AudioManager {
     }
 
     if (mute) {
-      this.pauseMusic()
+      this.stopMusic()
     } else {
-      this.resumeMusic()
+      this.playBackgroundMusic()
     }
     return mute
   }
@@ -269,11 +345,23 @@ export class AudioManager {
     // Resume audio context if suspended (browser requirement)
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume().then(() => {
-        console.log('🔊 Audio context resumed!')
-        this.playBackgroundMusic()
+        if (!this.musicMuted) {
+          this.playBackgroundMusic()
+        }
       })
-    } else {
+    } else if (!this.musicMuted && !this.musicPlaying) {
       this.playBackgroundMusic()
     }
+  }
+
+  // Cleanup when leaving game
+  cleanup() {
+    this.stopMusic()
+    if (this.audioContext) {
+      this.audioContext.close()
+      this.audioContext = null
+    }
+    this.musicGain = null
+    this.sfxGain = null
   }
 }

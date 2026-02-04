@@ -16,6 +16,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   private baseSpeed = 250 // FAST: Increased from 200
   private speed = 250
+  private readonly MAX_SPEED = 800 // Absolute max speed cap to prevent velocity bugs
   private currentWeapon = 2 // ROGUELIKE: Always shotgun!
   private weaponSystem: WeaponSystem
   public skillTree: SkillTreeManager
@@ -154,13 +155,30 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Update abilities
     this.updateAbilities()
 
+    // Safety check: clamp speed to prevent runaway velocity
+    if (this.speed > this.MAX_SPEED || !isFinite(this.speed)) {
+      this.speed = this.MAX_SPEED
+    }
+    if (this.speed < 0) {
+      this.speed = this.baseSpeed
+    }
+
     // Normalize diagonal movement
     if (directionX !== 0 && directionY !== 0) {
       directionX *= 0.707
       directionY *= 0.707
     }
 
-    this.setVelocity(directionX * this.speed, directionY * this.speed)
+    const velocityX = directionX * this.speed
+    const velocityY = directionY * this.speed
+
+    // Safety check: prevent NaN or Infinity velocities
+    if (!isFinite(velocityX) || !isFinite(velocityY)) {
+      this.setVelocity(0, 0)
+      return
+    }
+
+    this.setVelocity(velocityX, velocityY)
 
     // Update aim line
     const pointer = this.scene.input.activePointer
@@ -353,13 +371,19 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   private recalculateSpeed() {
     const skillSpeedBonus = this.skillTree.getTotalBonus('speed')
-    this.baseSpeed = 200 * (1 + skillSpeedBonus + this.shopSpeedBonus)
+    // Cap the bonus multiplier to prevent extreme speeds
+    const totalBonus = Math.min(skillSpeedBonus + this.shopSpeedBonus, 2.0) // Max 200% bonus
+    this.baseSpeed = 200 * (1 + totalBonus)
 
     if (this.speedBoostActive) {
       this.speed = this.baseSpeed * 1.5
     } else {
       this.speed = this.baseSpeed
     }
+
+    // Enforce absolute max speed
+    this.speed = Math.min(this.speed, this.MAX_SPEED)
+    this.baseSpeed = Math.min(this.baseSpeed, this.MAX_SPEED)
   }
 
   getCurrentDamage(): number {
