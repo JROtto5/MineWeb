@@ -1,4 +1,4 @@
-// AudioManager - Improved with proper cleanup and better ambient music
+// AudioManager - Dubstep style music with proper cleanup
 
 export class AudioManager {
   private static instance: AudioManager
@@ -6,20 +6,18 @@ export class AudioManager {
   private musicGain: GainNode | null = null
   private sfxGain: GainNode | null = null
 
-  private musicVolume = 0.12 // 12% volume for background music
-  private sfxVolume = 0.25 // 25% volume for sound effects
+  private musicVolume = 0.15
+  private sfxVolume = 0.25
   private musicMuted = false
   private sfxMuted = false
   private musicPlaying = false
 
-  // Proper tracking for cleanup
   private activeOscillators: Set<OscillatorNode> = new Set()
+  private activeBufferSources: Set<AudioBufferSourceNode> = new Set()
   private musicInterval: ReturnType<typeof setInterval> | null = null
-  private chordIndex = 0
+  private beatIndex = 0
 
-  private constructor() {
-    // Audio context will be created on first user interaction
-  }
+  private constructor() {}
 
   static getInstance(): AudioManager {
     if (!AudioManager.instance) {
@@ -34,7 +32,6 @@ export class AudioManager {
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
 
-      // Create gain nodes for volume control
       this.musicGain = this.audioContext.createGain()
       this.musicGain.gain.value = this.musicMuted ? 0 : this.musicVolume
       this.musicGain.connect(this.audioContext.destination)
@@ -42,176 +39,249 @@ export class AudioManager {
       this.sfxGain = this.audioContext.createGain()
       this.sfxGain.gain.value = this.sfxMuted ? 0 : this.sfxVolume
       this.sfxGain.connect(this.audioContext.destination)
-
-      console.log('Audio system initialized')
     } catch (e) {
       console.error('Failed to initialize audio:', e)
     }
   }
 
-  // Play a simple tone (for sound effects)
-  private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volumeMult = 1) {
-    if (!this.audioContext || !this.sfxGain || this.sfxMuted) return
+  // =============== DUBSTEP MUSIC SYSTEM ===============
 
-    try {
-      const oscillator = this.audioContext.createOscillator()
-      const gainNode = this.audioContext.createGain()
-
-      oscillator.type = type
-      oscillator.frequency.value = frequency
-
-      // Envelope for natural sound
-      const now = this.audioContext.currentTime
-      gainNode.gain.setValueAtTime(0, now)
-      gainNode.gain.linearRampToValueAtTime(volumeMult, now + 0.01)
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration)
-
-      oscillator.connect(gainNode)
-      gainNode.connect(this.sfxGain)
-
-      oscillator.start(now)
-      oscillator.stop(now + duration)
-    } catch (e) {
-      // Ignore audio errors
-    }
-  }
-
-  // Play ambient music note with proper cleanup
-  private playMusicNote(frequency: number, duration: number) {
+  private createWobbleBass(baseFreq: number, duration: number) {
     if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
 
-    try {
-      const oscillator = this.audioContext.createOscillator()
-      const gainNode = this.audioContext.createGain()
+    const osc = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+    const filter = this.audioContext.createBiquadFilter()
 
-      oscillator.type = 'sine'
-      oscillator.frequency.value = frequency
+    osc.type = 'sawtooth'
+    osc.frequency.value = baseFreq
 
-      const now = this.audioContext.currentTime
-      // Soft fade in/out for ambient feel
-      gainNode.gain.setValueAtTime(0, now)
-      gainNode.gain.linearRampToValueAtTime(0.08, now + 0.3)
-      gainNode.gain.setValueAtTime(0.08, now + duration - 0.5)
-      gainNode.gain.linearRampToValueAtTime(0, now + duration)
+    filter.type = 'lowpass'
+    filter.Q.value = 12
 
-      oscillator.connect(gainNode)
-      gainNode.connect(this.musicGain)
-
-      // Track for cleanup
-      this.activeOscillators.add(oscillator)
-
-      oscillator.onended = () => {
-        this.activeOscillators.delete(oscillator)
-      }
-
-      oscillator.start(now)
-      oscillator.stop(now + duration)
-    } catch (e) {
-      // Ignore audio errors
+    // Wobble the filter frequency
+    const now = this.audioContext.currentTime
+    const wobbleRate = 8 // Hz - faster wobble
+    for (let i = 0; i < duration * wobbleRate * 2; i++) {
+      const time = now + i / (wobbleRate * 2)
+      const wobbleAmount = 150 + Math.abs(Math.sin(i * Math.PI * 0.5)) * 500
+      filter.frequency.setValueAtTime(wobbleAmount, time)
     }
+
+    gain.gain.setValueAtTime(0.25, now)
+    gain.gain.setValueAtTime(0.25, now + duration * 0.8)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + duration)
+
+    osc.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.musicGain)
+
+    this.activeOscillators.add(osc)
+    osc.onended = () => this.activeOscillators.delete(osc)
+
+    osc.start(now)
+    osc.stop(now + duration)
   }
 
-  // Background Music - Ambient pad with chord progression
+  private createKick() {
+    if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
+
+    const osc = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+
+    osc.type = 'sine'
+    const now = this.audioContext.currentTime
+    osc.frequency.setValueAtTime(150, now)
+    osc.frequency.exponentialRampToValueAtTime(35, now + 0.1)
+
+    gain.gain.setValueAtTime(0.6, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25)
+
+    osc.connect(gain)
+    gain.connect(this.musicGain)
+
+    this.activeOscillators.add(osc)
+    osc.onended = () => this.activeOscillators.delete(osc)
+
+    osc.start(now)
+    osc.stop(now + 0.25)
+  }
+
+  private createSnare() {
+    if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
+
+    const bufferSize = this.audioContext.sampleRate * 0.15
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2))
+    }
+
+    const noise = this.audioContext.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.audioContext.createBiquadFilter()
+    filter.type = 'highpass'
+    filter.frequency.value = 1500
+
+    const gain = this.audioContext.createGain()
+    const now = this.audioContext.currentTime
+    gain.gain.setValueAtTime(0.35, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.musicGain)
+
+    this.activeBufferSources.add(noise)
+    noise.onended = () => this.activeBufferSources.delete(noise)
+
+    noise.start(now)
+  }
+
+  private createHiHat(open = false) {
+    if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
+
+    const duration = open ? 0.15 : 0.05
+    const bufferSize = this.audioContext.sampleRate * duration
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3))
+    }
+
+    const noise = this.audioContext.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.audioContext.createBiquadFilter()
+    filter.type = 'highpass'
+    filter.frequency.value = 7000
+
+    const gain = this.audioContext.createGain()
+    const now = this.audioContext.currentTime
+    gain.gain.setValueAtTime(open ? 0.12 : 0.08, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + duration)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.musicGain)
+
+    this.activeBufferSources.add(noise)
+    noise.onended = () => this.activeBufferSources.delete(noise)
+
+    noise.start(now)
+  }
+
+  private createSynth(freq: number, duration: number) {
+    if (!this.audioContext || !this.musicGain || this.musicMuted || !this.musicPlaying) return
+
+    const osc = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+
+    osc.type = 'square'
+    osc.frequency.value = freq
+
+    const now = this.audioContext.currentTime
+    gain.gain.setValueAtTime(0, now)
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.05)
+    gain.gain.setValueAtTime(0.06, now + duration * 0.7)
+    gain.gain.linearRampToValueAtTime(0, now + duration)
+
+    osc.connect(gain)
+    gain.connect(this.musicGain)
+
+    this.activeOscillators.add(osc)
+    osc.onended = () => this.activeOscillators.delete(osc)
+
+    osc.start(now)
+    osc.stop(now + duration)
+  }
+
+  private playDubstepBeat() {
+    if (!this.musicPlaying || this.musicMuted) return
+
+    const bassNotes = [55, 55, 73.42, 55] // A1, A1, D2, A1
+    const synthNotes = [220, 293.66, 349.23, 293.66] // A3, D4, F4, D4
+
+    const pattern = this.beatIndex % 8
+
+    // Kick on 1, 3, 5, 7
+    if (pattern % 2 === 0) {
+      this.createKick()
+    }
+
+    // Snare on 3, 7
+    if (pattern === 2 || pattern === 6) {
+      this.createSnare()
+    }
+
+    // Hi-hat pattern
+    if (pattern % 2 === 1) {
+      this.createHiHat(pattern === 3)
+    }
+
+    // Wobble bass on every beat
+    if (pattern === 0 || pattern === 4) {
+      this.createWobbleBass(bassNotes[Math.floor(this.beatIndex / 8) % 4], 0.4)
+    }
+
+    // Synth melody every 4 beats
+    if (pattern === 0) {
+      this.createSynth(synthNotes[Math.floor(this.beatIndex / 8) % 4], 0.3)
+    }
+
+    this.beatIndex++
+  }
+
   playBackgroundMusic() {
-    if (this.musicPlaying) return // Prevent multiple instances
+    if (this.musicPlaying) return
 
     this.initializeAudioContext()
     if (!this.audioContext || !this.musicGain || this.musicMuted) return
 
     this.musicPlaying = true
-    this.chordIndex = 0
+    this.beatIndex = 0
 
-    // Ambient chord progression (darker, more atmospheric)
-    const chords = [
-      [130.81, 164.81, 196.00], // C3 chord (lower, ambient)
-      [146.83, 174.61, 220.00], // D3 minor
-      [164.81, 196.00, 246.94], // E3 minor
-      [174.61, 220.00, 261.63], // F3 major
-      [146.83, 174.61, 220.00], // D3 minor (repeat for flow)
-      [130.81, 164.81, 196.00], // C3 chord
-    ]
-
-    // Play chord every 3 seconds using interval (not recursive setTimeout)
-    const playNextChord = () => {
-      if (!this.musicPlaying || this.musicMuted) return
-
-      const chord = chords[this.chordIndex % chords.length]
-
-      // Play each note of the chord with slight delays for richness
-      chord.forEach((freq, i) => {
-        setTimeout(() => {
-          this.playMusicNote(freq, 3.5)
-          // Add subtle octave harmonic
-          this.playMusicNote(freq * 2, 2.5)
-        }, i * 100)
-      })
-
-      this.chordIndex++
-    }
-
-    // Play first chord immediately
-    playNextChord()
-
-    // Then play every 3 seconds
-    this.musicInterval = setInterval(playNextChord, 3000)
+    // Play beat every 125ms (120 BPM, eighth notes)
+    this.playDubstepBeat()
+    this.musicInterval = setInterval(() => this.playDubstepBeat(), 125)
   }
 
   playBossMusic() {
-    // Stop normal music first
     this.stopMusic()
 
     this.initializeAudioContext()
     if (!this.audioContext || !this.musicGain || this.musicMuted) return
 
     this.musicPlaying = true
-    this.chordIndex = 0
+    this.beatIndex = 0
 
-    // More intense chord progression for boss fights
-    const chords = [
-      [98.00, 123.47, 146.83],   // G2 minor (tense)
-      [110.00, 130.81, 164.81],  // A2 minor
-      [87.31, 110.00, 130.81],   // F2 (darker)
-      [98.00, 123.47, 146.83],   // G2 minor
-    ]
-
-    const playNextChord = () => {
-      if (!this.musicPlaying || this.musicMuted) return
-
-      const chord = chords[this.chordIndex % chords.length]
-
-      chord.forEach((freq, i) => {
-        setTimeout(() => {
-          this.playMusicNote(freq, 2.0)
-          this.playMusicNote(freq * 2, 1.5)
-        }, i * 80)
-      })
-
-      this.chordIndex++
-    }
-
-    playNextChord()
-    this.musicInterval = setInterval(playNextChord, 2000) // Faster for boss
+    // Faster tempo for boss (150 BPM)
+    this.playDubstepBeat()
+    this.musicInterval = setInterval(() => this.playDubstepBeat(), 100)
   }
 
   stopMusic() {
     this.musicPlaying = false
 
-    // Clear the interval
     if (this.musicInterval) {
       clearInterval(this.musicInterval)
       this.musicInterval = null
     }
 
-    // Stop all active oscillators
+    // Stop all oscillators
     this.activeOscillators.forEach(osc => {
-      try {
-        osc.stop()
-      } catch (e) {
-        // Already stopped
-      }
+      try { osc.stop() } catch {}
     })
     this.activeOscillators.clear()
-    this.chordIndex = 0
+
+    // Stop all buffer sources
+    this.activeBufferSources.forEach(src => {
+      try { src.stop() } catch {}
+    })
+    this.activeBufferSources.clear()
+
+    this.beatIndex = 0
   }
 
   pauseMusic() {
@@ -224,58 +294,70 @@ export class AudioManager {
     }
   }
 
-  // Sound Effects
+  // =============== SOUND EFFECTS ===============
+
+  private playTone(frequency: number, duration: number, type: OscillatorType = 'sine', volumeMult = 1) {
+    if (!this.audioContext || !this.sfxGain || this.sfxMuted) return
+
+    try {
+      const osc = this.audioContext.createOscillator()
+      const gain = this.audioContext.createGain()
+
+      osc.type = type
+      osc.frequency.value = frequency
+
+      const now = this.audioContext.currentTime
+      gain.gain.setValueAtTime(0, now)
+      gain.gain.linearRampToValueAtTime(volumeMult, now + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.01, now + duration)
+
+      osc.connect(gain)
+      gain.connect(this.sfxGain)
+
+      osc.start(now)
+      osc.stop(now + duration)
+    } catch {}
+  }
+
   playSound(soundName: string) {
     if (!this.audioContext || this.sfxMuted) return
     this.initializeAudioContext()
 
     switch (soundName) {
       case 'kill':
-        // Quick satisfying pop
         this.playTone(600, 0.08, 'sine', 0.8)
         setTimeout(() => this.playTone(800, 0.06, 'sine', 0.6), 40)
         break
-
       case 'death':
-        // Descending tone
         this.playTone(300, 0.15, 'sawtooth', 0.5)
         setTimeout(() => this.playTone(220, 0.2, 'sawtooth', 0.4), 100)
         setTimeout(() => this.playTone(150, 0.3, 'sawtooth', 0.3), 200)
         break
-
       case 'levelUp':
-        // Ascending arpeggio
         this.playTone(523, 0.1, 'sine', 0.7)
         setTimeout(() => this.playTone(659, 0.1, 'sine', 0.7), 70)
         setTimeout(() => this.playTone(784, 0.1, 'sine', 0.7), 140)
         setTimeout(() => this.playTone(1047, 0.2, 'sine', 0.8), 210)
         break
-
       case 'shoot':
-        // Quick blip
         this.playTone(400, 0.03, 'square', 0.3)
         break
-
       case 'purchase':
-        // Cash register ding
         this.playTone(880, 0.1, 'sine', 0.6)
         setTimeout(() => this.playTone(1100, 0.15, 'sine', 0.7), 80)
         break
-
       case 'upgrade':
-        // Sparkle sound
         this.playTone(1200, 0.08, 'sine', 0.5)
         setTimeout(() => this.playTone(1500, 0.1, 'sine', 0.6), 60)
         break
-
       case 'hit':
-        // Impact thud
         this.playTone(150, 0.08, 'triangle', 0.6)
         break
     }
   }
 
-  // Volume Controls
+  // =============== VOLUME CONTROLS ===============
+
   setMusicVolume(volume: number) {
     this.musicVolume = Math.max(0, Math.min(1, volume))
     if (this.musicGain && !this.musicMuted) {
@@ -290,7 +372,6 @@ export class AudioManager {
     }
   }
 
-  // Mute Controls
   toggleMusicMute(): boolean {
     this.musicMuted = !this.musicMuted
     if (this.musicGain) {
@@ -332,17 +413,14 @@ export class AudioManager {
     return mute
   }
 
-  // Getters
   isMusicMuted(): boolean { return this.musicMuted }
   isSfxMuted(): boolean { return this.sfxMuted }
   getMusicVolume(): number { return this.musicVolume }
   getSfxVolume(): number { return this.sfxVolume }
 
-  // Enable audio (call after user interaction)
   enableAudio() {
     this.initializeAudioContext()
 
-    // Resume audio context if suspended (browser requirement)
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume().then(() => {
         if (!this.musicMuted) {
@@ -354,8 +432,15 @@ export class AudioManager {
     }
   }
 
-  // Cleanup when leaving game
+  // IMPORTANT: Call this when leaving the game scene
   cleanup() {
+    this.stopMusic()
+    // Don't close the audio context, just stop the music
+    // This allows sounds to still work if user returns
+  }
+
+  // Full cleanup - only call when completely leaving
+  fullCleanup() {
     this.stopMusic()
     if (this.audioContext) {
       this.audioContext.close()

@@ -2105,6 +2105,47 @@ export default class GameSceneV3 extends Phaser.Scene {
     }
   }
 
+  // Public method called by GameWrapper before destroying the game
+  // This saves the game and stops music when navigating away (e.g., to hub)
+  public async cleanupBeforeExit(): Promise<void> {
+    console.log('GameSceneV3: Cleaning up before exit...')
+
+    // Stop the music immediately
+    if (this.audioManager) {
+      this.audioManager.cleanup()
+    }
+
+    // Stop the auto-save timer
+    if (this.autoSaveTimer) {
+      this.autoSaveTimer.remove()
+      this.autoSaveTimer = null
+    }
+
+    // Perform a final save if player is alive and we have user info
+    if (this.player && !this.player.isDead() && this.currentUserId) {
+      try {
+        const saveSlot = this.currentSaveSlot || 1
+        await this.saveManager.saveGame(
+          this.currentUserId,
+          saveSlot,
+          this.player,
+          this.floorManager.getCurrentFloorNumber(),
+          this.shopManager,
+          {
+            totalKills: this.runStats.totalKills,
+            totalMoney: this.runStats.totalMoney,
+            highestCombo: this.runStats.highestCombo,
+            bossesKilled: this.runStats.bossesKilled,
+            startTime: this.runStats.startTime
+          }
+        )
+        console.log('GameSceneV3: Auto-saved before exit')
+      } catch (error) {
+        console.error('Failed to save before exit:', error)
+      }
+    }
+  }
+
   private gameOver() {
     // Play death sound and stop music
     this.audioManager.playSound('death')

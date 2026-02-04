@@ -420,9 +420,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   getModifiedFireRate(): number {
     let fireRate = this.weapons[this.currentWeapon].fireRate
 
-    // Apply skill bonus
+    // Apply skill bonus (cap total bonus at 80% reduction)
     const skillFireRateBonus = this.skillTree.getTotalBonus('fireRate')
-    fireRate *= (1 - skillFireRateBonus - this.shopFireRateBonus)
+    const totalBonus = Math.min(skillFireRateBonus + this.shopFireRateBonus, 0.8)
+    fireRate *= (1 - totalBonus)
 
     // Apply rapid fire power-up
     if (this.rapidFireActive) {
@@ -434,7 +435,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       fireRate *= 0.5 // Fire twice as fast during time slow
     }
 
-    return fireRate
+    // IMPORTANT: Cap minimum fire rate at 30ms to prevent insane shooting
+    const MIN_FIRE_RATE = 30
+    return Math.max(fireRate, MIN_FIRE_RATE)
   }
 
   applyLuckBonus(amount: number): number {

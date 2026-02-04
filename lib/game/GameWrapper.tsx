@@ -5,6 +5,7 @@ import Phaser from 'phaser'
 import MenuScene from './MenuScene'
 import GameSceneV3 from './GameSceneV3'
 import { useAuth } from '../context/AuthContext'
+import { AudioManager } from './AudioManager'
 
 export default function GameWrapper() {
   const gameRef = useRef<Phaser.Game | null>(null)
@@ -45,7 +46,23 @@ export default function GameWrapper() {
     }
 
     return () => {
-      gameRef.current?.destroy(true)
+      // Cleanup before destroying: save game and stop music
+      if (gameRef.current) {
+        // Stop music immediately via AudioManager singleton
+        const audioManager = AudioManager.getInstance()
+        audioManager.cleanup()
+
+        // Try to trigger save from the active GameSceneV3 scene
+        const gameScene = gameRef.current.scene.getScene('GameSceneV3') as GameSceneV3
+        if (gameScene && gameScene.scene.isActive()) {
+          // Fire and forget - the save will complete in background
+          gameScene.cleanupBeforeExit().catch(err => {
+            console.warn('Cleanup save failed:', err)
+          })
+        }
+
+        gameRef.current.destroy(true)
+      }
     }
   }, [user])
 

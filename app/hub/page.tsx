@@ -24,6 +24,180 @@ function formatNumber(n: number): string {
   return (n / 1000000000000000).toFixed(2) + 'Q'
 }
 
+// Hub Music Player - Ambient Synthwave/Chillwave style
+class HubMusicPlayer {
+  private audioContext: AudioContext | null = null
+  private masterGain: GainNode | null = null
+  private isPlaying = false
+  private isMuted = false
+  private musicLoop: ReturnType<typeof setInterval> | null = null
+  private activeOscillators: Set<OscillatorNode> = new Set()
+  private chordIndex = 0
+
+  // Dreamy chord progression (C major 7 - A minor 7 - F major 7 - G major 7)
+  private chords = [
+    [261.63, 329.63, 392.00, 493.88], // Cmaj7
+    [220.00, 261.63, 329.63, 392.00], // Am7
+    [174.61, 220.00, 261.63, 329.63], // Fmaj7
+    [196.00, 246.94, 293.66, 369.99], // Gmaj7
+  ]
+
+  init() {
+    if (this.audioContext) return
+
+    try {
+      this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+      this.masterGain = this.audioContext.createGain()
+      this.masterGain.gain.value = 0.12 // Quiet ambient level
+      this.masterGain.connect(this.audioContext.destination)
+    } catch (e) {
+      console.warn('Failed to initialize hub audio:', e)
+    }
+  }
+
+  private playPad(frequencies: number[], duration: number) {
+    if (!this.audioContext || !this.masterGain || this.isMuted) return
+
+    const now = this.audioContext.currentTime
+
+    frequencies.forEach((freq, i) => {
+      const osc = this.audioContext!.createOscillator()
+      const gain = this.audioContext!.createGain()
+      const filter = this.audioContext!.createBiquadFilter()
+
+      // Soft sine/triangle mix for dreamy sound
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle'
+      osc.frequency.value = freq
+
+      // Low-pass filter for warmth
+      filter.type = 'lowpass'
+      filter.frequency.value = 800
+      filter.Q.value = 1
+
+      // Slow attack, long release for pad sound
+      gain.gain.setValueAtTime(0, now)
+      gain.gain.linearRampToValueAtTime(0.08, now + 0.8) // Slow fade in
+      gain.gain.setValueAtTime(0.08, now + duration - 1.5)
+      gain.gain.linearRampToValueAtTime(0, now + duration) // Slow fade out
+
+      osc.connect(filter)
+      filter.connect(gain)
+      gain.connect(this.masterGain!)
+
+      this.activeOscillators.add(osc)
+      osc.onended = () => this.activeOscillators.delete(osc)
+
+      osc.start(now + i * 0.1) // Slight stagger for richness
+      osc.stop(now + duration)
+    })
+  }
+
+  private playArpeggio() {
+    if (!this.audioContext || !this.masterGain || this.isMuted) return
+
+    const now = this.audioContext.currentTime
+    const chord = this.chords[this.chordIndex]
+    const noteDelay = 0.4
+
+    chord.forEach((freq, i) => {
+      const osc = this.audioContext!.createOscillator()
+      const gain = this.audioContext!.createGain()
+
+      osc.type = 'sine'
+      osc.frequency.value = freq * 2 // One octave up
+
+      const startTime = now + i * noteDelay
+      gain.gain.setValueAtTime(0, startTime)
+      gain.gain.linearRampToValueAtTime(0.04, startTime + 0.05)
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 1.2)
+
+      osc.connect(gain)
+      gain.connect(this.masterGain!)
+
+      this.activeOscillators.add(osc)
+      osc.onended = () => this.activeOscillators.delete(osc)
+
+      osc.start(startTime)
+      osc.stop(startTime + 1.5)
+    })
+  }
+
+  private playBeat() {
+    if (!this.isPlaying || this.isMuted) return
+
+    // Play ambient pad chord
+    this.playPad(this.chords[this.chordIndex], 4)
+
+    // Play gentle arpeggio
+    setTimeout(() => this.playArpeggio(), 500)
+
+    // Move to next chord
+    this.chordIndex = (this.chordIndex + 1) % this.chords.length
+  }
+
+  start() {
+    if (this.isPlaying) return
+
+    this.init()
+    if (!this.audioContext || !this.masterGain) return
+
+    // Resume audio context if suspended
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume()
+    }
+
+    this.isPlaying = true
+    this.playBeat()
+    // Play a new chord every 4 seconds
+    this.musicLoop = setInterval(() => this.playBeat(), 4000)
+  }
+
+  stop() {
+    this.isPlaying = false
+
+    if (this.musicLoop) {
+      clearInterval(this.musicLoop)
+      this.musicLoop = null
+    }
+
+    // Stop all oscillators
+    this.activeOscillators.forEach(osc => {
+      try { osc.stop() } catch {}
+    })
+    this.activeOscillators.clear()
+  }
+
+  toggleMute(): boolean {
+    this.isMuted = !this.isMuted
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.isMuted ? 0 : 0.12
+    }
+    return this.isMuted
+  }
+
+  isMutedState(): boolean {
+    return this.isMuted
+  }
+
+  cleanup() {
+    this.stop()
+    if (this.audioContext) {
+      this.audioContext.close()
+      this.audioContext = null
+    }
+    this.masterGain = null
+  }
+}
+
+// Singleton instance
+let hubMusicPlayer: HubMusicPlayer | null = null
+function getHubMusicPlayer(): HubMusicPlayer {
+  if (!hubMusicPlayer) {
+    hubMusicPlayer = new HubMusicPlayer()
+  }
+  return hubMusicPlayer
+}
+
 interface SynergyStats {
   slayerFloorsCleared: number
   slayerHighestFloor: number
@@ -49,6 +223,8 @@ export default function GameHub() {
   const [slayerLeaderboard, setSlayerLeaderboard] = useState<LeaderboardEntry[]>([])
   const [clickerLeaderboard, setClickerLeaderboard] = useState<ClickerLeaderboardEntry[]>([])
   const [activeLeaderboard, setActiveLeaderboard] = useState<'slayer' | 'clicker'>('slayer')
+  const [musicMuted, setMusicMuted] = useState(false)
+  const [musicStarted, setMusicStarted] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -161,6 +337,39 @@ export default function GameHub() {
     setParticles(newParticles)
   }, [])
 
+  // Hub ambient music - start on first interaction
+  useEffect(() => {
+    const startMusic = () => {
+      if (!musicStarted) {
+        const player = getHubMusicPlayer()
+        player.start()
+        setMusicStarted(true)
+      }
+    }
+
+    // Start music on any click/touch
+    document.addEventListener('click', startMusic, { once: true })
+    document.addEventListener('touchstart', startMusic, { once: true })
+
+    // Cleanup on unmount
+    return () => {
+      document.removeEventListener('click', startMusic)
+      document.removeEventListener('touchstart', startMusic)
+      const player = getHubMusicPlayer()
+      player.stop()
+    }
+  }, [musicStarted])
+
+  const toggleMusic = () => {
+    const player = getHubMusicPlayer()
+    if (!musicStarted) {
+      player.start()
+      setMusicStarted(true)
+    }
+    const muted = player.toggleMute()
+    setMusicMuted(muted)
+  }
+
   if (loading) {
     return (
       <div className="hub-loading">
@@ -204,6 +413,11 @@ export default function GameHub() {
       <div className="orb orb-1"></div>
       <div className="orb orb-2"></div>
       <div className="orb orb-3"></div>
+
+      {/* Music Toggle Button */}
+      <button className="music-toggle" onClick={toggleMusic} title={musicMuted ? 'Unmute Music' : 'Mute Music'}>
+        {musicMuted ? '🔇' : '🎵'}
+      </button>
 
       {/* Header */}
       <header className="hub-header">
@@ -420,6 +634,36 @@ export default function GameHub() {
           overflow-x: hidden;
           overflow-y: auto;
           padding-bottom: 50px;
+        }
+
+        .music-toggle {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.9), rgba(10, 15, 30, 0.95));
+          border: 2px solid rgba(0, 217, 255, 0.3);
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+          z-index: 1000;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .music-toggle:hover {
+          transform: scale(1.1);
+          border-color: rgba(0, 217, 255, 0.6);
+          box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .music-toggle:active {
+          transform: scale(0.95);
         }
 
         .mesh-bg {
