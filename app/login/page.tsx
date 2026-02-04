@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.push('/')
+      router.push('/hub')
     }
   }, [user, loading, router])
 
@@ -103,14 +103,14 @@ export default function LoginPage() {
       }}>
         {/* Logo/Title */}
         <h1 style={{
-          fontSize: '48px',
+          fontSize: '42px',
           color: '#05878a',
           textAlign: 'center',
           margin: '0 0 10px 0',
           fontWeight: 'bold',
           textShadow: '0 0 20px rgba(5, 135, 138, 0.8)'
         }}>
-          DOT SLAYER
+          <span style={{ color: '#00d9ff' }}>●</span> DOT UNIVERSE <span style={{ color: '#ff6b00' }}>●</span>
         </h1>
 
         <p style={{
@@ -119,7 +119,7 @@ export default function LoginPage() {
           fontSize: '14px',
           marginBottom: '30px'
         }}>
-          100 Floors. Infinite Challenge. Global Competition.
+          Two Epic Games. One Account. Infinite Fun.
         </p>
 
         {/* Error Message */}
@@ -267,21 +267,33 @@ export default function LoginPage() {
           borderRadius: '8px',
           border: '1px solid #2e3440'
         }}>
-          <h3 style={{ color: '#05878a', fontSize: '16px', marginBottom: '12px', marginTop: 0 }}>
-            What awaits:
+          <h3 style={{ color: '#ff6b00', fontSize: '14px', marginBottom: '8px', marginTop: 0 }}>
+            DOT SLAYER - Roguelike Action
           </h3>
           <ul style={{
             color: '#88c0d0',
-            fontSize: '14px',
-            lineHeight: '24px',
+            fontSize: '13px',
+            lineHeight: '20px',
+            paddingLeft: '20px',
+            margin: '0 0 15px 0'
+          }}>
+            <li>100 procedurally generated floors</li>
+            <li>Epic bosses & skill trees</li>
+            <li>Global leaderboards</li>
+          </ul>
+          <h3 style={{ color: '#00d9ff', fontSize: '14px', marginBottom: '8px', marginTop: 0 }}>
+            DOT CLICKER - Idle Empire
+          </h3>
+          <ul style={{
+            color: '#88c0d0',
+            fontSize: '13px',
+            lineHeight: '20px',
             paddingLeft: '20px',
             margin: 0
           }}>
-            <li>100 procedurally generated floors</li>
-            <li>Global competitive leaderboards</li>
-            <li>Deep skill tree progression</li>
-            <li>Random item drops & upgrades</li>
-            <li>Cloud saves across devices</li>
+            <li>Addictive idle progression</li>
+            <li>Buildings, upgrades & prestige</li>
+            <li>Cross-game synergy bonuses!</li>
           </ul>
         </div>
       </div>
