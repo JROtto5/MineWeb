@@ -6,6 +6,218 @@ import { useAuth } from '../../lib/context/AuthContext'
 import { clickerSyncService, ClickerGameState } from '../../lib/supabase'
 import Link from 'next/link'
 
+// ============= DUBSTEP MUSIC SYSTEM =============
+class DubstepMusicPlayer {
+  private audioContext: AudioContext | null = null
+  private masterGain: GainNode | null = null
+  private isPlaying = false
+  private isMuted = false
+  private loopInterval: ReturnType<typeof setInterval> | null = null
+  private wobbleOscillators: OscillatorNode[] = []
+  private volume = 0.15
+
+  initialize() {
+    if (this.audioContext) return
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    this.masterGain = this.audioContext.createGain()
+    this.masterGain.gain.value = this.volume
+    this.masterGain.connect(this.audioContext.destination)
+  }
+
+  private createWobbleBass(startFreq: number, duration: number) {
+    if (!this.audioContext || !this.masterGain || this.isMuted) return
+
+    const osc = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+    const filter = this.audioContext.createBiquadFilter()
+
+    // Sawtooth for that gritty dubstep sound
+    osc.type = 'sawtooth'
+    osc.frequency.value = startFreq
+
+    // Low-pass filter for wobble
+    filter.type = 'lowpass'
+    filter.frequency.value = 200
+    filter.Q.value = 15
+
+    // Wobble the filter (the signature dubstep sound)
+    const now = this.audioContext.currentTime
+    const wobbleSpeed = 4 // Hz
+    for (let i = 0; i < duration * wobbleSpeed; i++) {
+      const time = now + i / wobbleSpeed
+      filter.frequency.setValueAtTime(150 + Math.sin(i * Math.PI) * 400, time)
+    }
+
+    gain.gain.setValueAtTime(0.3, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + duration)
+
+    osc.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+
+    osc.start(now)
+    osc.stop(now + duration)
+    this.wobbleOscillators.push(osc)
+    osc.onended = () => {
+      this.wobbleOscillators = this.wobbleOscillators.filter(o => o !== osc)
+    }
+  }
+
+  private createKick() {
+    if (!this.audioContext || !this.masterGain || this.isMuted) return
+
+    const osc = this.audioContext.createOscillator()
+    const gain = this.audioContext.createGain()
+
+    osc.type = 'sine'
+    const now = this.audioContext.currentTime
+    osc.frequency.setValueAtTime(150, now)
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.1)
+
+    gain.gain.setValueAtTime(0.5, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
+
+    osc.connect(gain)
+    gain.connect(this.masterGain)
+
+    osc.start(now)
+    osc.stop(now + 0.3)
+  }
+
+  private createSnare() {
+    if (!this.audioContext || !this.masterGain || this.isMuted) return
+
+    // White noise for snare
+    const bufferSize = this.audioContext.sampleRate * 0.1
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+
+    const noise = this.audioContext.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.audioContext.createBiquadFilter()
+    filter.type = 'highpass'
+    filter.frequency.value = 1000
+
+    const gain = this.audioContext.createGain()
+    const now = this.audioContext.currentTime
+    gain.gain.setValueAtTime(0.3, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+
+    noise.start(now)
+  }
+
+  private createHiHat() {
+    if (!this.audioContext || !this.masterGain || this.isMuted) return
+
+    const bufferSize = this.audioContext.sampleRate * 0.05
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+
+    const noise = this.audioContext.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.audioContext.createBiquadFilter()
+    filter.type = 'highpass'
+    filter.frequency.value = 5000
+
+    const gain = this.audioContext.createGain()
+    const now = this.audioContext.currentTime
+    gain.gain.setValueAtTime(0.1, now)
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+
+    noise.start(now)
+  }
+
+  private playBeat() {
+    // Classic dubstep pattern: kick-snare with wobble bass
+    const bassNotes = [55, 55, 65, 55] // Low bass notes (A1, A1, C2, A1)
+
+    // Kick on 1
+    this.createKick()
+    this.createWobbleBass(bassNotes[Math.floor(Math.random() * bassNotes.length)], 0.5)
+
+    // Hi-hat on off-beats
+    setTimeout(() => this.createHiHat(), 125)
+    setTimeout(() => this.createHiHat(), 375)
+
+    // Snare on 2
+    setTimeout(() => {
+      this.createSnare()
+      this.createWobbleBass(bassNotes[Math.floor(Math.random() * bassNotes.length)], 0.5)
+    }, 250)
+
+    // More hi-hats
+    setTimeout(() => this.createHiHat(), 500 + 125)
+    setTimeout(() => this.createHiHat(), 500 + 375)
+  }
+
+  play() {
+    if (this.isPlaying) return
+    this.initialize()
+
+    if (this.audioContext?.state === 'suspended') {
+      this.audioContext.resume()
+    }
+
+    this.isPlaying = true
+    this.playBeat()
+
+    // Loop the beat every 1 second (120 BPM half-time feel)
+    this.loopInterval = setInterval(() => {
+      if (!this.isMuted) this.playBeat()
+    }, 1000)
+  }
+
+  stop() {
+    this.isPlaying = false
+    if (this.loopInterval) {
+      clearInterval(this.loopInterval)
+      this.loopInterval = null
+    }
+    this.wobbleOscillators.forEach(osc => {
+      try { osc.stop() } catch {}
+    })
+    this.wobbleOscillators = []
+  }
+
+  toggleMute(): boolean {
+    this.isMuted = !this.isMuted
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.isMuted ? 0 : this.volume
+    }
+    return this.isMuted
+  }
+
+  isMutedState(): boolean {
+    return this.isMuted
+  }
+
+  cleanup() {
+    this.stop()
+    if (this.audioContext) {
+      this.audioContext.close()
+      this.audioContext = null
+    }
+  }
+}
+
+const dubstepPlayer = new DubstepMusicPlayer()
+
 // ============= GAME DATA =============
 
 interface Building {
@@ -270,6 +482,8 @@ export default function DotClicker() {
   const router = useRouter()
   const [gameState, setGameState] = useState<GameState | null>(null)
   const [clickEffects, setClickEffects] = useState<Array<{id: number, x: number, y: number, value: string, color: string}>>([])
+  const [musicMuted, setMusicMuted] = useState(false)
+  const [musicStarted, setMusicStarted] = useState(false)
   const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'stats' | 'achievements'>('buildings')
   const [showPrestige, setShowPrestige] = useState(false)
   const [goldenDot, setGoldenDot] = useState<{x: number, y: number, expires: number} | null>(null)
@@ -618,12 +832,19 @@ export default function DotClicker() {
       if (cloudSaveTimerRef.current) clearInterval(cloudSaveTimerRef.current)
       clearInterval(goldenInterval)
       clearInterval(frenzyInterval)
+      dubstepPlayer.cleanup()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState !== null, frenzyMode])
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (!gameState) return
+
+    // Start music on first click
+    if (!musicStarted) {
+      dubstepPlayer.play()
+      setMusicStarted(true)
+    }
 
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
@@ -668,7 +889,7 @@ export default function DotClicker() {
         maxCombo: Math.max(prev.maxCombo, newCombo)
       }
     })
-  }, [gameState, frenzyMode])
+  }, [gameState, frenzyMode, musicStarted])
 
   const handleGoldenClick = useCallback(() => {
     if (!gameState || !goldenDot) return
@@ -817,6 +1038,19 @@ export default function DotClicker() {
           {frenzyMode && <span className="frenzy-badge">🔥 FRENZY {frenzyTimer}s</span>}
         </div>
         <div className="header-stats">
+          <button
+            className={`music-toggle ${musicMuted ? 'muted' : ''}`}
+            onClick={() => {
+              if (!musicStarted) {
+                dubstepPlayer.play()
+                setMusicStarted(true)
+              }
+              const muted = dubstepPlayer.toggleMute()
+              setMusicMuted(muted)
+            }}
+          >
+            {musicMuted ? '🔇' : '🎵'}
+          </button>
           <span className="prestige-display">⭐ {gameState.prestigePoints}</span>
         </div>
       </header>
@@ -1168,6 +1402,33 @@ export default function DotClicker() {
         .dot-icon { animation: pulse 1s ease-in-out infinite; }
 
         .prestige-display { color: #f39c12; font-weight: bold; }
+
+        .music-toggle {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #2ecc71;
+          padding: 6px 12px;
+          border-radius: 15px;
+          cursor: pointer;
+          font-size: 1rem;
+          transition: all 0.2s;
+          margin-right: 10px;
+        }
+
+        .music-toggle:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        .music-toggle.muted {
+          color: #666;
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .header-stats {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
 
         .main-stats {
           text-align: center;
