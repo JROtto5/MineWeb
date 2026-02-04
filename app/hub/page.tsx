@@ -225,6 +225,10 @@ export default function GameHub() {
   const [activeLeaderboard, setActiveLeaderboard] = useState<'slayer' | 'clicker'>('slayer')
   const [musicMuted, setMusicMuted] = useState(false)
   const [musicStarted, setMusicStarted] = useState(false)
+  const [showNameModal, setShowNameModal] = useState(false)
+  const [newDisplayName, setNewDisplayName] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [nameUpdateStatus, setNameUpdateStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -275,6 +279,70 @@ export default function GameHub() {
       loadLeaderboards()
     }
   }, [user])
+
+  // Load current display name from user_profiles
+  useEffect(() => {
+    const loadDisplayName = async () => {
+      if (!user) return
+
+      try {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single()
+
+        if (data?.display_name) {
+          setDisplayName(data.display_name)
+          setNewDisplayName(data.display_name)
+        } else {
+          // Fallback to email username
+          const fallbackName = user.email?.split('@')[0] || 'Player'
+          setDisplayName(fallbackName)
+          setNewDisplayName(fallbackName)
+        }
+      } catch {
+        const fallbackName = user.email?.split('@')[0] || 'Player'
+        setDisplayName(fallbackName)
+        setNewDisplayName(fallbackName)
+      }
+    }
+
+    loadDisplayName()
+  }, [user])
+
+  // Update display name function
+  const updateDisplayName = async () => {
+    if (!user || !newDisplayName.trim()) return
+
+    const trimmedName = newDisplayName.trim().slice(0, 20) // Max 20 chars
+
+    setNameUpdateStatus('saving')
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          display_name: trimmedName,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
+
+      if (error) throw error
+
+      setDisplayName(trimmedName)
+      setNameUpdateStatus('success')
+
+      // Close modal after success
+      setTimeout(() => {
+        setShowNameModal(false)
+        setNameUpdateStatus('idle')
+      }, 1500)
+    } catch (error) {
+      console.error('Failed to update display name:', error)
+      setNameUpdateStatus('error')
+    }
+  }
 
   // Load synergy stats from localStorage
   useEffect(() => {
@@ -430,7 +498,7 @@ export default function GameHub() {
           </h1>
         </div>
         <p className="hub-subtitle">
-          Welcome back, <span className="player-name">{(user.user_metadata as any)?.display_name || user.email?.split('@')[0] || 'Player'}</span>
+          Welcome back, <span className="player-name clickable" onClick={() => setShowNameModal(true)} title="Click to change display name">{displayName || 'Player'}</span> <span className="edit-icon" onClick={() => setShowNameModal(true)}>✏️</span>
         </p>
         <div className="header-decoration"></div>
       </header>
@@ -613,6 +681,50 @@ export default function GameHub() {
           )}
         </div>
       </section>
+
+      {/* Display Name Change Modal */}
+      {showNameModal && (
+        <div className="modal-overlay" onClick={() => nameUpdateStatus !== 'saving' && setShowNameModal(false)}>
+          <div className="name-modal" onClick={e => e.stopPropagation()}>
+            <h2>✏️ Change Display Name</h2>
+            <p className="modal-desc">This name will appear on leaderboards</p>
+            <input
+              type="text"
+              value={newDisplayName}
+              onChange={e => setNewDisplayName(e.target.value)}
+              placeholder="Enter display name"
+              maxLength={20}
+              className="name-input"
+              disabled={nameUpdateStatus === 'saving'}
+            />
+            <span className="char-count">{newDisplayName.length}/20</span>
+
+            {nameUpdateStatus === 'error' && (
+              <p className="error-text">Failed to update name. Try again.</p>
+            )}
+            {nameUpdateStatus === 'success' && (
+              <p className="success-text">Name updated successfully!</p>
+            )}
+
+            <div className="modal-buttons">
+              <button
+                className="save-name-btn"
+                onClick={updateDisplayName}
+                disabled={nameUpdateStatus === 'saving' || !newDisplayName.trim()}
+              >
+                {nameUpdateStatus === 'saving' ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                className="cancel-btn"
+                onClick={() => setShowNameModal(false)}
+                disabled={nameUpdateStatus === 'saving'}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="hub-footer">
@@ -904,6 +1016,161 @@ export default function GameHub() {
           -webkit-text-fill-color: transparent;
           background-clip: text;
           font-weight: 700;
+        }
+
+        .player-name.clickable {
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .player-name.clickable:hover {
+          filter: brightness(1.2);
+        }
+
+        .edit-icon {
+          cursor: pointer;
+          font-size: 0.8rem;
+          opacity: 0.6;
+          transition: opacity 0.2s;
+        }
+
+        .edit-icon:hover {
+          opacity: 1;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.85);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .name-modal {
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.98), rgba(10, 15, 30, 0.98));
+          border: 1px solid rgba(0, 217, 255, 0.3);
+          border-radius: 20px;
+          padding: 30px;
+          max-width: 400px;
+          width: 90%;
+          text-align: center;
+          animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+
+        .name-modal h2 {
+          color: #00d9ff;
+          margin-bottom: 10px;
+        }
+
+        .modal-desc {
+          color: #889;
+          font-size: 0.9rem;
+          margin-bottom: 20px;
+        }
+
+        .name-input {
+          width: 100%;
+          padding: 12px 15px;
+          border: 2px solid rgba(0, 217, 255, 0.3);
+          border-radius: 10px;
+          background: rgba(0, 0, 0, 0.3);
+          color: white;
+          font-size: 1.1rem;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .name-input:focus {
+          border-color: #00d9ff;
+        }
+
+        .name-input:disabled {
+          opacity: 0.5;
+        }
+
+        .char-count {
+          display: block;
+          text-align: right;
+          color: #667;
+          font-size: 0.8rem;
+          margin-top: 5px;
+        }
+
+        .error-text {
+          color: #e74c3c;
+          margin: 10px 0;
+          font-size: 0.9rem;
+        }
+
+        .success-text {
+          color: #2ecc71;
+          margin: 10px 0;
+          font-size: 0.9rem;
+        }
+
+        .modal-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 20px;
+        }
+
+        .save-name-btn {
+          flex: 1;
+          padding: 12px;
+          background: linear-gradient(135deg, #00d9ff, #0099cc);
+          border: none;
+          border-radius: 10px;
+          color: white;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .save-name-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3);
+        }
+
+        .save-name-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .cancel-btn {
+          flex: 1;
+          padding: 12px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          color: #aab;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .cancel-btn:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.15);
+        }
+
+        .cancel-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .header-decoration {

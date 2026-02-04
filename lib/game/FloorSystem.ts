@@ -72,28 +72,28 @@ export class FloorManager {
   private getEnemyTypes(): EnemyType[] {
     const floor = this.currentFloor
 
-    // REBALANCED: Gradual enemy type introduction with new types!
+    // REBALANCED: Gradual enemy type introduction with TONS of variety!
     if (floor < 10) {
-      // Early floors: Only grunts and scouts
-      return [EnemyType.GRUNT, EnemyType.SCOUT]
+      // Early floors: Basic enemies + swarms for action
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.SWARM]
     } else if (floor < 20) {
-      // Introduce tanks
-      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK]
+      // Introduce tanks and ghosts
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SWARM, EnemyType.GHOST]
     } else if (floor < 30) {
-      // Introduce snipers and shielders
-      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.SHIELDER]
+      // Introduce snipers, shielders, and teleporters
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.SHIELDER, EnemyType.TELEPORTER, EnemyType.SWARM]
     } else if (floor < 45) {
-      // Introduce berserkers and bombers
-      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.BOMBER, EnemyType.SHIELDER]
+      // Introduce berserkers, bombers, and splitters
+      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.BOMBER, EnemyType.SHIELDER, EnemyType.SPLITTER, EnemyType.GHOST]
     } else if (floor < 60) {
-      // Introduce assassins and healers
-      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.HEALER]
+      // Introduce assassins, healers, and vampires
+      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.HEALER, EnemyType.VAMPIRE, EnemyType.TELEPORTER]
     } else if (floor < 80) {
-      // Elite mix - no more grunts
-      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER]
+      // Elite mix - no more grunts, all special types
+      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.VAMPIRE, EnemyType.SPLITTER, EnemyType.GHOST]
     } else {
-      // Late game: All elites, mini-bosses included
-      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.BOSS]
+      // Late game: EVERYTHING including mini-bosses - pure chaos!
+      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.TELEPORTER, EnemyType.VAMPIRE, EnemyType.SPLITTER, EnemyType.GHOST, EnemyType.BOSS]
     }
   }
 

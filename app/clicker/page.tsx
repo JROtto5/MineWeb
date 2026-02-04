@@ -270,6 +270,7 @@ interface GameState {
   buildings: Building[]
   upgrades: Upgrade[]
   achievements: Achievement[]
+  prestigeUpgrades: PrestigeUpgrade[]
   lastSave: number
   startTime: number
   combo: number
@@ -417,6 +418,47 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: 'synergy_50', name: 'Dual Master', description: 'Clear 50 DotSlayer floors', condition: (s) => s.slayerFloorsCleared >= 50, reward: 50, unlocked: false, icon: '🎮' },
 ]
 
+// ============= PRESTIGE UPGRADES (Bought with Prestige Points) =============
+interface PrestigeUpgrade {
+  id: string
+  name: string
+  description: string
+  cost: number
+  effect: string
+  purchased: boolean
+  icon: string
+  tier: number
+}
+
+const INITIAL_PRESTIGE_UPGRADES: PrestigeUpgrade[] = [
+  // Tier 1 - Basic (1-5 points)
+  { id: 'p_click_boost', name: 'Eternal Click', description: '+50% base click power', cost: 1, effect: 'clickBoost', purchased: false, icon: '👆', tier: 1 },
+  { id: 'p_start_dots', name: 'Head Start', description: 'Start with 1000 dots after prestige', cost: 2, effect: 'startDots', purchased: false, icon: '🎁', tier: 1 },
+  { id: 'p_combo_decay', name: 'Combo Keeper', description: 'Combo decays 50% slower', cost: 3, effect: 'comboDecay', purchased: false, icon: '⏰', tier: 1 },
+  { id: 'p_golden_boost', name: 'Golden Aura', description: '+3% golden dot spawn rate', cost: 3, effect: 'goldenRate', purchased: false, icon: '✨', tier: 1 },
+  { id: 'p_crit_boost', name: 'Critical Eye', description: '+10% crit chance permanently', cost: 5, effect: 'critBoost', purchased: false, icon: '🎯', tier: 1 },
+
+  // Tier 2 - Intermediate (5-15 points)
+  { id: 'p_building_cost', name: 'Bulk Discount', description: 'All buildings cost 10% less', cost: 7, effect: 'buildingDiscount', purchased: false, icon: '💰', tier: 2 },
+  { id: 'p_offline_boost', name: 'Dream Factory', description: '+50% offline earnings', cost: 8, effect: 'offlineBoost', purchased: false, icon: '😴', tier: 2 },
+  { id: 'p_dps_boost', name: 'Accelerated Growth', description: '+25% passive DPS', cost: 10, effect: 'dpsBoost', purchased: false, icon: '📈', tier: 2 },
+  { id: 'p_frenzy_duration', name: 'Extended Frenzy', description: 'Frenzy mode lasts 50% longer', cost: 12, effect: 'frenzyDuration', purchased: false, icon: '⚡', tier: 2 },
+  { id: 'p_prestige_bonus', name: 'Prestige Master', description: '+20% more prestige points earned', cost: 15, effect: 'prestigeBonus', purchased: false, icon: '⭐', tier: 2 },
+
+  // Tier 3 - Advanced (15-30 points)
+  { id: 'p_auto_clicker', name: 'Phantom Clicks', description: 'Auto-click once per second', cost: 18, effect: 'autoClick', purchased: false, icon: '👻', tier: 3 },
+  { id: 'p_combo_power', name: 'Combo Amplifier', description: 'Combo bonus is 2x more effective', cost: 20, effect: 'comboPower', purchased: false, icon: '🔥', tier: 3 },
+  { id: 'p_golden_value', name: 'Golden Fortune', description: 'Golden dots give 50% more', cost: 22, effect: 'goldenValue', purchased: false, icon: '🌟', tier: 3 },
+  { id: 'p_crit_damage', name: 'Devastating Crits', description: '+50% crit multiplier', cost: 25, effect: 'critDamage', purchased: false, icon: '💥', tier: 3 },
+  { id: 'p_synergy_boost', name: 'Synergy Amplifier', description: '2x cross-game synergy bonus', cost: 30, effect: 'synergyBoost', purchased: false, icon: '🔗', tier: 3 },
+
+  // Tier 4 - Legendary (30+ points)
+  { id: 'p_mega_click', name: 'Mega Click', description: '5% chance for 100x click', cost: 40, effect: 'megaClick', purchased: false, icon: '💎', tier: 4 },
+  { id: 'p_double_prestige', name: 'Double Ascension', description: '2x prestige multiplier effect', cost: 50, effect: 'doublePrestige', purchased: false, icon: '🌈', tier: 4 },
+  { id: 'p_permanent_frenzy', name: 'Perpetual Frenzy', description: '+10% permanent frenzy bonus always active', cost: 75, effect: 'permanentFrenzy', purchased: false, icon: '🔥', tier: 4 },
+  { id: 'p_ultimate_power', name: 'Ultimate Dot Power', description: '+100% to ALL bonuses', cost: 100, effect: 'ultimatePower', purchased: false, icon: '👑', tier: 4 },
+]
+
 // ============= HELPER FUNCTIONS =============
 
 function formatNumber(n: number): string {
@@ -454,7 +496,29 @@ function calculateDps(state: GameState): number {
   }
   dps *= state.globalMultiplier
   dps *= state.prestigeMultiplier
-  dps *= (1 + state.synergyBonus)
+
+  // Apply synergy bonus (double if synergyBoost purchased)
+  let synergyMult = 1 + state.synergyBonus
+  if (state.prestigeUpgrades?.some(u => u.effect === 'synergyBoost' && u.purchased)) {
+    synergyMult = 1 + state.synergyBonus * 2
+  }
+  dps *= synergyMult
+
+  // Prestige upgrade: +25% DPS
+  if (state.prestigeUpgrades?.some(u => u.effect === 'dpsBoost' && u.purchased)) {
+    dps *= 1.25
+  }
+
+  // Prestige upgrade: +10% permanent frenzy bonus
+  if (state.prestigeUpgrades?.some(u => u.effect === 'permanentFrenzy' && u.purchased)) {
+    dps *= 1.1
+  }
+
+  // Prestige upgrade: +100% to all
+  if (state.prestigeUpgrades?.some(u => u.effect === 'ultimatePower' && u.purchased)) {
+    dps *= 2
+  }
+
   return dps
 }
 
@@ -465,14 +529,48 @@ function calculateClickPower(state: GameState): number {
       power += upgrade.multiplier
     }
   }
-  power *= (1 + state.combo * 0.01 * state.comboMultiplier)
+
+  // Prestige upgrade: +50% base click power
+  if (state.prestigeUpgrades?.some(u => u.effect === 'clickBoost' && u.purchased)) {
+    power *= 1.5
+  }
+
+  // Combo calculation (with prestige combo power boost)
+  let comboBonus = 1 + state.combo * 0.01 * state.comboMultiplier
+  if (state.prestigeUpgrades?.some(u => u.effect === 'comboPower' && u.purchased)) {
+    comboBonus = 1 + state.combo * 0.02 * state.comboMultiplier // 2x effective
+  }
+  power *= comboBonus
+
   power *= state.prestigeMultiplier
-  power *= (1 + state.synergyBonus)
+
+  // Synergy bonus (doubled if prestige upgrade)
+  let synergyMult = 1 + state.synergyBonus
+  if (state.prestigeUpgrades?.some(u => u.effect === 'synergyBoost' && u.purchased)) {
+    synergyMult = 1 + state.synergyBonus * 2
+  }
+  power *= synergyMult
+
+  // +10% permanent frenzy
+  if (state.prestigeUpgrades?.some(u => u.effect === 'permanentFrenzy' && u.purchased)) {
+    power *= 1.1
+  }
+
+  // Ultimate power: +100% to all
+  if (state.prestigeUpgrades?.some(u => u.effect === 'ultimatePower' && u.purchased)) {
+    power *= 2
+  }
+
   return power
 }
 
-function calculatePrestigePoints(totalDots: number): number {
-  return Math.floor(Math.pow(totalDots / 1000000, 0.5))
+function calculatePrestigePoints(totalDots: number, state?: GameState): number {
+  let points = Math.floor(Math.pow(totalDots / 1000000, 0.5))
+  // Prestige upgrade: +20% more prestige points
+  if (state?.prestigeUpgrades?.some(u => u.effect === 'prestigeBonus' && u.purchased)) {
+    points = Math.floor(points * 1.2)
+  }
+  return points
 }
 
 // ============= MAIN COMPONENT =============
@@ -484,7 +582,7 @@ export default function DotClicker() {
   const [clickEffects, setClickEffects] = useState<Array<{id: number, x: number, y: number, value: string, color: string}>>([])
   const [musicMuted, setMusicMuted] = useState(false)
   const [musicStarted, setMusicStarted] = useState(false)
-  const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'stats' | 'achievements'>('buildings')
+  const [activeTab, setActiveTab] = useState<'buildings' | 'upgrades' | 'stats' | 'achievements' | 'prestige'>('buildings')
   const [showPrestige, setShowPrestige] = useState(false)
   const [goldenDot, setGoldenDot] = useState<{x: number, y: number, expires: number} | null>(null)
   const [notification, setNotification] = useState<string | null>(null)
@@ -558,6 +656,10 @@ export default function DotClicker() {
             const saved = cloudData.achievements?.find((sa) => sa.id === a.id)
             return saved ? { ...a, unlocked: saved.unlocked } : a
           }),
+          prestigeUpgrades: INITIAL_PRESTIGE_UPGRADES.map(u => {
+            const saved = cloudData.prestigeUpgrades?.find((su: {id: string; purchased: boolean}) => su.id === u.id)
+            return saved ? { ...u, purchased: saved.purchased } : u
+          }),
         }
       } else {
         // Fall back to local save
@@ -580,6 +682,10 @@ export default function DotClicker() {
               achievements: INITIAL_ACHIEVEMENTS.map(a => {
                 const savedA = parsed.achievements?.find((sa: Achievement) => sa.id === a.id)
                 return savedA ? { ...a, unlocked: savedA.unlocked } : a
+              }),
+              prestigeUpgrades: INITIAL_PRESTIGE_UPGRADES.map(u => {
+                const savedU = parsed.prestigeUpgrades?.find((su: {id: string; purchased: boolean}) => su.id === u.id)
+                return savedU ? { ...u, purchased: savedU.purchased } : u
               }),
             }
           } catch {
@@ -652,6 +758,7 @@ export default function DotClicker() {
       buildings: [...INITIAL_BUILDINGS],
       upgrades: [...INITIAL_UPGRADES],
       achievements: [...INITIAL_ACHIEVEMENTS],
+      prestigeUpgrades: [...INITIAL_PRESTIGE_UPGRADES],
       lastSave: Date.now(),
       startTime: Date.now(),
       combo: 0,
@@ -666,6 +773,11 @@ export default function DotClicker() {
       slayerFloorsCleared: 0,
       synergyBonus: 0,
     }
+  }
+
+  // Helper to check if a prestige upgrade is purchased
+  function hasPrestigeUpgrade(state: GameState, effectId: string): boolean {
+    return state.prestigeUpgrades.some(u => u.effect === effectId && u.purchased)
   }
 
   // Local save (quick, every 30 seconds)
@@ -712,6 +824,7 @@ export default function DotClicker() {
         buildings: gameState.buildings.map(b => ({ id: b.id, owned: b.owned })),
         upgrades: gameState.upgrades.map(u => ({ id: u.id, purchased: u.purchased })),
         achievements: gameState.achievements.map(a => ({ id: a.id, unlocked: a.unlocked })),
+        prestigeUpgrades: gameState.prestigeUpgrades.map(u => ({ id: u.id, purchased: u.purchased })),
         lastSave: saveTime,
         startTime: gameState.startTime,
         combo: gameState.combo,
@@ -969,16 +1082,39 @@ export default function DotClicker() {
   const handlePrestige = useCallback(() => {
     if (!gameState) return
 
-    const newPrestigePoints = calculatePrestigePoints(gameState.totalDots)
+    const newPrestigePoints = calculatePrestigePoints(gameState.totalDots, gameState)
     if (newPrestigePoints < 1) return
 
     const totalPrestige = gameState.prestigePoints + newPrestigePoints
 
+    // Calculate prestige multiplier (double if prestige upgrade purchased)
+    const hasDoublePrestige = gameState.prestigeUpgrades?.some(u => u.effect === 'doublePrestige' && u.purchased)
+    const prestigeMultiplier = hasDoublePrestige
+      ? 1 + totalPrestige * 0.2 // 20% per point
+      : 1 + totalPrestige * 0.1 // 10% per point
+
+    // Check for start dots bonus
+    const hasStartDots = gameState.prestigeUpgrades?.some(u => u.effect === 'startDots' && u.purchased)
+    const startingDots = hasStartDots ? 1000 : 0
+
+    // Get crit boost from prestige upgrades
+    const hasCritBoost = gameState.prestigeUpgrades?.some(u => u.effect === 'critBoost' && u.purchased)
+    const baseCritChance = hasCritBoost ? 0.15 : 0.05 // 15% vs 5%
+
+    // Get golden rate boost
+    const hasGoldenRate = gameState.prestigeUpgrades?.some(u => u.effect === 'goldenRate' && u.purchased)
+    const goldenChance = hasGoldenRate ? 0.04 : 0.01 // 4% vs 1%
+
     setGameState({
       ...getInitialState(),
+      dots: startingDots,
+      totalDots: startingDots,
       prestigePoints: totalPrestige,
-      prestigeMultiplier: 1 + totalPrestige * 0.1,
+      prestigeMultiplier: prestigeMultiplier,
+      critChance: baseCritChance,
+      goldenDotChance: goldenChance,
       achievements: gameState.achievements,
+      prestigeUpgrades: gameState.prestigeUpgrades, // PRESERVE prestige upgrades!
       maxCombo: gameState.maxCombo,
       totalPrestiges: gameState.totalPrestiges + 1,
       totalGoldenClicks: gameState.totalGoldenClicks,
@@ -989,7 +1125,7 @@ export default function DotClicker() {
     })
 
     setShowPrestige(false)
-    setNotification(`⭐ Prestiged! +${newPrestigePoints} points. New bonus: ${((1 + totalPrestige * 0.1) * 100).toFixed(0)}%`)
+    setNotification(`⭐ Prestiged! +${newPrestigePoints} points. New bonus: ${(prestigeMultiplier * 100).toFixed(0)}%`)
     setTimeout(() => setNotification(null), 5000)
   }, [gameState])
 
@@ -1025,7 +1161,7 @@ export default function DotClicker() {
     )
   }
 
-  const potentialPrestige = calculatePrestigePoints(gameState.totalDots)
+  const potentialPrestige = calculatePrestigePoints(gameState.totalDots, gameState)
   const playTime = Math.floor((Date.now() - gameState.startTime) / 1000)
 
   return (
@@ -1114,6 +1250,9 @@ export default function DotClicker() {
         </button>
         <button className={`tab ${activeTab === 'achievements' ? 'active' : ''}`} onClick={() => setActiveTab('achievements')}>
           🏆 {gameState.achievements.filter(a => a.unlocked).length}/{gameState.achievements.length}
+        </button>
+        <button className={`tab prestige-tab ${activeTab === 'prestige' ? 'active' : ''}`} onClick={() => setActiveTab('prestige')}>
+          ⭐ Prestige Shop
         </button>
       </div>
 
@@ -1234,6 +1373,54 @@ export default function DotClicker() {
                   <span className="achievement-desc">{achievement.description}</span>
                 </div>
                 <span className="achievement-reward">+{achievement.reward}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'prestige' && (
+          <div className="prestige-shop">
+            <div className="prestige-shop-header">
+              <span className="prestige-points-display">⭐ {gameState.prestigePoints} Prestige Points</span>
+            </div>
+            {[1, 2, 3, 4].map(tier => (
+              <div key={tier} className="prestige-tier">
+                <h4 className={`tier-title tier-${tier}`}>
+                  {tier === 1 && '🌟 Tier 1 - Basic'}
+                  {tier === 2 && '💫 Tier 2 - Intermediate'}
+                  {tier === 3 && '✨ Tier 3 - Advanced'}
+                  {tier === 4 && '👑 Tier 4 - Legendary'}
+                </h4>
+                <div className="prestige-upgrades-grid">
+                  {gameState.prestigeUpgrades.filter(u => u.tier === tier).map(upgrade => (
+                    <div
+                      key={upgrade.id}
+                      className={`prestige-upgrade-item ${upgrade.purchased ? 'purchased' : ''} ${gameState.prestigePoints >= upgrade.cost && !upgrade.purchased ? 'affordable' : ''}`}
+                      onClick={() => {
+                        if (!upgrade.purchased && gameState.prestigePoints >= upgrade.cost) {
+                          setGameState(prev => prev ? {
+                            ...prev,
+                            prestigePoints: prev.prestigePoints - upgrade.cost,
+                            prestigeUpgrades: prev.prestigeUpgrades.map(u =>
+                              u.id === upgrade.id ? { ...u, purchased: true } : u
+                            )
+                          } : prev)
+                          setNotification(`⭐ Purchased ${upgrade.name}!`)
+                          setTimeout(() => setNotification(null), 3000)
+                        }
+                      }}
+                    >
+                      <span className="prestige-upgrade-icon">{upgrade.icon}</span>
+                      <div className="prestige-upgrade-info">
+                        <span className="prestige-upgrade-name">{upgrade.name}</span>
+                        <span className="prestige-upgrade-desc">{upgrade.description}</span>
+                      </div>
+                      <span className={`prestige-upgrade-cost ${upgrade.purchased ? 'purchased' : ''}`}>
+                        {upgrade.purchased ? '✓' : `${upgrade.cost}⭐`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -1689,6 +1876,124 @@ export default function DotClicker() {
         .achievement-name { display: block; font-weight: bold; font-size: 0.9rem; }
         .achievement-desc { font-size: 0.75rem; color: #888; }
         .achievement-reward { color: #2ecc71; font-weight: bold; }
+
+        /* Prestige Shop Styles */
+        .prestige-shop {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .prestige-shop-header {
+          text-align: center;
+          padding: 15px;
+          background: linear-gradient(135deg, rgba(155, 89, 182, 0.2), rgba(142, 68, 173, 0.1));
+          border-radius: 12px;
+          border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .prestige-points-display {
+          font-size: 1.5rem;
+          font-weight: bold;
+          color: #f39c12;
+        }
+
+        .prestige-tier {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 12px;
+          padding: 15px;
+        }
+
+        .tier-title {
+          margin-bottom: 12px;
+          font-size: 1rem;
+          padding-bottom: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tier-1 { color: #3498db; }
+        .tier-2 { color: #9b59b6; }
+        .tier-3 { color: #f39c12; }
+        .tier-4 { color: #e74c3c; }
+
+        .prestige-upgrades-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .prestige-upgrade-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
+          opacity: 0.5;
+          border: 1px solid transparent;
+        }
+
+        .prestige-upgrade-item.affordable {
+          opacity: 1;
+          border-color: rgba(155, 89, 182, 0.4);
+        }
+
+        .prestige-upgrade-item.affordable:hover {
+          background: rgba(155, 89, 182, 0.2);
+          transform: translateX(5px);
+        }
+
+        .prestige-upgrade-item.purchased {
+          opacity: 0.7;
+          background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.05));
+          border-color: rgba(46, 204, 113, 0.3);
+          cursor: default;
+        }
+
+        .prestige-upgrade-icon {
+          font-size: 1.5rem;
+          width: 40px;
+          text-align: center;
+        }
+
+        .prestige-upgrade-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .prestige-upgrade-name {
+          font-weight: bold;
+          color: #fff;
+        }
+
+        .prestige-upgrade-desc {
+          font-size: 0.8rem;
+          color: #888;
+        }
+
+        .prestige-upgrade-cost {
+          font-weight: bold;
+          color: #f39c12;
+          min-width: 50px;
+          text-align: right;
+        }
+
+        .prestige-upgrade-cost.purchased {
+          color: #2ecc71;
+        }
+
+        .prestige-tab {
+          background: rgba(155, 89, 182, 0.2) !important;
+        }
+
+        .prestige-tab.active {
+          background: rgba(155, 89, 182, 0.4) !important;
+          color: #d4a5ff !important;
+        }
 
         .bottom-buttons {
           position: fixed;

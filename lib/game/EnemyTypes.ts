@@ -8,11 +8,17 @@ export enum EnemyType {
   SNIPER = 'sniper',
   BERSERKER = 'berserker',
   BOSS = 'boss',
-  // NEW ENEMY TYPES
+  // ENEMY TYPES
   ASSASSIN = 'assassin',
   BOMBER = 'bomber',
   HEALER = 'healer',
   SHIELDER = 'shielder',
+  // NEW ENEMIES - More variety!
+  TELEPORTER = 'teleporter',
+  SWARM = 'swarm',
+  VAMPIRE = 'vampire',
+  SPLITTER = 'splitter',
+  GHOST = 'ghost',
 }
 
 export interface EnemyStats {
@@ -150,6 +156,67 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     size: 26,
     behavior: 'tank', // Protects other enemies
   },
+  // NEW ENEMIES!
+  [EnemyType.TELEPORTER]: {
+    health: 70,
+    speed: 200,
+    damage: 25,
+    attackRange: 500,
+    attackSpeed: 2000,
+    moneyDrop: [60, 120],
+    xpDrop: [40, 70],
+    color: 0xaa00ff, // Purple - magical
+    size: 16,
+    behavior: 'fast', // Teleports around
+  },
+  [EnemyType.SWARM]: {
+    health: 15,
+    speed: 280,
+    damage: 5,
+    attackRange: 300,
+    attackSpeed: 400,
+    moneyDrop: [5, 15],
+    xpDrop: [3, 8],
+    color: 0x888888, // Grey - small
+    size: 8,
+    behavior: 'chase', // Swarms in groups
+  },
+  [EnemyType.VAMPIRE]: {
+    health: 150,
+    speed: 180,
+    damage: 20,
+    attackRange: 400,
+    attackSpeed: 1200,
+    moneyDrop: [70, 140],
+    xpDrop: [45, 80],
+    color: 0x8b0000, // Dark red - bloodsucker
+    size: 22,
+    behavior: 'chase', // Drains health
+  },
+  [EnemyType.SPLITTER]: {
+    health: 100,
+    speed: 160,
+    damage: 15,
+    attackRange: 400,
+    attackSpeed: 1000,
+    moneyDrop: [40, 80],
+    xpDrop: [30, 55],
+    color: 0x00ff88, // Teal - divides
+    size: 22,
+    behavior: 'tank', // Splits into smaller enemies
+  },
+  [EnemyType.GHOST]: {
+    health: 50,
+    speed: 220,
+    damage: 30,
+    attackRange: 450,
+    attackSpeed: 1500,
+    moneyDrop: [55, 100],
+    xpDrop: [35, 60],
+    color: 0xccccff, // Pale blue - ethereal
+    size: 18,
+    behavior: 'fast', // Phases through walls
+  },
 }
 
 export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
@@ -213,6 +280,11 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
       [EnemyType.BOMBER]: '💣 Bomber',
       [EnemyType.HEALER]: '💚 Healer',
       [EnemyType.SHIELDER]: '🛡️ Shielder',
+      [EnemyType.TELEPORTER]: '🌀 Teleporter',
+      [EnemyType.SWARM]: 'Swarm',
+      [EnemyType.VAMPIRE]: '🧛 Vampire',
+      [EnemyType.SPLITTER]: '⚡ Splitter',
+      [EnemyType.GHOST]: '👻 Ghost',
     }
 
     this.nameTag = scene.add.text(x, y - 35, typeNames[type], {
