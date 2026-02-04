@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../lib/context/AuthContext'
+import { clickerSyncService, ClickerGameState } from '../../lib/supabase'
 import Link from 'next/link'
 
 // ============= GAME DATA =============
@@ -275,71 +276,150 @@ export default function DotClicker() {
   const [notification, setNotification] = useState<string | null>(null)
   const [frenzyMode, setFrenzyMode] = useState(false)
   const [frenzyTimer, setFrenzyTimer] = useState(0)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  const [saveMessage, setSaveMessage] = useState('')
+  const [lastCloudSave, setLastCloudSave] = useState<number | null>(null)
+  const [offlineEarningsInfo, setOfflineEarningsInfo] = useState<{amount: number, time: number} | null>(null)
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null)
   const comboTimerRef = useRef<NodeJS.Timeout | null>(null)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const cloudSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Initialize game
+  // Initialize game - Load from cloud first, then local
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
       return
     }
 
-    const saved = localStorage.getItem('dotclicker_save')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        const mergedState = {
+    if (!user) return
+
+    const initializeGame = async () => {
+      // Try to load from cloud first
+      const cloudResult = await clickerSyncService.loadFromCloud(user.id)
+
+      let mergedState: GameState
+      let lastSaveTime: number = Date.now()
+
+      if (cloudResult.success && cloudResult.data) {
+        // Use cloud save
+        const cloudData = cloudResult.data
+        lastSaveTime = cloudData.lastSave
+        setLastCloudSave(lastSaveTime)
+
+        mergedState = {
           ...getInitialState(),
-          ...parsed,
+          dots: cloudData.dots,
+          totalDots: cloudData.totalDots,
+          totalClicks: cloudData.totalClicks,
+          dotsPerClick: cloudData.dotsPerClick,
+          dotsPerSecond: cloudData.dotsPerSecond,
+          critChance: cloudData.critChance,
+          critMultiplier: cloudData.critMultiplier,
+          goldenDotChance: cloudData.goldenDotChance,
+          globalMultiplier: cloudData.globalMultiplier,
+          prestigePoints: cloudData.prestigePoints,
+          prestigeMultiplier: cloudData.prestigeMultiplier,
+          comboMultiplier: cloudData.comboMultiplier,
+          offlineMultiplier: cloudData.offlineMultiplier,
+          totalGoldenClicks: cloudData.totalGoldenClicks,
+          totalCrits: cloudData.totalCrits,
+          totalPrestiges: cloudData.totalPrestiges,
+          highestDps: cloudData.highestDps,
+          maxCombo: cloudData.maxCombo,
+          slayerFloorsCleared: cloudData.slayerFloorsCleared,
+          synergyBonus: cloudData.synergyBonus,
+          lastSave: lastSaveTime,
+          startTime: cloudData.startTime,
           buildings: INITIAL_BUILDINGS.map(b => {
-            const saved = parsed.buildings?.find((sb: Building) => sb.id === b.id)
+            const saved = cloudData.buildings?.find((sb) => sb.id === b.id)
             return saved ? { ...b, owned: saved.owned } : b
           }),
           upgrades: INITIAL_UPGRADES.map(u => {
-            const saved = parsed.upgrades?.find((su: Upgrade) => su.id === u.id)
+            const saved = cloudData.upgrades?.find((su) => su.id === u.id)
             return saved ? { ...u, purchased: saved.purchased } : u
           }),
           achievements: INITIAL_ACHIEVEMENTS.map(a => {
-            const saved = parsed.achievements?.find((sa: Achievement) => sa.id === a.id)
+            const saved = cloudData.achievements?.find((sa) => sa.id === a.id)
             return saved ? { ...a, unlocked: saved.unlocked } : a
           }),
         }
-        setGameState(mergedState)
-
-        // Calculate offline earnings
-        const offlineTime = (Date.now() - parsed.lastSave) / 1000
-        if (offlineTime > 10) {
-          const offlineDps = calculateDps(mergedState)
-          const offlineEarnings = offlineDps * offlineTime * (0.5 + mergedState.offlineMultiplier)
-          if (offlineEarnings > 0) {
-            setGameState(prev => prev ? {
-              ...prev,
-              dots: prev.dots + offlineEarnings,
-              totalDots: prev.totalDots + offlineEarnings
-            } : prev)
-            setNotification(`Welcome back! You earned ${formatNumber(offlineEarnings)} dots while away! (${formatTime(offlineTime)})`)
-            setTimeout(() => setNotification(null), 5000)
+      } else {
+        // Fall back to local save
+        const saved = localStorage.getItem('dotclicker_save')
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved)
+            lastSaveTime = parsed.lastSave || Date.now()
+            mergedState = {
+              ...getInitialState(),
+              ...parsed,
+              buildings: INITIAL_BUILDINGS.map(b => {
+                const savedB = parsed.buildings?.find((sb: Building) => sb.id === b.id)
+                return savedB ? { ...b, owned: savedB.owned } : b
+              }),
+              upgrades: INITIAL_UPGRADES.map(u => {
+                const savedU = parsed.upgrades?.find((su: Upgrade) => su.id === u.id)
+                return savedU ? { ...u, purchased: savedU.purchased } : u
+              }),
+              achievements: INITIAL_ACHIEVEMENTS.map(a => {
+                const savedA = parsed.achievements?.find((sa: Achievement) => sa.id === a.id)
+                return savedA ? { ...a, unlocked: savedA.unlocked } : a
+              }),
+            }
+          } catch {
+            mergedState = getInitialState()
           }
+        } else {
+          mergedState = getInitialState()
         }
+      }
 
-        // Load cross-game synergy from localStorage
+      // Calculate offline earnings
+      const offlineTime = (Date.now() - lastSaveTime) / 1000
+      if (offlineTime > 10) {
+        const offlineDps = calculateDps(mergedState)
+        const offlineRate = 0.5 + mergedState.offlineMultiplier
+        // Max 24 hours of offline earnings
+        const effectiveTime = Math.min(offlineTime, 24 * 60 * 60)
+        const offlineEarnings = offlineDps * effectiveTime * offlineRate
+
+        if (offlineEarnings > 0) {
+          mergedState = {
+            ...mergedState,
+            dots: mergedState.dots + offlineEarnings,
+            totalDots: mergedState.totalDots + offlineEarnings
+          }
+          setOfflineEarningsInfo({ amount: offlineEarnings, time: effectiveTime })
+        }
+      }
+
+      // Load cross-game synergy
+      try {
+        const synergy = await clickerSyncService.getSlayerSynergy(user.id)
+        mergedState = {
+          ...mergedState,
+          slayerFloorsCleared: synergy.floorsCleared,
+          synergyBonus: synergy.synergyBonus
+        }
+      } catch {
+        // Also try localStorage synergy
         const slayerProgress = localStorage.getItem('dotslayer_progress')
         if (slayerProgress) {
           const progress = JSON.parse(slayerProgress)
-          setGameState(prev => prev ? {
-            ...prev,
+          mergedState = {
+            ...mergedState,
             slayerFloorsCleared: progress.floorsCleared || 0,
-            synergyBonus: (progress.floorsCleared || 0) * 0.01 // 1% per floor
-          } : prev)
+            synergyBonus: (progress.floorsCleared || 0) * 0.01
+          }
         }
-      } catch {
-        setGameState(getInitialState())
       }
-    } else {
-      setGameState(getInitialState())
+
+      setGameState(mergedState)
     }
+
+    initializeGame()
   }, [user, loading, router])
 
   function getInitialState(): GameState {
@@ -373,6 +453,92 @@ export default function DotClicker() {
       synergyBonus: 0,
     }
   }
+
+  // Local save (quick, every 30 seconds)
+  const saveGameLocal = useCallback(() => {
+    if (gameState) {
+      localStorage.setItem('dotclicker_save', JSON.stringify({
+        ...gameState,
+        lastSave: Date.now()
+      }))
+    }
+  }, [gameState])
+
+  // Cloud save (every 60 seconds and manual)
+  const saveGameCloud = useCallback(async (showModal = false) => {
+    if (!gameState || !user) return
+
+    if (showModal) {
+      setShowSaveModal(true)
+      setSaveStatus('saving')
+      setSaveMessage('Saving to cloud...')
+    }
+
+    try {
+      // Save locally first
+      const saveTime = Date.now()
+      localStorage.setItem('dotclicker_save', JSON.stringify({
+        ...gameState,
+        lastSave: saveTime
+      }))
+
+      // Then save to cloud
+      const cloudState: ClickerGameState = {
+        dots: gameState.dots,
+        totalDots: gameState.totalDots,
+        totalClicks: gameState.totalClicks,
+        dotsPerClick: gameState.dotsPerClick,
+        dotsPerSecond: gameState.dotsPerSecond,
+        critChance: gameState.critChance,
+        critMultiplier: gameState.critMultiplier,
+        goldenDotChance: gameState.goldenDotChance,
+        globalMultiplier: gameState.globalMultiplier,
+        prestigePoints: gameState.prestigePoints,
+        prestigeMultiplier: gameState.prestigeMultiplier,
+        buildings: gameState.buildings.map(b => ({ id: b.id, owned: b.owned })),
+        upgrades: gameState.upgrades.map(u => ({ id: u.id, purchased: u.purchased })),
+        achievements: gameState.achievements.map(a => ({ id: a.id, unlocked: a.unlocked })),
+        lastSave: saveTime,
+        startTime: gameState.startTime,
+        combo: gameState.combo,
+        maxCombo: gameState.maxCombo,
+        comboTimer: gameState.comboTimer,
+        comboMultiplier: gameState.comboMultiplier,
+        offlineMultiplier: gameState.offlineMultiplier,
+        totalGoldenClicks: gameState.totalGoldenClicks,
+        totalCrits: gameState.totalCrits,
+        totalPrestiges: gameState.totalPrestiges,
+        highestDps: gameState.highestDps,
+        slayerFloorsCleared: gameState.slayerFloorsCleared,
+        synergyBonus: gameState.synergyBonus
+      }
+
+      const result = await clickerSyncService.saveToCloud(user.id, cloudState)
+
+      if (result.success) {
+        setLastCloudSave(saveTime)
+        if (showModal) {
+          setSaveStatus('success')
+          setSaveMessage('Game saved to cloud!')
+        }
+      } else {
+        if (showModal) {
+          setSaveStatus('error')
+          setSaveMessage(result.message)
+        }
+      }
+    } catch (error: any) {
+      if (showModal) {
+        setSaveStatus('error')
+        setSaveMessage(`Save failed: ${error.message}`)
+      }
+    }
+  }, [gameState, user])
+
+  // Handle manual save button click
+  const handleManualSave = useCallback(() => {
+    saveGameCloud(true)
+  }, [saveGameCloud])
 
   // Game loop
   useEffect(() => {
@@ -408,7 +574,11 @@ export default function DotClicker() {
       })
     }, 50)
 
-    saveTimerRef.current = setInterval(() => saveGame(), 30000)
+    // Local save every 30 seconds
+    saveTimerRef.current = setInterval(() => saveGameLocal(), 30000)
+
+    // Cloud save every 60 seconds (auto, no modal)
+    cloudSaveTimerRef.current = setInterval(() => saveGameCloud(false), 60000)
 
     const goldenInterval = setInterval(() => {
       if (gameState && Math.random() < (0.02 + gameState.goldenDotChance)) {
@@ -445,19 +615,12 @@ export default function DotClicker() {
     return () => {
       if (gameLoopRef.current) clearInterval(gameLoopRef.current)
       if (saveTimerRef.current) clearInterval(saveTimerRef.current)
+      if (cloudSaveTimerRef.current) clearInterval(cloudSaveTimerRef.current)
       clearInterval(goldenInterval)
       clearInterval(frenzyInterval)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState !== null, frenzyMode])
-
-  const saveGame = useCallback(() => {
-    if (gameState) {
-      localStorage.setItem('dotclicker_save', JSON.stringify({
-        ...gameState,
-        lastSave: Date.now()
-      }))
-    }
-  }, [gameState])
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     if (!gameState) return
@@ -851,8 +1014,13 @@ export default function DotClicker() {
         >
           ⭐ Prestige {potentialPrestige > 0 && `(+${potentialPrestige})`}
         </button>
-        <button className="btn save-btn" onClick={saveGame}>
+        <button className="btn save-btn" onClick={handleManualSave}>
           💾 Save
+          {lastCloudSave && (
+            <span className="last-save-time">
+              {Math.floor((Date.now() - lastCloudSave) / 60000)}m ago
+            </span>
+          )}
         </button>
       </div>
 
@@ -880,6 +1048,61 @@ export default function DotClicker() {
               <p className="prestige-warning">Need 1M total dots to prestige!</p>
             )}
             <button className="btn close-btn" onClick={() => setShowPrestige(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Save Modal */}
+      {showSaveModal && (
+        <div className="modal-overlay" onClick={() => saveStatus !== 'saving' && setShowSaveModal(false)}>
+          <div className="modal save-modal" onClick={e => e.stopPropagation()}>
+            <h2>
+              {saveStatus === 'saving' && '💾 Saving...'}
+              {saveStatus === 'success' && '✅ Saved!'}
+              {saveStatus === 'error' && '❌ Error'}
+            </h2>
+            <div className="save-status-content">
+              {saveStatus === 'saving' && (
+                <div className="save-spinner"></div>
+              )}
+              {saveStatus === 'success' && (
+                <>
+                  <p className="save-success-msg">{saveMessage}</p>
+                  <p className="save-details">Your progress has been saved to the cloud.</p>
+                  <p className="save-details">You can continue playing on any device!</p>
+                </>
+              )}
+              {saveStatus === 'error' && (
+                <>
+                  <p className="save-error-msg">{saveMessage}</p>
+                  <p className="save-details">Your progress is still saved locally.</p>
+                </>
+              )}
+            </div>
+            {saveStatus !== 'saving' && (
+              <button className="btn close-btn" onClick={() => setShowSaveModal(false)}>Close</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Offline Earnings Modal */}
+      {offlineEarningsInfo && (
+        <div className="modal-overlay" onClick={() => setOfflineEarningsInfo(null)}>
+          <div className="modal offline-modal" onClick={e => e.stopPropagation()}>
+            <h2>🌙 Welcome Back!</h2>
+            <div className="offline-info">
+              <p className="offline-time">You were away for <strong>{formatTime(offlineEarningsInfo.time)}</strong></p>
+              <p className="offline-earned">
+                You earned <span className="offline-amount">{formatNumber(offlineEarningsInfo.amount)}</span> dots!
+              </p>
+              <p className="offline-hint">
+                Tip: Buy offline upgrades to earn up to 150% while away!
+              </p>
+            </div>
+            <button className="btn collect-btn" onClick={() => setOfflineEarningsInfo(null)}>
+              Collect!
+            </button>
           </div>
         </div>
       )}
@@ -1300,6 +1523,115 @@ export default function DotClicker() {
 
         .prestige-warning { color: #e74c3c; font-size: 0.9rem; }
         .close-btn { background: rgba(255, 255, 255, 0.1); color: #888; width: 100%; }
+
+        .last-save-time {
+          display: block;
+          font-size: 0.7rem;
+          color: #666;
+          font-weight: normal;
+          margin-top: 2px;
+        }
+
+        .save-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        /* Save Modal Styles */
+        .save-modal {
+          min-height: 200px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .save-status-content {
+          padding: 20px 0;
+          text-align: center;
+        }
+
+        .save-spinner {
+          width: 50px;
+          height: 50px;
+          border: 4px solid rgba(0, 217, 255, 0.2);
+          border-top-color: #00d9ff;
+          border-radius: 50%;
+          margin: 0 auto;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .save-success-msg {
+          color: #2ecc71;
+          font-size: 1.2rem;
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+
+        .save-error-msg {
+          color: #e74c3c;
+          font-size: 1rem;
+          margin-bottom: 10px;
+        }
+
+        .save-details {
+          color: #888;
+          font-size: 0.9rem;
+          margin: 5px 0;
+        }
+
+        /* Offline Earnings Modal */
+        .offline-modal h2 {
+          color: #f39c12;
+        }
+
+        .offline-info {
+          background: rgba(0, 0, 0, 0.3);
+          padding: 20px;
+          border-radius: 10px;
+          margin: 15px 0;
+        }
+
+        .offline-time {
+          color: #888;
+          font-size: 1rem;
+          margin-bottom: 15px;
+        }
+
+        .offline-earned {
+          font-size: 1.1rem;
+          margin-bottom: 10px;
+        }
+
+        .offline-amount {
+          color: #00d9ff;
+          font-size: 1.5rem;
+          font-weight: bold;
+        }
+
+        .offline-hint {
+          color: #666;
+          font-size: 0.85rem;
+          font-style: italic;
+          margin-top: 15px;
+        }
+
+        .collect-btn {
+          background: linear-gradient(135deg, #f39c12, #e67e22);
+          color: white;
+          width: 100%;
+          padding: 15px;
+          font-size: 1.1rem;
+          margin-top: 10px;
+        }
+
+        .collect-btn:hover {
+          transform: scale(1.02);
+        }
 
         @keyframes pulse {
           0%, 100% { opacity: 1; }
