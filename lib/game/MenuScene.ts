@@ -234,9 +234,8 @@ export default class MenuScene extends Phaser.Scene {
       fontStyle: rank <= 3 ? 'bold' : 'normal',
     }).setOrigin(0, 0.5)
 
-    // Player name (use display_name, fallback to player_name for backward compatibility)
-    // Truncate long names
-    let playerName = entry.display_name || entry.player_name || 'Anonymous'
+    // Player name - truncate long names
+    let playerName = entry.display_name || 'Anonymous'
     const maxNameLength = isSmallScreen ? 8 : 12
     if (playerName.length > maxNameLength) {
       playerName = playerName.substring(0, maxNameLength) + '...'
@@ -255,7 +254,7 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0, 0.5)
 
     // Stage reached - right aligned
-    const stageText = this.add.text(centerX + panelWidth/2 - 20, y, `F${entry.stage_reached}`, {
+    const stageText = this.add.text(centerX + panelWidth/2 - 20, y, `F${entry.floor_reached}`, {
       fontSize: smallFontSize,
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
     }).setOrigin(1, 0.5)
@@ -356,7 +355,7 @@ export default class MenuScene extends Phaser.Scene {
           color: '#8b0000',
         }).setOrigin(0.5)
 
-        const statsText = this.add.text(0, 35, `Lvl ${pd.level} | Stage ${saveData.stage_number}`, {
+        const statsText = this.add.text(0, 35, `Lvl ${pd.level} | Floor ${saveData.floor_number}`, {
           fontSize: '12px',
           color: '#666666',
         }).setOrigin(0.5)
@@ -399,7 +398,7 @@ export default class MenuScene extends Phaser.Scene {
           color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
         }).setOrigin(0.5)
 
-        const stageText = this.add.text(0, 25, `Stage ${saveData.stage_number}`, {
+        const stageText = this.add.text(0, 25, `Floor ${saveData.floor_number}`, {
           fontSize: '14px',
           color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
         }).setOrigin(0.5)

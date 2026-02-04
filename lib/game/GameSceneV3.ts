@@ -150,6 +150,14 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Create player
     this.player = new Player(this, this.worldWidth / 2, this.worldHeight / 2, this.weaponSystem)
 
+    // Load cross-game synergy from Dot Clicker
+    this.player.loadClickerSynergy()
+    if (this.player.clickerSynergyBonus > 0) {
+      this.time.delayedCall(2000, () => {
+        this.addKillFeedMessage(`🔗 Clicker Synergy: +${Math.round(this.player.clickerSynergyBonus * 100)}% damage!`, '#f39c12', 5000)
+      })
+    }
+
     // Get current user from auth context (passed via registry from React)
     const currentUser = this.registry.get('currentUser')
     if (currentUser) {
@@ -161,13 +169,12 @@ export default class GameSceneV3 extends Phaser.Scene {
     const loadSaveData = this.registry.get('loadSaveData')
     if (loadSaveData) {
       this.currentUserId = loadSaveData.user_id
-      this.currentPlayerName = loadSaveData.player_name || this.currentPlayerName
       this.currentSaveSlot = loadSaveData.save_slot
       this.saveManager.applySaveData(loadSaveData, this.player, this.shopManager)
 
-      // Set floor manager to the correct floor (convert old stage_number to floor)
-      if (loadSaveData.stage_number) {
-        this.floorManager.setFloor(loadSaveData.stage_number)
+      // Set floor manager to the correct floor
+      if (loadSaveData.floor_number) {
+        this.floorManager.setFloor(loadSaveData.floor_number)
       }
 
       this.registry.remove('loadSaveData') // Clear the registry
@@ -1668,6 +1675,17 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Check for achievements
     this.checkAchievementsProgress()
 
+    // Save progress for cross-game synergy with Dot Clicker
+    try {
+      const currentProgress = JSON.parse(localStorage.getItem('dotslayer_progress') || '{"floorsCleared":0,"highestFloor":0}')
+      currentProgress.floorsCleared = floorNum
+      currentProgress.highestFloor = Math.max(currentProgress.highestFloor || 0, floorNum)
+      currentProgress.lastPlayed = Date.now()
+      localStorage.setItem('dotslayer_progress', JSON.stringify(currentProgress))
+    } catch (e) {
+      console.warn('Failed to save cross-game progress:', e)
+    }
+
     // Check if more floors
     if (this.floorManager.nextFloor()) {
       // Next floor
@@ -2048,6 +2066,18 @@ export default class GameSceneV3 extends Phaser.Scene {
   private gameWon() {
     this.addKillFeedMessage('🏆 YOU WON! ALL STAGES CLEARED! 🏆', '#2ecc71', 6000)
     this.showRunStats(true)
+
+    // Save progress for cross-game synergy - GAME WON!
+    try {
+      const currentProgress = JSON.parse(localStorage.getItem('dotslayer_progress') || '{"floorsCleared":0,"highestFloor":0}')
+      currentProgress.floorsCleared = 100
+      currentProgress.highestFloor = 100
+      currentProgress.gamesWon = (currentProgress.gamesWon || 0) + 1
+      currentProgress.lastPlayed = Date.now()
+      localStorage.setItem('dotslayer_progress', JSON.stringify(currentProgress))
+    } catch (e) {
+      console.warn('Failed to save cross-game progress:', e)
+    }
 
     // Submit to leaderboard
     this.time.delayedCall(2000, () => {

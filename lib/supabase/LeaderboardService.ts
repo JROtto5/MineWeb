@@ -12,23 +12,27 @@ export class LeaderboardService {
     return LeaderboardService.instance
   }
 
-  // Submit score to leaderboard (NOW USES user_id and display_name)
+  // Submit score to leaderboard
   async submitScore(
     userId: string,
     displayName: string,
     score: number,
-    stageReached: number,
+    floorReached: number,
     kills: number,
-    timePlayed: number
+    timePlayed: number,
+    wasVictory: boolean = false,
+    runData?: Record<string, any>
   ): Promise<{ success: boolean; message: string; rank?: number }> {
     try {
       const entry: LeaderboardEntry = {
         user_id: userId,
         display_name: displayName,
         score: score,
-        stage_reached: stageReached,
+        floor_reached: floorReached,
         kills: kills,
         time_played: timePlayed,
+        was_victory: wasVictory,
+        run_data: runData || {}
       }
 
       const { error } = await supabase.from('leaderboard').insert(entry)
@@ -40,7 +44,9 @@ export class LeaderboardService {
 
       return {
         success: true,
-        message: `Score submitted! You ranked #${rank}`,
+        message: wasVictory
+          ? `Victory! You ranked #${rank}!`
+          : `Score submitted! You ranked #${rank}`,
         rank: rank,
       }
     } catch (error: any) {
@@ -69,20 +75,38 @@ export class LeaderboardService {
     }
   }
 
-  // Get top scores by stage
-  async getTopByStage(limit: number = 10): Promise<LeaderboardEntry[]> {
+  // Get top scores by floor
+  async getTopByFloor(limit: number = 10): Promise<LeaderboardEntry[]> {
     try {
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
-        .order('stage_reached', { ascending: false })
+        .order('floor_reached', { ascending: false })
         .order('score', { ascending: false })
         .limit(limit)
 
       if (error) throw error
       return (data as LeaderboardEntry[]) || []
     } catch (error) {
-      console.error('Get top by stage error:', error)
+      console.error('Get top by floor error:', error)
+      return []
+    }
+  }
+
+  // Get victories only
+  async getVictories(limit: number = 10): Promise<LeaderboardEntry[]> {
+    try {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('was_victory', true)
+        .order('score', { ascending: false })
+        .limit(limit)
+
+      if (error) throw error
+      return (data as LeaderboardEntry[]) || []
+    } catch (error) {
+      console.error('Get victories error:', error)
       return []
     }
   }
@@ -103,7 +127,7 @@ export class LeaderboardService {
     }
   }
 
-  // Get player's best score (NOW USES user_id)
+  // Get player's best score
   async getPlayerBest(userId: string): Promise<LeaderboardEntry | null> {
     try {
       const { data, error } = await supabase
@@ -114,11 +138,29 @@ export class LeaderboardService {
         .limit(1)
         .single()
 
-      if (error) throw error
+      if (error && error.code !== 'PGRST116') throw error
       return data as LeaderboardEntry
     } catch (error) {
       console.error('Get player best error:', error)
       return null
+    }
+  }
+
+  // Get player's all scores
+  async getPlayerScores(userId: string, limit: number = 10): Promise<LeaderboardEntry[]> {
+    try {
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+      if (error) throw error
+      return (data as LeaderboardEntry[]) || []
+    } catch (error) {
+      console.error('Get player scores error:', error)
+      return []
     }
   }
 
@@ -131,7 +173,7 @@ export class LeaderboardService {
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
-        .gte('timestamp', today.toISOString())
+        .gte('created_at', today.toISOString())
         .order('score', { ascending: false })
         .limit(limit)
 
@@ -152,7 +194,7 @@ export class LeaderboardService {
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
-        .gte('timestamp', weekAgo.toISOString())
+        .gte('created_at', weekAgo.toISOString())
         .order('score', { ascending: false })
         .limit(limit)
 
@@ -164,3 +206,5 @@ export class LeaderboardService {
     }
   }
 }
+
+export const leaderboardService = LeaderboardService.getInstance()

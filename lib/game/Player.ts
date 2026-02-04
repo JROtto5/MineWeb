@@ -31,6 +31,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   public shopMoneyBonus = 0
   public shopXPBonus = 0
 
+  // Cross-game synergy bonus from Dot Clicker
+  public clickerSynergyBonus = 0
+
   // Abilities
   private hasDash = false
   private hasShield = false
@@ -295,6 +298,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.recalculateSpeed()
   }
 
+  // CROSS-GAME SYNERGY: Load bonus from Dot Clicker
+  loadClickerSynergy() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const clickerSave = localStorage.getItem('dotclicker_save')
+        if (clickerSave) {
+          const save = JSON.parse(clickerSave)
+          const prestiges = save.totalPrestiges || 0
+          // 5% damage bonus per prestige
+          this.clickerSynergyBonus = prestiges * 0.05
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load clicker synergy:', e)
+    }
+  }
+
   // SHOP SYSTEM INTEGRATION
   applyShopBonuses(shopManager: ShopManager) {
     this.shopManager = shopManager
@@ -348,6 +368,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Apply skill bonus
     const skillDamageBonus = this.skillTree.getTotalBonus('damage')
     damage *= (1 + skillDamageBonus + this.shopDamageBonus)
+
+    // Apply cross-game synergy bonus from Dot Clicker
+    damage *= (1 + this.clickerSynergyBonus)
 
     // Apply power-up bonus
     if (this.damageBoostActive) {

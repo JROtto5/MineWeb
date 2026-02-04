@@ -1,4 +1,4 @@
-import { supabase, SaveData } from './client'
+import { supabase, SlayerSave } from './client'
 import Player from '../game/Player'
 import { ShopManager } from '../game/ShopSystem'
 import { SkillTreeManager } from '../game/SkillTree'
@@ -15,16 +15,23 @@ export class SaveManager {
     return SaveManager.instance
   }
 
-  // Save game to cloud (NOW USES user_id)
+  // Save game to cloud
   async saveGame(
     userId: string,
     saveSlot: number,
     player: Player,
-    stageNumber: number,
-    shopManager: ShopManager
+    floorNumber: number,
+    shopManager: ShopManager,
+    runStats?: {
+      totalKills: number
+      totalMoney: number
+      highestCombo: number
+      bossesKilled: number
+      startTime: number
+    }
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const saveData: SaveData = {
+      const saveData: Partial<SlayerSave> = {
         user_id: userId,
         save_slot: saveSlot,
         player_data: {
@@ -38,32 +45,19 @@ export class SaveManager {
           shopItems: this.serializeShop(shopManager),
           currentWeapon: player.getCurrentWeapon(),
         },
-        stage_number: stageNumber,
+        floor_number: floorNumber,
         is_alive: true,
+        run_stats: runStats || {}
       }
 
-      // Check if save slot already exists for this user
-      const { data: existing } = await supabase
-        .from('saves')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('save_slot', saveSlot)
-        .single()
+      // Upsert - insert or update based on user_id + save_slot
+      const { error } = await supabase
+        .from('slayer_saves')
+        .upsert(saveData, {
+          onConflict: 'user_id,save_slot'
+        })
 
-      if (existing) {
-        // Update existing save
-        const { error } = await supabase
-          .from('saves')
-          .update(saveData)
-          .eq('id', existing.id)
-
-        if (error) throw error
-      } else {
-        // Create new save
-        const { error } = await supabase.from('saves').insert(saveData)
-
-        if (error) throw error
-      }
+      if (error) throw error
 
       return {
         success: true,
@@ -78,20 +72,28 @@ export class SaveManager {
     }
   }
 
-  // Load game from cloud (NOW USES user_id)
+  // Load game from cloud
   async loadGame(
     userId: string,
     saveSlot: number
-  ): Promise<{ success: boolean; data?: SaveData; message: string }> {
+  ): Promise<{ success: boolean; data?: SlayerSave; message: string }> {
     try {
       const { data, error } = await supabase
-        .from('saves')
+        .from('slayer_saves')
         .select('*')
         .eq('user_id', userId)
         .eq('save_slot', saveSlot)
         .single()
 
-      if (error) throw error
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return {
+            success: false,
+            message: `No save found in slot ${saveSlot}`,
+          }
+        }
+        throw error
+      }
 
       if (!data) {
         return {
@@ -102,7 +104,7 @@ export class SaveManager {
 
       return {
         success: true,
-        data: data as SaveData,
+        data: data as SlayerSave,
         message: `Game loaded from slot ${saveSlot}!`,
       }
     } catch (error: any) {
@@ -114,31 +116,31 @@ export class SaveManager {
     }
   }
 
-  // List all saves for a user (NOW USES user_id)
-  async listSaves(userId: string): Promise<SaveData[]> {
+  // List all saves for a user
+  async listSaves(userId: string): Promise<SlayerSave[]> {
     try {
       const { data, error } = await supabase
-        .from('saves')
+        .from('slayer_saves')
         .select('*')
         .eq('user_id', userId)
         .order('save_slot')
 
       if (error) throw error
-      return (data as SaveData[]) || []
+      return (data as SlayerSave[]) || []
     } catch (error) {
       console.error('List saves error:', error)
       return []
     }
   }
 
-  // Delete a save (NOW USES user_id)
+  // Delete a save
   async deleteSave(
     userId: string,
     saveSlot: number
   ): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
-        .from('saves')
+        .from('slayer_saves')
         .delete()
         .eq('user_id', userId)
         .eq('save_slot', saveSlot)
@@ -158,14 +160,14 @@ export class SaveManager {
     }
   }
 
-  // Mark a save as dead (NOW USES user_id)
+  // Mark a save as dead
   async markSaveDead(
     userId: string,
     saveSlot: number
   ): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
-        .from('saves')
+        .from('slayer_saves')
         .update({ is_alive: false })
         .eq('user_id', userId)
         .eq('save_slot', saveSlot)
@@ -186,7 +188,7 @@ export class SaveManager {
   }
 
   // Apply loaded save data to player
-  applySaveData(saveData: SaveData, player: Player, shopManager: ShopManager) {
+  applySaveData(saveData: SlayerSave, player: Player, shopManager: ShopManager) {
     const pd = saveData.player_data
 
     player.level = pd.level
@@ -218,7 +220,6 @@ export class SaveManager {
 
   private serializeSkills(skillTree: SkillTreeManager): Record<string, number> {
     const skills: Record<string, number> = {}
-    // Get all skill levels
     const allSkills = skillTree.getAllSkills()
     allSkills.forEach(({ skill, level }) => {
       if (level > 0) {
@@ -230,7 +231,6 @@ export class SaveManager {
 
   private serializeShop(shopManager: ShopManager): Record<string, number> {
     const items: Record<string, number> = {}
-    // Get all purchased items with their levels
     const allItems = shopManager.getAllItems()
     allItems.forEach(({ item, level }) => {
       if (level > 0) {
@@ -240,3 +240,6 @@ export class SaveManager {
     return items
   }
 }
+
+// Export singleton and type
+export const saveManager = SaveManager.getInstance()
