@@ -3,7 +3,26 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../lib/context/AuthContext'
+import { leaderboardService, LeaderboardEntry } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase/client'
 import Link from 'next/link'
+
+interface ClickerLeaderboardEntry {
+  user_id: string
+  display_name: string
+  total_dots: number
+  total_prestiges: number
+  highest_dps: number
+}
+
+function formatNumber(n: number): string {
+  if (n < 1000) return Math.floor(n).toString()
+  if (n < 1000000) return (n / 1000).toFixed(1) + 'K'
+  if (n < 1000000000) return (n / 1000000).toFixed(2) + 'M'
+  if (n < 1000000000000) return (n / 1000000000).toFixed(2) + 'B'
+  if (n < 1000000000000000) return (n / 1000000000000).toFixed(2) + 'T'
+  return (n / 1000000000000000).toFixed(2) + 'Q'
+}
 
 interface SynergyStats {
   slayerFloorsCleared: number
@@ -27,12 +46,59 @@ export default function GameHub() {
     clickerTotalDots: 0,
     synergyBonus: 0
   })
+  const [slayerLeaderboard, setSlayerLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [clickerLeaderboard, setClickerLeaderboard] = useState<ClickerLeaderboardEntry[]>([])
+  const [activeLeaderboard, setActiveLeaderboard] = useState<'slayer' | 'clicker'>('slayer')
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [user, loading, router])
+
+  // Load leaderboards from Supabase
+  useEffect(() => {
+    const loadLeaderboards = async () => {
+      try {
+        // Load Slayer leaderboard
+        const slayerScores = await leaderboardService.getTopScores(10)
+        setSlayerLeaderboard(slayerScores)
+
+        // Load Clicker leaderboard from clicker_saves table
+        const { data: clickerData } = await supabase
+          .from('clicker_saves')
+          .select('user_id, total_dots, total_prestiges, stats')
+          .order('total_dots', { ascending: false })
+          .limit(10)
+
+        if (clickerData) {
+          // Get user profiles for display names
+          const userIds = clickerData.map(c => c.user_id)
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('id, display_name')
+            .in('id', userIds)
+
+          const profileMap = new Map(profiles?.map(p => [p.id, p.display_name]) || [])
+
+          const clickerEntries: ClickerLeaderboardEntry[] = clickerData.map(c => ({
+            user_id: c.user_id,
+            display_name: profileMap.get(c.user_id) || 'Anonymous',
+            total_dots: c.total_dots || 0,
+            total_prestiges: c.total_prestiges || 0,
+            highest_dps: c.stats?.highestDps || 0
+          }))
+          setClickerLeaderboard(clickerEntries)
+        }
+      } catch (error) {
+        console.error('Failed to load leaderboards:', error)
+      }
+    }
+
+    if (user) {
+      loadLeaderboards()
+    }
+  }, [user])
 
   // Load synergy stats from localStorage
   useEffect(() => {
@@ -259,6 +325,76 @@ export default function GameHub() {
             <div className="synergy-achievement">
               <span className="achievement-icon">🏆</span>
               <span>DotSlayer Champion x{synergyStats.slayerGamesWon}</span>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Leaderboards Section */}
+      <section className="leaderboards-section">
+        <div className="leaderboards-header">
+          <h3 className="leaderboards-title">🏆 LEADERBOARDS</h3>
+          <div className="leaderboard-tabs">
+            <button
+              className={`lb-tab ${activeLeaderboard === 'slayer' ? 'active slayer-active' : ''}`}
+              onClick={() => setActiveLeaderboard('slayer')}
+            >
+              ⚔️ DotSlayer
+            </button>
+            <button
+              className={`lb-tab ${activeLeaderboard === 'clicker' ? 'active clicker-active' : ''}`}
+              onClick={() => setActiveLeaderboard('clicker')}
+            >
+              ● DotClicker
+            </button>
+          </div>
+        </div>
+
+        <div className="leaderboard-content">
+          {activeLeaderboard === 'slayer' ? (
+            <div className="leaderboard-list slayer-list">
+              {slayerLeaderboard.length > 0 ? (
+                slayerLeaderboard.map((entry, index) => (
+                  <div key={entry.id || index} className={`lb-entry ${index < 3 ? `top-${index + 1}` : ''}`}>
+                    <span className="lb-rank">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    </span>
+                    <span className="lb-name">{entry.display_name || 'Anonymous'}</span>
+                    <div className="lb-stats">
+                      <span className="lb-floor">Floor {entry.floor_reached}</span>
+                      <span className="lb-score">{formatNumber(entry.score)} pts</span>
+                    </div>
+                    {entry.was_victory && <span className="lb-victory">👑</span>}
+                  </div>
+                ))
+              ) : (
+                <div className="lb-empty">
+                  <span>No scores yet!</span>
+                  <span className="lb-hint">Be the first to conquer the tower</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="leaderboard-list clicker-list">
+              {clickerLeaderboard.length > 0 ? (
+                clickerLeaderboard.map((entry, index) => (
+                  <div key={entry.user_id} className={`lb-entry ${index < 3 ? `top-${index + 1}` : ''}`}>
+                    <span className="lb-rank">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    </span>
+                    <span className="lb-name">{entry.display_name}</span>
+                    <div className="lb-stats">
+                      <span className="lb-dots">{formatNumber(entry.total_dots)} dots</span>
+                      <span className="lb-prestiges">⭐ {entry.total_prestiges}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="lb-empty">
+                  <span>No clickers yet!</span>
+                  <span className="lb-hint">Start clicking to claim your spot</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1005,6 +1141,170 @@ export default function GameHub() {
           color: #aab;
         }
 
+        /* Leaderboards Section */
+        .leaderboards-section {
+          max-width: 700px;
+          margin: 30px auto 40px;
+          padding: 0 20px;
+          position: relative;
+          z-index: 10;
+        }
+
+        .leaderboards-header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+
+        .leaderboards-title {
+          font-size: 1.3rem;
+          font-weight: 700;
+          letter-spacing: 3px;
+          color: #f39c12;
+          margin-bottom: 15px;
+        }
+
+        .leaderboard-tabs {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .lb-tab {
+          padding: 10px 25px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 20px;
+          color: #778;
+          cursor: pointer;
+          transition: all 0.3s;
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+
+        .lb-tab:hover {
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .lb-tab.active {
+          color: white;
+        }
+
+        .lb-tab.slayer-active {
+          background: linear-gradient(135deg, rgba(255, 107, 0, 0.2), rgba(255, 50, 0, 0.2));
+          border-color: rgba(255, 107, 0, 0.4);
+          color: #ff6b00;
+        }
+
+        .lb-tab.clicker-active {
+          background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 150, 255, 0.2));
+          border-color: rgba(0, 217, 255, 0.4);
+          color: #00d9ff;
+        }
+
+        .leaderboard-content {
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
+          border-radius: 16px;
+          padding: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .leaderboard-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .lb-entry {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 15px;
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 10px;
+          transition: all 0.2s;
+        }
+
+        .lb-entry:hover {
+          background: rgba(0, 0, 0, 0.3);
+        }
+
+        .lb-entry.top-1 {
+          background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 200, 0, 0.1));
+          border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .lb-entry.top-2 {
+          background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(169, 169, 169, 0.1));
+          border: 1px solid rgba(192, 192, 192, 0.2);
+        }
+
+        .lb-entry.top-3 {
+          background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(180, 100, 50, 0.1));
+          border: 1px solid rgba(205, 127, 50, 0.2);
+        }
+
+        .lb-rank {
+          font-size: 1.1rem;
+          width: 35px;
+          text-align: center;
+        }
+
+        .lb-name {
+          flex: 1;
+          font-weight: 600;
+          color: #ddd;
+        }
+
+        .lb-stats {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+        }
+
+        .slayer-list .lb-floor {
+          color: #ff6b00;
+          font-weight: 700;
+          font-size: 0.9rem;
+        }
+
+        .slayer-list .lb-score {
+          color: #888;
+          font-size: 0.8rem;
+        }
+
+        .clicker-list .lb-dots {
+          color: #00d9ff;
+          font-weight: 700;
+          font-size: 0.9rem;
+        }
+
+        .clicker-list .lb-prestiges {
+          color: #f39c12;
+          font-size: 0.8rem;
+        }
+
+        .lb-victory {
+          font-size: 1rem;
+          margin-left: 5px;
+        }
+
+        .lb-empty {
+          text-align: center;
+          padding: 40px 20px;
+          color: #556;
+        }
+
+        .lb-empty span {
+          display: block;
+        }
+
+        .lb-hint {
+          font-size: 0.85rem;
+          color: #445;
+          margin-top: 8px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
           .hub-title { font-size: 2.2rem; }
@@ -1016,6 +1316,8 @@ export default function GameHub() {
           .game-features { grid-template-columns: 1fr; }
           .synergy-stats { grid-template-columns: 1fr; gap: 15px; }
           .orb { display: none; }
+          .leaderboard-tabs { flex-direction: column; gap: 8px; }
+          .lb-tab { width: 100%; }
         }
       `}</style>
     </div>

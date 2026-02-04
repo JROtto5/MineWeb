@@ -71,6 +71,8 @@ export default class GameSceneV3 extends Phaser.Scene {
   private skillTreeUI: any = null
   private pauseMenuUI: any[] = []
   private isPaused = false
+  private autoSaveTimer: Phaser.Time.TimerEvent | null = null
+  private lastAutoSave = 0
   private skillTreeScrollOffset = 0
   private skillTreeSkillElements: any[] = []
   private enemyLocators: any[] = []
@@ -243,6 +245,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // UI updates
     this.updateUI()
+
+    // Auto-save every 60 seconds
+    this.setupAutoSave()
 
     // Welcome message - DotSlayer!
     this.addKillFeedMessage('⚡ DOTSLAYER - Systems Online!', '#00d9ff', 5000)
@@ -1686,6 +1691,9 @@ export default class GameSceneV3 extends Phaser.Scene {
       console.warn('Failed to save cross-game progress:', e)
     }
 
+    // Auto-save on floor completion (important checkpoint!)
+    this.performAutoSave()
+
     // Check if more floors
     if (this.floorManager.nextFloor()) {
       // Next floor
@@ -2043,6 +2051,58 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.pauseMenuUI.forEach(el => el.destroy())
     this.pauseMenuUI = []
+  }
+
+  // Auto-save system
+  private setupAutoSave() {
+    // Only auto-save if user is logged in and has a save slot
+    if (!this.currentUserId) return
+
+    // Auto-save every 60 seconds
+    this.autoSaveTimer = this.time.addEvent({
+      delay: 60000, // 60 seconds
+      callback: () => this.performAutoSave(),
+      loop: true
+    })
+
+    // Also save when completing a floor (handled in completeFloor)
+  }
+
+  private async performAutoSave() {
+    // Don't auto-save if paused, dead, or no user
+    if (this.isPaused || this.player.isDead() || !this.currentUserId) return
+
+    // Don't save too frequently
+    const now = Date.now()
+    if (now - this.lastAutoSave < 30000) return // Min 30 seconds between saves
+
+    const saveSlot = this.currentSaveSlot || 1
+    this.currentSaveSlot = saveSlot
+
+    try {
+      const result = await this.saveManager.saveGame(
+        this.currentUserId,
+        saveSlot,
+        this.player,
+        this.floorManager.getCurrentFloorNumber(),
+        this.shopManager,
+        {
+          totalKills: this.runStats.totalKills,
+          totalMoney: this.runStats.totalMoney,
+          highestCombo: this.runStats.highestCombo,
+          bossesKilled: this.runStats.bossesKilled,
+          startTime: this.runStats.startTime
+        }
+      )
+
+      if (result.success) {
+        this.lastAutoSave = now
+        // Show subtle notification
+        this.addKillFeedMessage('💾 Auto-saved', '#888', 2000)
+      }
+    } catch (error) {
+      console.error('Auto-save failed:', error)
+    }
   }
 
   private gameOver() {
