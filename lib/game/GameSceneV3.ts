@@ -274,13 +274,13 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.player.classDamageBonus = playerClass.bonusDamage / 100
     }
 
-    // Apply speed bonus
+    // Apply speed bonus via shop bonus system (cleaner integration)
     if (playerClass.bonusSpeed !== 0) {
-      const speedMult = 1 + (playerClass.bonusSpeed / 100)
-      this.player.speed = Math.floor(this.player.speed * speedMult)
+      // Add to shop speed bonus - this gets properly capped in recalculateSpeed
+      this.player.shopSpeedBonus += playerClass.bonusSpeed / 100
     }
 
-    // Apply fire rate bonus
+    // Apply fire rate bonus (capped in getModifiedFireRate)
     if (playerClass.bonusFireRate !== 0) {
       this.player.classFireRateBonus = playerClass.bonusFireRate / 100
     }
@@ -290,7 +290,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Set starting weapon based on class
     if (playerClass.startingWeapon > 0) {
-      this.player.currentWeaponIndex = Math.min(playerClass.startingWeapon, this.player.weapons.length - 1)
+      this.player.setCurrentWeapon(Math.min(playerClass.startingWeapon, this.player.weapons.length - 1))
     }
 
     // Show class message

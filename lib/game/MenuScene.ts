@@ -592,8 +592,8 @@ export default class MenuScene extends Phaser.Scene {
     overlay.setOrigin(0)
     this.classSelectionContainer.add(overlay)
 
-    // Title
-    const title = this.add.text(centerX, 60, 'CHOOSE YOUR CLASS', {
+    // Title - positioned relative to center
+    const title = this.add.text(centerX, centerY - 280, 'CHOOSE YOUR CLASS', {
       fontSize: '36px',
       fontStyle: 'bold',
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
@@ -603,19 +603,26 @@ export default class MenuScene extends Phaser.Scene {
     this.classSelectionContainer.add(title)
 
     // Subtitle
-    const subtitle = this.add.text(centerX, 100, 'Each class has unique bonuses and starting weapons', {
+    const subtitle = this.add.text(centerX, centerY - 240, 'Each class has unique bonuses and starting weapons', {
       fontSize: '16px',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
     }).setOrigin(0.5)
     this.classSelectionContainer.add(subtitle)
 
-    // Create class cards - 3 per row
+    // Create class cards - 3 per row, CENTERED on screen
     const cardWidth = 180
-    const cardHeight = 200
+    const cardHeight = 180
     const cardsPerRow = 3
     const spacing = 20
-    const startX = centerX - ((cardWidth + spacing) * (cardsPerRow - 1)) / 2
-    const startY = 150
+
+    // Calculate total grid dimensions
+    const numRows = Math.ceil(PLAYER_CLASSES.length / cardsPerRow)
+    const totalGridWidth = cardsPerRow * cardWidth + (cardsPerRow - 1) * spacing
+    const totalGridHeight = numRows * cardHeight + (numRows - 1) * spacing
+
+    // Center the grid
+    const startX = centerX - totalGridWidth / 2 + cardWidth / 2
+    const startY = centerY - totalGridHeight / 2 + cardHeight / 2 - 20
 
     PLAYER_CLASSES.forEach((playerClass, index) => {
       const row = Math.floor(index / cardsPerRow)
@@ -626,12 +633,13 @@ export default class MenuScene extends Phaser.Scene {
       this.createClassCard(playerClass, x, y, cardWidth, cardHeight)
     })
 
-    // Back button
-    const backBtn = this.add.rectangle(centerX - 100, height - 60, 150, 45, COLORS.panel, 0.9)
+    // Back button - positioned below the cards
+    const buttonY = centerY + 180
+    const backBtn = this.add.rectangle(centerX - 100, buttonY, 150, 45, COLORS.panel, 0.9)
     backBtn.setStrokeStyle(2, COLORS.accent, 0.5)
     backBtn.setInteractive({ useHandCursor: true })
 
-    const backText = this.add.text(centerX - 100, height - 60, '← BACK', {
+    const backText = this.add.text(centerX - 100, buttonY, '← BACK', {
       fontSize: '20px',
       fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
@@ -644,11 +652,11 @@ export default class MenuScene extends Phaser.Scene {
     this.classSelectionContainer.add([backBtn, backText])
 
     // Start button
-    const startBtn = this.add.rectangle(centerX + 100, height - 60, 150, 45, COLORS.accent, 0.9)
+    const startBtn = this.add.rectangle(centerX + 100, buttonY, 150, 45, COLORS.accent, 0.9)
     startBtn.setStrokeStyle(2, COLORS.accent2, 1)
     startBtn.setInteractive({ useHandCursor: true })
 
-    const startText = this.add.text(centerX + 100, height - 60, 'START →', {
+    const startText = this.add.text(centerX + 100, buttonY, 'START →', {
       fontSize: '20px',
       fontStyle: 'bold',
       color: '#ffffff',
@@ -677,29 +685,29 @@ export default class MenuScene extends Phaser.Scene {
     bg.setStrokeStyle(isSelected ? 3 : 2, isSelected ? COLORS.highlight : COLORS.accent, isSelected ? 1 : 0.5)
     bg.setInteractive({ useHandCursor: true })
 
-    // Icon
-    const icon = this.add.text(x, y - 60, playerClass.icon, {
-      fontSize: '40px',
+    // Icon - centered in upper portion
+    const icon = this.add.text(x, y - 50, playerClass.icon, {
+      fontSize: '36px',
     }).setOrigin(0.5)
 
     // Name
-    const name = this.add.text(x, y - 20, playerClass.name, {
-      fontSize: '16px',
+    const name = this.add.text(x, y - 15, playerClass.name, {
+      fontSize: '14px',
       fontStyle: 'bold',
       color: isSelected ? '#ffffff' : `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
     }).setOrigin(0.5)
 
-    // Description
+    // Description - compact
     const desc = this.add.text(x, y + 10, playerClass.description, {
-      fontSize: '11px',
+      fontSize: '10px',
       color: isSelected ? '#dddddd' : `#${COLORS.text.toString(16).padStart(6, '0')}`,
-      wordWrap: { width: width - 20 },
+      wordWrap: { width: width - 15 },
       align: 'center',
     }).setOrigin(0.5, 0)
 
-    // Special ability
-    const special = this.add.text(x, y + 65, playerClass.special, {
-      fontSize: '12px',
+    // Special ability - at bottom
+    const special = this.add.text(x, y + 55, playerClass.special, {
+      fontSize: '11px',
       fontStyle: 'bold',
       color: isSelected ? '#ffff00' : `#${COLORS.gold.toString(16).padStart(6, '0')}`,
       wordWrap: { width: width - 10 },

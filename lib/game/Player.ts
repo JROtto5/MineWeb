@@ -250,31 +250,38 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   activateDamageBoost(duration: number) {
+    // Don't stack - just extend duration if already active
     this.damageBoostActive = true
-    this.damageBoostEnd = this.scene.time.now + duration
+    this.damageBoostEnd = Math.max(this.damageBoostEnd, this.scene.time.now + duration)
     this.setTint(0xff6b6b)
   }
 
   activateSpeedBoost(duration: number) {
-    this.speedBoostActive = true
-    this.speedBoostEnd = this.scene.time.now + duration
-    this.speed = this.baseSpeed * 1.5
+    // Don't stack - just extend duration if already active
+    if (!this.speedBoostActive) {
+      this.speedBoostActive = true
+      // Store the speed multiplier flag, don't directly modify speed
+    }
+    this.speedBoostEnd = Math.max(this.speedBoostEnd, this.scene.time.now + duration)
   }
 
   activateInvincibility(duration: number) {
+    // Don't stack - just extend duration
     this.invincibilityActive = true
-    this.invincibilityEnd = this.scene.time.now + duration
+    this.invincibilityEnd = Math.max(this.invincibilityEnd, this.scene.time.now + duration)
     this.setAlpha(0.7)
   }
 
   activateMultiShot(duration: number) {
+    // Don't stack - just extend duration
     this.multiShotActive = true
-    this.multiShotEnd = this.scene.time.now + duration
+    this.multiShotEnd = Math.max(this.multiShotEnd, this.scene.time.now + duration)
   }
 
   activateRapidFire(duration: number) {
+    // Don't stack - just extend duration
     this.rapidFireActive = true
-    this.rapidFireEnd = this.scene.time.now + duration
+    this.rapidFireEnd = Math.max(this.rapidFireEnd, this.scene.time.now + duration)
   }
 
   updatePowerUps() {
@@ -286,9 +293,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       if (!this.invincibilityActive) this.clearTint()
     }
 
-    // Check speed boost
-    if (this.speedBoostActive && currentTime >= this.speedBoostEnd) {
-      this.speedBoostActive = false
+    // Check speed boost - recalculate speed every frame while active
+    if (this.speedBoostActive) {
+      if (currentTime >= this.speedBoostEnd) {
+        this.speedBoostActive = false
+      }
       this.recalculateSpeed()
     }
 
@@ -378,19 +387,25 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
   private recalculateSpeed() {
     const skillSpeedBonus = this.skillTree.getTotalBonus('speed')
-    // Cap the bonus multiplier to prevent extreme speeds
-    const totalBonus = Math.min(skillSpeedBonus + this.shopSpeedBonus, 2.0) // Max 200% bonus
+    // Cap the bonus multiplier to prevent extreme speeds (max 100% bonus from skills/shop)
+    const totalBonus = Math.min(skillSpeedBonus + this.shopSpeedBonus, 1.0)
+
+    // Base speed is 200, modified by skills and shop (NOT class - that's applied separately)
     this.baseSpeed = 200 * (1 + totalBonus)
 
+    // Enforce max base speed
+    this.baseSpeed = Math.min(this.baseSpeed, 400)
+
+    // Calculate final speed
+    this.speed = this.baseSpeed
+
+    // Apply speed boost power-up (capped at 1.3x to prevent crazy speeds)
     if (this.speedBoostActive) {
-      this.speed = this.baseSpeed * 1.5
-    } else {
-      this.speed = this.baseSpeed
+      this.speed *= 1.3
     }
 
     // Enforce absolute max speed
     this.speed = Math.min(this.speed, this.MAX_SPEED)
-    this.baseSpeed = Math.min(this.baseSpeed, this.MAX_SPEED)
   }
 
   getCurrentDamage(): number {
@@ -435,23 +450,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   getModifiedFireRate(): number {
     let fireRate = this.weapons[this.currentWeapon].fireRate
 
-    // Apply skill bonus (cap total bonus at 80% reduction)
+    // Apply skill bonus (cap total bonus at 60% reduction to prevent too fast)
     const skillFireRateBonus = this.skillTree.getTotalBonus('fireRate')
-    const totalBonus = Math.min(skillFireRateBonus + this.shopFireRateBonus + this.classFireRateBonus, 0.8)
+    const totalBonus = Math.min(skillFireRateBonus + this.shopFireRateBonus + this.classFireRateBonus, 0.6)
     fireRate *= (1 - totalBonus)
 
-    // Apply rapid fire power-up
+    // Apply rapid fire power-up (0.7x fire rate = 30% faster, not 50%)
     if (this.rapidFireActive) {
-      fireRate *= 0.5
+      fireRate *= 0.7
     }
 
-    // Time slow ability
+    // Time slow ability (0.8x fire rate = 20% faster)
     if (this.timeSlowActive) {
-      fireRate *= 0.5 // Fire twice as fast during time slow
+      fireRate *= 0.8
     }
 
-    // IMPORTANT: Cap minimum fire rate at 30ms to prevent insane shooting
-    const MIN_FIRE_RATE = 30
+    // IMPORTANT: Cap minimum fire rate at 50ms to prevent insane shooting
+    const MIN_FIRE_RATE = 50
     return Math.max(fireRate, MIN_FIRE_RATE)
   }
 
