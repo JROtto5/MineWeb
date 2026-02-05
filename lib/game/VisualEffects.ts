@@ -756,6 +756,294 @@ export class VisualEffects {
     }
   }
 
+  // ==================== EXPLOSION EFFECT ====================
+
+  /**
+   * Create explosion effect (used by nuke power-up)
+   */
+  createExplosion(x: number, y: number, size: number = 1) {
+    const colors = [0xff6600, 0xff0000, 0xffff00, 0xff9900]
+
+    // Central flash
+    const flash = this.scene.add.circle(x, y, 20 * size, 0xffffff)
+      .setDepth(5500)
+      .setAlpha(1)
+
+    this.scene.tweens.add({
+      targets: flash,
+      scale: 3,
+      alpha: 0,
+      duration: 250,
+      ease: 'Cubic.easeOut',
+      onComplete: () => flash.destroy()
+    })
+
+    // Expanding rings
+    for (let ring = 0; ring < 3; ring++) {
+      this.scene.time.delayedCall(ring * 50, () => {
+        const expandRing = this.scene.add.circle(x, y, 15 * size, 0, 0)
+          .setStrokeStyle(6 - ring * 2, Phaser.Math.RND.pick(colors))
+          .setDepth(5500)
+
+        this.scene.tweens.add({
+          targets: expandRing,
+          scale: 3 + ring,
+          alpha: 0,
+          duration: 400,
+          ease: 'Cubic.easeOut',
+          onComplete: () => expandRing.destroy()
+        })
+      })
+    }
+
+    // Particle burst
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2
+      const speed = Phaser.Math.Between(60, 150) * size
+      const particleSize = Phaser.Math.Between(3, 8)
+      const color = Phaser.Math.RND.pick(colors)
+
+      const particle = this.scene.add.circle(x, y, particleSize, color)
+        .setDepth(5500)
+
+      this.scene.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        alpha: 0,
+        scale: 0.2,
+        duration: Phaser.Math.Between(300, 500),
+        ease: 'Cubic.easeOut',
+        onComplete: () => particle.destroy()
+      })
+    }
+  }
+
+  // ==================== BOSS ENTRANCE EFFECT ====================
+
+  /**
+   * Create epic boss entrance effect
+   */
+  createBossEntrance(x: number, y: number, bossName: string) {
+    const screenWidth = this.scene.scale.width
+    const screenHeight = this.scene.scale.height
+
+    // Dark overlay
+    const overlay = this.scene.add.rectangle(
+      screenWidth / 2,
+      screenHeight / 2,
+      screenWidth * 2,
+      screenHeight * 2,
+      0x000000, 0
+    ).setScrollFactor(0).setDepth(9990)
+
+    // Boss warning
+    const warningText = this.scene.add.text(
+      screenWidth / 2,
+      screenHeight / 3,
+      'WARNING',
+      {
+        fontSize: '48px',
+        color: '#ff0000',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 6
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(9991).setAlpha(0)
+
+    // Boss name
+    const nameText = this.scene.add.text(
+      screenWidth / 2,
+      screenHeight / 2,
+      bossName.toUpperCase(),
+      {
+        fontSize: '64px',
+        color: '#ff6600',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 8
+      }
+    ).setOrigin(0.5).setScrollFactor(0).setDepth(9991).setAlpha(0)
+
+    // Animate overlay
+    this.scene.tweens.add({
+      targets: overlay,
+      fillAlpha: 0.6,
+      duration: 300,
+      yoyo: true,
+      hold: 1200,
+      ease: 'Cubic.easeInOut',
+      onComplete: () => overlay.destroy()
+    })
+
+    // Animate warning text with flash
+    let flashCount = 0
+    const flashTimer = this.scene.time.addEvent({
+      delay: 200,
+      repeat: 5,
+      callback: () => {
+        warningText.setAlpha(flashCount % 2 === 0 ? 1 : 0.3)
+        flashCount++
+        if (flashCount >= 6) {
+          this.scene.tweens.add({
+            targets: warningText,
+            alpha: 0,
+            duration: 200,
+            onComplete: () => warningText.destroy()
+          })
+        }
+      }
+    })
+
+    // Animate boss name
+    this.scene.time.delayedCall(400, () => {
+      this.scene.tweens.add({
+        targets: nameText,
+        alpha: 1,
+        scale: { from: 0.5, to: 1.2 },
+        duration: 400,
+        ease: 'Back.easeOut',
+        onComplete: () => {
+          this.scene.time.delayedCall(600, () => {
+            this.scene.tweens.add({
+              targets: nameText,
+              alpha: 0,
+              scale: 1.5,
+              duration: 300,
+              onComplete: () => nameText.destroy()
+            })
+          })
+        }
+      })
+    })
+
+    // Screen effects
+    this.shakeScreen('heavy')
+    this.screenFlash(0xff0000, 0.4, 300)
+
+    // Ground impact at boss position
+    for (let i = 0; i < 3; i++) {
+      this.scene.time.delayedCall(i * 150, () => {
+        const ring = this.scene.add.circle(x, y, 30, 0, 0)
+          .setStrokeStyle(4, 0xff6600)
+          .setDepth(500)
+
+        this.scene.tweens.add({
+          targets: ring,
+          scale: 4 + i,
+          alpha: 0,
+          duration: 500,
+          ease: 'Cubic.easeOut',
+          onComplete: () => ring.destroy()
+        })
+      })
+    }
+  }
+
+  // ==================== POWER-UP PICKUP EFFECT ====================
+
+  /**
+   * Create power-up pickup celebration effect
+   */
+  createPowerUpPickup(x: number, y: number, powerUpName: string, color: number) {
+    // Expanding ring
+    const ring = this.scene.add.circle(x, y, 20, 0, 0)
+      .setStrokeStyle(4, color)
+      .setDepth(5500)
+
+    this.scene.tweens.add({
+      targets: ring,
+      scale: 3,
+      alpha: 0,
+      duration: 400,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    })
+
+    // Sparkle particles
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2
+      const speed = Phaser.Math.Between(50, 100)
+
+      const star = this.scene.add.star(x, y, 4, 2, 5, color)
+        .setDepth(5500)
+
+      this.scene.tweens.add({
+        targets: star,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        alpha: 0,
+        rotation: Math.PI * 2,
+        duration: 500,
+        ease: 'Cubic.easeOut',
+        onComplete: () => star.destroy()
+      })
+    }
+
+    // Floating text
+    const text = this.scene.add.text(x, y - 20, powerUpName, {
+      fontSize: '18px',
+      color: `#${color.toString(16).padStart(6, '0')}`,
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(6000)
+
+    this.scene.tweens.add({
+      targets: text,
+      y: y - 60,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy()
+    })
+  }
+
+  // ==================== HEAL EFFECT ====================
+
+  /**
+   * Create healing effect on player
+   */
+  createHealEffect(x: number, y: number) {
+    // Green plus signs rising
+    for (let i = 0; i < 5; i++) {
+      this.scene.time.delayedCall(i * 100, () => {
+        const plus = this.scene.add.text(
+          x + Phaser.Math.Between(-20, 20),
+          y,
+          '+',
+          {
+            fontSize: '24px',
+            color: '#2ecc71',
+            fontStyle: 'bold'
+          }
+        ).setOrigin(0.5).setDepth(5500)
+
+        this.scene.tweens.add({
+          targets: plus,
+          y: y - 40,
+          alpha: 0,
+          duration: 600,
+          ease: 'Cubic.easeOut',
+          onComplete: () => plus.destroy()
+        })
+      })
+    }
+
+    // Green glow
+    const glow = this.scene.add.circle(x, y, 30, 0x2ecc71, 0.3)
+      .setDepth(500)
+
+    this.scene.tweens.add({
+      targets: glow,
+      scale: 1.5,
+      alpha: 0,
+      duration: 500,
+      ease: 'Cubic.easeOut',
+      onComplete: () => glow.destroy()
+    })
+  }
+
   destroy() {
     this.damageNumbers.destroy(true)
     this.particles.destroy(true)

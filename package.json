@@ -1,8 +1,24 @@
 {
-  "name": "crime-city-game",
-  "version": "1.0.0",
-  "description": "Crime City: Underground Empire - Top-down action game with gambling",
+  "name": "dot-universe",
+  "version": "2.0.0",
+  "description": "Dot Universe - Multi-game browser gaming platform with DotSlayer roguelike and Dot Clicker idle game",
   "private": true,
+  "author": "Dot Universe Team",
+  "license": "MIT",
+  "homepage": "https://dotslayer.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JROtto5/MineWeb.git"
+  },
+  "keywords": [
+    "game",
+    "roguelike",
+    "idle",
+    "clicker",
+    "phaser",
+    "nextjs",
+    "typescript"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -22,5 +38,8 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

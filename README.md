@@ -1,98 +1,76 @@
-# 🎮 Crime City: Underground Empire
+# Dot Universe
 
-A browser-based top-down action game with shooting combat, enemies, and casino gambling mechanics.
+A multi-game browser gaming platform featuring **DotSlayer** (roguelike shooter) and **Dot Clicker** (idle incremental game) with cross-game synergy bonuses.
 
-![Crime City](https://img.shields.io/badge/Status-Playable-success)
-![Tech](https://img.shields.io/badge/Tech-Phaser.js%20%7C%20Next.js-blue)
+[![Live Demo](https://img.shields.io/badge/Play%20Now-dotslayer.vercel.app-blue?style=for-the-badge)](https://dotslayer.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Phaser](https://img.shields.io/badge/Phaser-3.60-purple?style=flat-square)](https://phaser.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-green?style=flat-square&logo=supabase)](https://supabase.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 
-## 🚀 Features
+---
 
-### ✅ Currently Implemented
+## Games
 
-#### Combat System
-- **Three Weapons**:
-  - Pistol: Balanced damage and fire rate (20 dmg, 300ms)
-  - SMG: Fast fire rate, lower damage (15 dmg, 100ms)
-  - Shotgun: High damage, spread shot (40 dmg, 600ms)
-- **Weapon Switching**: Press 1-3 to switch weapons
-- **Bullet Physics**: Projectiles with proper collision detection
-- **Enemy AI**: Enemies chase and attack the player
-- **Health System**: Player and enemy health bars
-- **Damage Feedback**: Screen shake, red tint, visual effects
+### DotSlayer - 100 Floors Challenge
 
-#### Player System
-- **WASD Movement**: Smooth 8-directional movement
-- **Mouse Aiming**: Aim with mouse, auto-rotate to face cursor
-- **Stats**: Health, ammo, XP, level, money
-- **Leveling**: Gain XP from kills, level up increases max health
-- **Money System**: Earn money from enemy kills
+A fast-paced roguelike shooter where you descend through 100 procedurally generated floors, fighting enemies, collecting loot, and defeating bosses.
 
-#### Mission System
-- **Enemy Waves**: Complete waves to progress
-- **Kill Objectives**: Eliminate all enemies to advance
-- **Progressive Difficulty**: Each wave adds more enemies
-- **Rewards**: Money and XP for completing missions
+**Features:**
+- 5 unique player classes (Warrior, Rogue, Mage, Tank, Vampire)
+- 6+ weapon types with unique behaviors
+- Procedural floor generation with themed environments
+- Boss fights every 10 floors
+- Skill tree with 15+ upgrades
+- Shop system with persistent upgrades
+- Achievement system (40+ achievements)
+- Daily challenges with streak bonuses
+- Cloud saves with Supabase
+- Global leaderboards
 
-#### Visual Polish
-- **Grid Background**: Cyberpunk-style grid world
-- **Health Bars**: Enemy health indicators
-- **Aim Line**: Visual aiming guide
-- **Muzzle Flash**: Weapon fire effects
-- **Camera Shake**: Impact feedback
-- **Smooth Animations**: Tweened effects
+### Dot Clicker - Idle Incremental
 
-#### UI/HUD
-- **Stats Display**: Real-time health, ammo, XP, level
-- **Money Counter**: Live money tracking
-- **Mission Tracker**: Current objective and progress
-- **Weapon Info**: Current weapon and ammo count
-- **Controls Guide**: On-screen control reference
-- **Message System**: Pop-up notifications for events
+Build your dot empire with buildings, upgrades, and prestige mechanics.
 
-### 🎰 Casino System (Implemented, Not Yet Wired to UI)
+**Features:**
+- 20+ buildings to purchase
+- 7 prestige tiers with unique upgrades
+- Ascension system for meta-progression
+- Offline progress calculation
+- Cross-game synergy with DotSlayer
 
-The game includes a fully functional casino system ready to be activated:
+---
 
-- **Slot Machine**: Spin 3 reels, match symbols for payouts (2x - 50x)
-- **Blackjack**: Play against the dealer (simplified rules)
-- **Roulette**: Bet on red/black for 2x payout
-- **Loot Boxes**: Random rewards with rarity tiers
-  - Common (50%): 0.5x return
-  - Uncommon (30%): 2x return
-  - Rare (15%): 5x return
-  - Epic (4%): 20x return
-  - Legendary (1%): 100x return
+## Cross-Game Synergy
 
-### 🎯 Coming Soon
+Progress in one game boosts the other:
+- **DotSlayer floors cleared** = Damage bonus in Dot Clicker
+- **Dot Clicker prestiges** = Starting gold bonus in DotSlayer
 
-- Casino UI overlays (press E at casino zones)
-- More enemy types with different behaviors
-- Boss fights
-- Weapon upgrades and customization
-- More missions and story
-- Save/load progress
-- Sound effects and music
-- Power-ups and pickups
+---
 
-## 🎮 Controls
+## Tech Stack
 
-| Key | Action |
-|-----|--------|
-| W/A/S/D | Move |
-| Mouse | Aim |
-| Left Click | Shoot |
-| 1/2/3 | Switch Weapon |
-| R | Reload |
-| E | Interact (Casino zones) |
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14 (App Router) |
+| Game Engine | Phaser 3.60 |
+| Backend | Supabase (Auth, Database, Realtime) |
+| Language | TypeScript |
+| Styling | CSS Modules |
+| Hosting | Vercel |
 
-## 🛠️ Tech Stack
+---
 
-- **Phaser 3**: 2D game framework with physics
-- **Next.js 14**: React framework for deployment
-- **TypeScript**: Type-safe development
-- **Vercel**: Serverless hosting (recommended)
+## Getting Started
 
-## 📦 Installation
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Supabase account (for backend features)
+
+### Installation
 
 ```bash
 # Clone the repository
@@ -102,155 +80,128 @@ cd MineWeb
 # Install dependencies
 npm install
 
+# Set up environment variables
+cp .env.example .env.local
+# Add your Supabase credentials to .env.local
+
 # Run development server
 npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
 ```
 
-## 🌐 Deployment to Vercel
+### Environment Variables
 
-### Option 1: Automatic (Recommended)
-
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com)
-3. Click "New Project"
-4. Import your GitHub repository
-5. Vercel auto-detects Next.js - just click "Deploy"
-6. Done! Your game is live
-
-### Option 2: Vercel CLI
-
-```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Login
-vercel login
-
-# Deploy
-vercel
-
-# Deploy to production
-vercel --prod
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Option 3: Manual GitHub Integration
+### Database Setup
 
-1. Connect Vercel to your GitHub account
-2. Every push to `main` branch auto-deploys
-3. Pull requests get preview deployments
-
-## 🎯 Game Design
-
-### Combat Loop
-1. Spawn in safe area
-2. Enemies spawn around the map
-3. Chase and eliminate enemies
-4. Earn money and XP
-5. Level up for health boost
-6. New wave spawns with more enemies
-7. Repeat
-
-### Progression System
-- **Kills → XP → Levels**: Every 100 XP = level up
-- **Kills → Money**: $10-50 per enemy
-- **Levels → Health**: +20 max health per level
-- **Money → Gambling**: Use at casino zones (future)
-
-### Casino Integration
-- Find casino zones marked with 🎰
-- Press E to gamble
-- Slots, Blackjack, Roulette available
-- Win big or lose it all
-- Rewards fund weapon upgrades (future)
-
-## 📁 Project Structure
-
-```
-MinecraftWeb/
-├── app/
-│   ├── page.tsx          # Main React component with HUD
-│   ├── layout.tsx        # App layout
-│   └── globals.css       # Styling
-├── lib/
-│   └── game/
-│       ├── GameWrapper.tsx    # Phaser initialization
-│       ├── GameScene.ts       # Main game scene
-│       ├── Player.ts          # Player class
-│       ├── Enemy.ts           # Enemy AI
-│       ├── Weapon.ts          # Weapon & bullet system
-│       └── Casino.ts          # Gambling mechanics
-├── public/
-│   └── assets/               # Game assets (textures, sounds)
-├── package.json
-├── next.config.js
-└── tsconfig.json
-```
-
-## 🎨 Art Style
-
-Currently using **procedural graphics** (no external assets):
-- Simple colored circles for player/enemies
-- Geometric shapes for UI
-- Grid-based cyberpunk background
-- Particle effects for combat
-
-Future plans:
-- Custom sprite sheets
-- Animated characters
-- Environmental tiles
-- Casino visuals
-
-## 🐛 Known Issues
-
-- Phaser import warnings during build (harmless)
-- Casino zones exist but UI not yet implemented
-- No sound/music yet
-- Enemies can stack on each other
-
-## 🔮 Roadmap
-
-### Phase 1: Core Polish (Current)
-- ✅ Player movement and shooting
-- ✅ Enemy AI and combat
-- ✅ Basic progression
-- ✅ HUD system
-
-### Phase 2: Casino Integration
-- Add casino UI overlays
-- Wire up gambling systems
-- Add win/loss animations
-- Integrate with economy
-
-### Phase 3: Content Expansion
-- More enemy types
-- Boss encounters
-- Weapon variety
-- Map variety
-
-### Phase 4: Meta Systems
-- Save/load
-- Achievements
-- Daily challenges
-- Leaderboards
-
-## 📝 License
-
-MIT License - Feel free to use and modify
-
-## 🤝 Contributing
-
-This is a personal project but feedback is welcome!
-
-## 🎮 Play Now
-
-Once deployed to Vercel, share your link and start playing!
+Run the SQL migrations in your Supabase SQL Editor:
+1. `supabase_schema.sql` - Core tables
+2. `supabase_migration_tracking.sql` - Tracking system tables
 
 ---
 
-**Built with Phaser.js and Next.js** | **Deployed on Vercel**
+## Project Structure
+
+```
+dot-universe/
+├── app/                    # Next.js App Router
+│   ├── page.tsx           # Landing page
+│   ├── layout.tsx         # Root layout with SEO
+│   ├── slayer/            # DotSlayer game
+│   ├── clicker/           # Dot Clicker game
+│   ├── hub/               # Game hub
+│   └── login/             # Authentication
+├── lib/
+│   ├── game/              # Phaser game code
+│   │   ├── GameSceneV3.ts # Main game scene
+│   │   ├── Player.ts      # Player class
+│   │   ├── EnemyTypes.ts  # Enemy definitions
+│   │   ├── Boss.ts        # Boss system
+│   │   ├── Weapon.ts      # Weapon system
+│   │   ├── SkillTree.ts   # Skill upgrades
+│   │   ├── ShopSystem.ts  # Shop mechanics
+│   │   ├── FloorSystem.ts # Floor generation
+│   │   ├── AchievementSystem.ts
+│   │   └── DailyChallenges.ts
+│   ├── supabase/          # Backend services
+│   │   ├── client.ts      # Supabase client
+│   │   ├── SaveManager.ts
+│   │   ├── LeaderboardService.ts
+│   │   └── ...
+│   └── context/           # React contexts
+├── public/                # Static assets
+└── supabase_*.sql        # Database migrations
+```
+
+---
+
+## Controls
+
+### DotSlayer
+
+| Input | Action |
+|-------|--------|
+| WASD | Move |
+| Mouse | Aim |
+| Left Click | Shoot |
+| 1-6 | Switch Weapon |
+| E | Open Shop |
+| Tab | Skill Tree |
+
+### Dot Clicker
+
+| Input | Action |
+|-------|--------|
+| Click | Generate dots |
+| Keyboard shortcuts | Quick buy buildings |
+
+---
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push to GitHub
+2. Import project in Vercel
+3. Add environment variables
+4. Deploy
+
+```bash
+# Or use Vercel CLI
+npm i -g vercel
+vercel --prod
+```
+
+---
+
+## Contributing
+
+Contributions welcome! Please read our contributing guidelines first.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## Acknowledgments
+
+- [Phaser.js](https://phaser.io/) - Game framework
+- [Next.js](https://nextjs.org/) - React framework
+- [Supabase](https://supabase.com/) - Backend services
+- [Vercel](https://vercel.com/) - Hosting
+
+---
+
+**Made with love by the Dot Universe team**

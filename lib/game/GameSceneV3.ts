@@ -271,6 +271,16 @@ export default class GameSceneV3 extends Phaser.Scene {
       }
     })
 
+    // Listen for freeze power-up events
+    this.events.on('freezeEnemies', (data: { duration: number }) => {
+      this.freezeAllEnemies(data.duration)
+    })
+
+    // Listen for nuke power-up events
+    this.events.on('nukeActivated', () => {
+      this.nukeAllEnemies()
+    })
+
     // Listen for boss summon minions events (Mega Boss ability)
     if (typeof window !== 'undefined') {
       const summonHandler = (event: Event) => {
@@ -1074,6 +1084,26 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Combo system (REDUCED POPUPS: removed "Combo ended!" message)
     this.comboSystem.update(time)
+
+    // Magnet power-up: pull power-ups towards player
+    if (this.player.isMagnetActive()) {
+      this.powerUpManager.powerUps.children.entries.forEach((powerUp: any) => {
+        if (powerUp.active) {
+          const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, powerUp.x, powerUp.y)
+          if (dist < 300 && dist > 10) { // Pull range of 300 pixels
+            const angle = Phaser.Math.Angle.Between(powerUp.x, powerUp.y, this.player.x, this.player.y)
+            const pullSpeed = 400 * (1 - dist / 300) // Faster when closer
+            powerUp.x += Math.cos(angle) * pullSpeed * (delta / 1000)
+            powerUp.y += Math.sin(angle) * pullSpeed * (delta / 1000)
+            // Also move the icon if it exists
+            if (powerUp.icon) {
+              powerUp.icon.x = powerUp.x
+              powerUp.icon.y = powerUp.y
+            }
+          }
+        }
+      })
+    }
 
     // Update persistent UI
     this.updateComboDisplay()
@@ -2843,6 +2873,117 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.addKillFeedMessage('☄️ ORBITAL STRIKE!', '#ff6600', 3000)
       }
     })
+  }
+
+  // FREEZE POWER-UP: Freeze all enemies in place
+  private freezeAllEnemies(duration: number) {
+    // Create visual freeze effect
+    this.visualEffects.screenFlash(0x00bfff, 0.3, 200)
+
+    // Freeze all enemies
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active && enemy.body) {
+        // Store original speed and stop enemy
+        const originalSpeed = enemy.speed || 100
+        enemy.speed = 0
+        enemy.body.setVelocity(0, 0)
+        enemy.setTint(0x00bfff) // Ice blue tint
+
+        // Unfreeze after duration
+        this.time.delayedCall(duration, () => {
+          if (enemy.active) {
+            enemy.speed = originalSpeed
+            enemy.clearTint()
+          }
+        })
+      }
+    })
+
+    // Also freeze bosses (but they thaw faster)
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active && boss.body) {
+        const originalSpeed = boss.moveSpeed || 150
+        boss.moveSpeed = 0
+        boss.body.setVelocity(0, 0)
+        boss.setTint(0x00bfff)
+
+        // Bosses thaw in half the time
+        this.time.delayedCall(duration / 2, () => {
+          if (boss.active) {
+            boss.moveSpeed = originalSpeed
+            boss.clearTint()
+          }
+        })
+      }
+    })
+
+    this.addKillFeedMessage('❄️ ALL ENEMIES FROZEN!', '#00bfff', 2000)
+  }
+
+  // NUKE POWER-UP: Destroy all enemies on screen
+  private nukeAllEnemies() {
+    let killCount = 0
+    let totalReward = 0
+
+    // Create expanding shockwave effect
+    for (let wave = 0; wave < 8; wave++) {
+      this.time.delayedCall(wave * 50, () => {
+        const ring = this.add.circle(
+          this.cameras.main.scrollX + this.cameras.main.width / 2,
+          this.cameras.main.scrollY + this.cameras.main.height / 2,
+          50 + wave * 100,
+          0xff0000, 0
+        ).setStrokeStyle(10 - wave, 0xff0000, 1 - wave * 0.1).setDepth(5000)
+
+        this.tweens.add({
+          targets: ring,
+          scale: 2,
+          alpha: 0,
+          duration: 400,
+          ease: 'Cubic.easeOut',
+          onComplete: () => ring.destroy()
+        })
+      })
+    }
+
+    // Kill all enemies
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        // Explosion effect at enemy position
+        this.visualEffects.createExplosion(enemy.x, enemy.y)
+
+        // Reward
+        const reward = enemy.reward || 50
+        totalReward += reward
+        this.player.addMoney(reward)
+        this.player.addXP(Math.floor(reward / 2))
+
+        killCount++
+        this.enemiesKilled++
+        this.runStats.totalKills++
+        enemy.destroy()
+      }
+    })
+
+    // Damage bosses significantly (but don't instant-kill)
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        const damage = Math.floor(boss.maxHealth * 0.3) // 30% max HP damage
+        boss.takeDamage(damage)
+        this.visualEffects.showDamageNumber(boss.x, boss.y, damage, true)
+        this.visualEffects.createExplosion(boss.x, boss.y)
+
+        if (boss.isDead()) {
+          killCount++
+          this.enemiesKilled++
+          this.runStats.bossesKilled++
+          boss.destroy()
+        }
+      }
+    })
+
+    // Show reward
+    this.addKillFeedMessage(`☢️ NUKE! ${killCount} enemies destroyed! +$${totalReward}`, '#ff0000', 3000)
   }
 
   private createCasinoZones() {

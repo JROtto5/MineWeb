@@ -9,6 +9,12 @@ export enum PowerUpType {
   INVINCIBILITY = 'invincibility',
   MULTI_SHOT = 'multi_shot',
   RAPID_FIRE = 'rapid_fire',
+  MAGNET = 'magnet',
+  FREEZE = 'freeze',
+  XP_BOOST = 'xp_boost',
+  GOLD_RUSH = 'gold_rush',
+  NUKE = 'nuke',
+  REGEN = 'regen',
 }
 
 interface PowerUpConfig {
@@ -26,11 +32,17 @@ const POWERUP_CONFIGS: Record<PowerUpType, PowerUpConfig> = {
   [PowerUpType.INVINCIBILITY]: { color: 0xf1c40f, icon: '🛡️', duration: 5000 },
   [PowerUpType.MULTI_SHOT]: { color: 0x9b59b6, icon: '🎯', duration: 12000 },
   [PowerUpType.RAPID_FIRE]: { color: 0xe67e22, icon: '🔫', duration: 10000 },
+  [PowerUpType.MAGNET]: { color: 0xff00ff, icon: '🧲', duration: 15000 },
+  [PowerUpType.FREEZE]: { color: 0x00bfff, icon: '❄️', duration: 5000 },
+  [PowerUpType.XP_BOOST]: { color: 0x00ff00, icon: '✨', duration: 20000 },
+  [PowerUpType.GOLD_RUSH]: { color: 0xffd700, icon: '💰', duration: 15000 },
+  [PowerUpType.NUKE]: { color: 0xff0000, icon: '☢️', value: 1000 },
+  [PowerUpType.REGEN]: { color: 0xff69b4, icon: '💗', duration: 12000, value: 5 },
 }
 
 export class PowerUp extends Phaser.Physics.Arcade.Sprite {
   private powerUpType: PowerUpType
-  private icon: Phaser.GameObjects.Text
+  public icon: Phaser.GameObjects.Text
 
   constructor(
     scene: Phaser.Scene,
@@ -133,6 +145,24 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
       case PowerUpType.RAPID_FIRE:
         player.activateRapidFire(config.duration!)
         break
+      case PowerUpType.MAGNET:
+        player.activateMagnet(config.duration!)
+        break
+      case PowerUpType.FREEZE:
+        player.activateFreeze(config.duration!)
+        break
+      case PowerUpType.XP_BOOST:
+        player.activateXPBoost(config.duration!)
+        break
+      case PowerUpType.GOLD_RUSH:
+        player.activateGoldRush(config.duration!)
+        break
+      case PowerUpType.NUKE:
+        player.activateNuke()
+        break
+      case PowerUpType.REGEN:
+        player.activateRegen(config.duration!, config.value!)
+        break
     }
 
     // Collect effect
@@ -208,9 +238,36 @@ export class PowerUpManager {
   }
 
   spawnRandomPowerUp(x: number, y: number) {
-    const types = Object.values(PowerUpType)
-    const randomType = Phaser.Math.RND.pick(types)
-    const powerUp = new PowerUp(this.scene, x, y, randomType)
+    // Weighted random selection - rare power-ups have lower weights
+    const weightedTypes: { type: PowerUpType; weight: number }[] = [
+      { type: PowerUpType.HEALTH, weight: 20 },
+      { type: PowerUpType.AMMO, weight: 20 },
+      { type: PowerUpType.DAMAGE_BOOST, weight: 10 },
+      { type: PowerUpType.SPEED_BOOST, weight: 10 },
+      { type: PowerUpType.INVINCIBILITY, weight: 5 },
+      { type: PowerUpType.MULTI_SHOT, weight: 8 },
+      { type: PowerUpType.RAPID_FIRE, weight: 8 },
+      { type: PowerUpType.MAGNET, weight: 6 },
+      { type: PowerUpType.FREEZE, weight: 5 },
+      { type: PowerUpType.XP_BOOST, weight: 7 },
+      { type: PowerUpType.GOLD_RUSH, weight: 7 },
+      { type: PowerUpType.NUKE, weight: 1 }, // Very rare!
+      { type: PowerUpType.REGEN, weight: 6 },
+    ]
+
+    const totalWeight = weightedTypes.reduce((sum, w) => sum + w.weight, 0)
+    let random = Math.random() * totalWeight
+    let selectedType = PowerUpType.HEALTH
+
+    for (const wt of weightedTypes) {
+      random -= wt.weight
+      if (random <= 0) {
+        selectedType = wt.type
+        break
+      }
+    }
+
+    const powerUp = new PowerUp(this.scene, x, y, selectedType)
     this.powerUps.add(powerUp)
   }
 

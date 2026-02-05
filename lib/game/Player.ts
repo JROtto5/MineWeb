@@ -86,6 +86,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     { name: 'SMG', damage: 15, fireRate: 100, ammo: 50, maxAmmo: 50 },
     { name: 'Shotgun', damage: 40, fireRate: 600, ammo: 8, maxAmmo: 8 },
     { name: 'Sniper', damage: 150, fireRate: 1200, ammo: 5, maxAmmo: 5 },
+    { name: 'Laser', damage: 35, fireRate: 150, ammo: 40, maxAmmo: 40 },
+    { name: 'Rocket', damage: 200, fireRate: 1500, ammo: 3, maxAmmo: 3 },
+    { name: 'Minigun', damage: 12, fireRate: 50, ammo: 100, maxAmmo: 100 },
+    { name: 'Plasma', damage: 80, fireRate: 800, ammo: 15, maxAmmo: 15 },
   ]
 
   public weapons: WeaponType[] = [
@@ -93,6 +97,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     { name: 'SMG', damage: 15, fireRate: 100, ammo: 50, maxAmmo: 50 },
     { name: 'Shotgun', damage: 40, fireRate: 600, ammo: 8, maxAmmo: 8 },
     { name: 'Sniper', damage: 150, fireRate: 1200, ammo: 5, maxAmmo: 5 },
+    { name: 'Laser', damage: 35, fireRate: 150, ammo: 40, maxAmmo: 40 },
+    { name: 'Rocket', damage: 200, fireRate: 1500, ammo: 3, maxAmmo: 3 },
+    { name: 'Minigun', damage: 12, fireRate: 50, ammo: 100, maxAmmo: 100 },
+    { name: 'Plasma', damage: 80, fireRate: 800, ammo: 15, maxAmmo: 15 },
   ]
 
   // Power-up states
@@ -106,6 +114,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   private multiShotEnd = 0
   private rapidFireActive = false
   private rapidFireEnd = 0
+
+  // New power-up states
+  private magnetActive = false
+  private magnetEnd = 0
+  private freezeActive = false
+  private freezeEnd = 0
+  private xpBoostActive = false
+  private xpBoostEnd = 0
+  private goldRushActive = false
+  private goldRushEnd = 0
+  private regenActive = false
+  private regenEnd = 0
+  private regenAmount = 0
+  private lastRegenTick = 0
 
   private lastShot = 0
   private aimLine!: Phaser.GameObjects.Line
@@ -293,6 +315,54 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this.rapidFireEnd = Math.max(this.rapidFireEnd, this.scene.time.now + duration)
   }
 
+  activateMagnet(duration: number) {
+    this.magnetActive = true
+    this.magnetEnd = Math.max(this.magnetEnd, this.scene.time.now + duration)
+    this.emitMessage('🧲 MAGNET ACTIVATED!', 'success')
+  }
+
+  activateFreeze(duration: number) {
+    this.freezeActive = true
+    this.freezeEnd = Math.max(this.freezeEnd, this.scene.time.now + duration)
+    // Emit event for GameScene to freeze enemies
+    this.scene.events.emit('freezeEnemies', { duration })
+    this.emitMessage('❄️ ENEMIES FROZEN!', 'success')
+  }
+
+  activateXPBoost(duration: number) {
+    this.xpBoostActive = true
+    this.xpBoostEnd = Math.max(this.xpBoostEnd, this.scene.time.now + duration)
+    this.emitMessage('✨ DOUBLE XP!', 'success')
+  }
+
+  activateGoldRush(duration: number) {
+    this.goldRushActive = true
+    this.goldRushEnd = Math.max(this.goldRushEnd, this.scene.time.now + duration)
+    this.emitMessage('💰 GOLD RUSH!', 'warning')
+  }
+
+  activateNuke() {
+    // Emit event for GameScene to handle the nuke
+    this.scene.events.emit('nukeActivated')
+    this.scene.cameras.main.flash(500, 255, 255, 255)
+    this.scene.cameras.main.shake(300, 0.01)
+    this.emitMessage('☢️ NUKE ACTIVATED!', 'danger')
+  }
+
+  activateRegen(duration: number, healPerSecond: number) {
+    this.regenActive = true
+    this.regenEnd = Math.max(this.regenEnd, this.scene.time.now + duration)
+    this.regenAmount = healPerSecond
+    this.lastRegenTick = this.scene.time.now
+    this.emitMessage('💗 REGENERATION ACTIVE!', 'success')
+  }
+
+  // Getters for new power-ups
+  isMagnetActive(): boolean { return this.magnetActive }
+  isFreezeActive(): boolean { return this.freezeActive }
+  isXPBoostActive(): boolean { return this.xpBoostActive }
+  isGoldRushActive(): boolean { return this.goldRushActive }
+
   updatePowerUps() {
     const currentTime = this.scene.time.now
 
@@ -324,6 +394,36 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Check rapid fire
     if (this.rapidFireActive && currentTime >= this.rapidFireEnd) {
       this.rapidFireActive = false
+    }
+
+    // Check magnet
+    if (this.magnetActive && currentTime >= this.magnetEnd) {
+      this.magnetActive = false
+    }
+
+    // Check freeze
+    if (this.freezeActive && currentTime >= this.freezeEnd) {
+      this.freezeActive = false
+    }
+
+    // Check XP boost
+    if (this.xpBoostActive && currentTime >= this.xpBoostEnd) {
+      this.xpBoostActive = false
+    }
+
+    // Check gold rush
+    if (this.goldRushActive && currentTime >= this.goldRushEnd) {
+      this.goldRushActive = false
+    }
+
+    // Handle regen tick (heal every second)
+    if (this.regenActive) {
+      if (currentTime >= this.regenEnd) {
+        this.regenActive = false
+      } else if (currentTime - this.lastRegenTick >= 1000) {
+        this.health = Math.min(this.maxHealth, this.health + this.regenAmount)
+        this.lastRegenTick = currentTime
+      }
     }
   }
 
@@ -557,6 +657,36 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const spread = (Math.random() - 0.5) * 0.3
         this.weaponSystem.fireBullet(this.x, this.y, angle + spread, damage)
       }
+    }
+    // Rocket launcher - fires explosive projectile (handled in GameScene for AOE)
+    else if (weapon.name === 'Rocket') {
+      this.weaponSystem.fireBullet(this.x, this.y, angle, damage)
+      // Screen shake for rocket
+      this.scene.cameras.main.shake(100, 0.003)
+    }
+    // Minigun - slight spread for rapid fire
+    else if (weapon.name === 'Minigun') {
+      const spread = (Math.random() - 0.5) * 0.15
+      this.weaponSystem.fireBullet(this.x, this.y, angle + spread, damage)
+    }
+    // Plasma cannon - fires 2 parallel shots
+    else if (weapon.name === 'Plasma') {
+      const perpAngle = angle + Math.PI / 2
+      const offset = 8
+      this.weaponSystem.fireBullet(
+        this.x + Math.cos(perpAngle) * offset,
+        this.y + Math.sin(perpAngle) * offset,
+        angle, damage
+      )
+      this.weaponSystem.fireBullet(
+        this.x - Math.cos(perpAngle) * offset,
+        this.y - Math.sin(perpAngle) * offset,
+        angle, damage
+      )
+    }
+    // Laser - accurate beam (normal shot but guaranteed hit feel)
+    else if (weapon.name === 'Laser') {
+      this.weaponSystem.fireBullet(this.x, this.y, angle, damage)
     }
     // Normal shot
     else {
@@ -832,6 +962,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Apply shop XP bonus
     amount = Math.floor(amount * (1 + this.shopXPBonus))
 
+    // Apply XP boost power-up
+    if (this.xpBoostActive) {
+      amount *= 2
+    }
+
     this.xp += amount
 
     // CREATIVE EXPANSION: Level scaling up to level 100!
@@ -889,6 +1024,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       amount = this.applyLuckBonus(amount)
       // Apply shop money bonus
       amount = Math.floor(amount * (1 + this.shopMoneyBonus))
+      // Apply gold rush power-up
+      if (this.goldRushActive) {
+        amount *= 2
+      }
     }
     this.money += amount
   }
