@@ -19,6 +19,12 @@ export enum EnemyType {
   VAMPIRE = 'vampire',
   SPLITTER = 'splitter',
   GHOST = 'ghost',
+  // EVEN MORE ENEMIES!
+  JUGGERNAUT = 'juggernaut',  // Ultra tank - slow but tons of HP
+  NINJA = 'ninja',            // Fast and dodges attacks
+  NECROMANCER = 'necromancer', // Summons minions
+  EXPLODER = 'exploder',      // Explodes on death
+  CHARGER = 'charger',        // Charges at player in straight line
 }
 
 export interface EnemyStats {
@@ -217,6 +223,67 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     size: 18,
     behavior: 'fast', // Phases through walls
   },
+  // NEW ENEMY TYPES!
+  [EnemyType.JUGGERNAUT]: {
+    health: 800,        // MASSIVE HP
+    speed: 60,          // Very slow
+    damage: 50,         // High damage
+    attackRange: 350,
+    attackSpeed: 2500,
+    moneyDrop: [150, 300],
+    xpDrop: [100, 180],
+    color: 0x4a0e4e,    // Dark purple - imposing
+    size: 36,
+    behavior: 'tank',
+  },
+  [EnemyType.NINJA]: {
+    health: 35,         // Very fragile
+    speed: 400,         // ULTRA fast
+    damage: 25,
+    attackRange: 300,
+    attackSpeed: 400,   // Quick attacks
+    moneyDrop: [60, 120],
+    xpDrop: [40, 70],
+    color: 0x1a1a1a,    // Near black - stealthy
+    size: 14,
+    behavior: 'fast',
+  },
+  [EnemyType.NECROMANCER]: {
+    health: 120,
+    speed: 100,         // Slow, stays back
+    damage: 15,
+    attackRange: 500,
+    attackSpeed: 3000,  // Slow but summons
+    moneyDrop: [100, 200],
+    xpDrop: [70, 120],
+    color: 0x800080,    // Purple - magic
+    size: 20,
+    behavior: 'ranged',
+  },
+  [EnemyType.EXPLODER]: {
+    health: 40,
+    speed: 280,         // Runs at you
+    damage: 80,         // MASSIVE damage on death
+    attackRange: 50,    // Has to get close
+    attackSpeed: 10000, // Doesn't attack normally
+    moneyDrop: [40, 80],
+    xpDrop: [30, 50],
+    color: 0xff4500,    // Orange-red - volatile
+    size: 16,
+    behavior: 'berserker',
+  },
+  [EnemyType.CHARGER]: {
+    health: 150,
+    speed: 500,         // VERY fast when charging
+    damage: 40,
+    attackRange: 600,   // Long charge range
+    attackSpeed: 3000,  // Cooldown between charges
+    moneyDrop: [70, 140],
+    xpDrop: [50, 90],
+    color: 0xdc143c,    // Crimson - aggressive
+    size: 22,
+    behavior: 'berserker',
+  },
 }
 
 export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
@@ -291,6 +358,11 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
       [EnemyType.VAMPIRE]: '🧛 Vampire',
       [EnemyType.SPLITTER]: '⚡ Splitter',
       [EnemyType.GHOST]: '👻 Ghost',
+      [EnemyType.JUGGERNAUT]: '🦾 Juggernaut',
+      [EnemyType.NINJA]: '🥷 Ninja',
+      [EnemyType.NECROMANCER]: '💀 Necromancer',
+      [EnemyType.EXPLODER]: '💥 Exploder',
+      [EnemyType.CHARGER]: '🐗 Charger',
     }
 
     this.nameTag = scene.add.text(x, y - 35, typeNames[type], {
@@ -439,7 +511,69 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
           this.clearTint()
         }
         break
+
+      case EnemyType.NINJA:
+        // Ninja flickers/dodges - visual effect
+        if (currentTime - this.lastSpecialAbility > 2000) {
+          this.setAlpha(0.3)
+          this.scene.time.delayedCall(200, () => {
+            if (this.active) this.setAlpha(1)
+          })
+          this.lastSpecialAbility = currentTime
+        }
+        break
+
+      case EnemyType.NECROMANCER:
+        // Summon minions every 5 seconds
+        if (currentTime - this.lastSpecialAbility > 5000) {
+          this.summonMinions()
+          this.lastSpecialAbility = currentTime
+        }
+        break
+
+      case EnemyType.CHARGER:
+        // Charger glows when preparing to charge
+        const distToTarget = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y)
+        if (distToTarget < 400 && distToTarget > 100) {
+          this.setTint(0xff4444)
+        } else {
+          this.clearTint()
+        }
+        break
+
+      case EnemyType.JUGGERNAUT:
+        // Juggernaut gets redder as HP decreases
+        const hpPercent = this.health / this.maxHealth
+        if (hpPercent < 0.3) {
+          this.setTint(0xff0000)
+        } else if (hpPercent < 0.6) {
+          this.setTint(0xff6666)
+        }
+        break
     }
+  }
+
+  // Necromancer: Summon minions
+  private summonMinions() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('necromancerSummon', {
+        detail: {
+          x: this.x,
+          y: this.y,
+          count: 2 // Summon 2 minions
+        }
+      }))
+    }
+
+    // Visual effect
+    const summonCircle = this.scene.add.circle(this.x, this.y, 50, 0x800080, 0.5)
+    this.scene.tweens.add({
+      targets: summonCircle,
+      scale: 2,
+      alpha: 0,
+      duration: 600,
+      onComplete: () => summonCircle.destroy()
+    })
   }
 
   // Healer: Heal nearby allies
@@ -664,8 +798,38 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
       this.onSplitterDeath()
     }
 
+    // Exploder: Explode on death dealing area damage
+    if (this.health <= 0 && this.enemyType === EnemyType.EXPLODER) {
+      this.onExploderDeath()
+    }
+
     // Return true if killed
     return this.health <= 0
+  }
+
+  // Exploder: Explode on death
+  private onExploderDeath() {
+    // Emit event for GameScene to handle explosion damage
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('exploderDeath', {
+        detail: {
+          x: this.x,
+          y: this.y,
+          damage: 40,
+          radius: 150
+        }
+      }))
+    }
+
+    // Visual explosion effect
+    const explosion = this.scene.add.circle(this.x, this.y, 20, 0xff4500, 0.8)
+    this.scene.tweens.add({
+      targets: explosion,
+      scale: 8,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => explosion.destroy()
+    })
   }
 
   // Splitter: Spawn smaller enemies on death

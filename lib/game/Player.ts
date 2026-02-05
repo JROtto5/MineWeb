@@ -80,6 +80,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   private hasOrbitalStrike = false
   private orbitalStrikeCooldown = 0
 
+  // Base weapon stats (immutable - used to calculate actual values with bonuses)
+  private readonly BASE_WEAPONS: WeaponType[] = [
+    { name: 'Pistol', damage: 20, fireRate: 300, ammo: 30, maxAmmo: 30 },
+    { name: 'SMG', damage: 15, fireRate: 100, ammo: 50, maxAmmo: 50 },
+    { name: 'Shotgun', damage: 40, fireRate: 600, ammo: 8, maxAmmo: 8 },
+    { name: 'Sniper', damage: 150, fireRate: 1200, ammo: 5, maxAmmo: 5 },
+  ]
+
   public weapons: WeaponType[] = [
     { name: 'Pistol', damage: 20, fireRate: 300, ammo: 30, maxAmmo: 30 },
     { name: 'SMG', damage: 15, fireRate: 100, ammo: 50, maxAmmo: 50 },
@@ -389,9 +397,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Update stats
     this.applySkillBonuses()
 
-    // Update weapon max ammo
-    this.weapons.forEach(weapon => {
-      weapon.maxAmmo += this.shopAmmoBonus
+    // Update weapon max ammo (use base values to prevent stacking bug)
+    this.weapons.forEach((weapon, index) => {
+      weapon.maxAmmo = this.BASE_WEAPONS[index].maxAmmo + this.shopAmmoBonus
     })
   }
 

@@ -74,42 +74,52 @@ export class FloorManager {
     const floor = this.currentFloor
 
     // REBALANCED: Gradual enemy type introduction with TONS of variety!
-    if (floor < 10) {
-      // Early floors: Basic enemies + swarms for action
+    if (floor < 5) {
+      // Very early: Just basics
       return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.SWARM]
-    } else if (floor < 20) {
-      // Introduce tanks and ghosts
-      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SWARM, EnemyType.GHOST]
-    } else if (floor < 30) {
-      // Introduce snipers, shielders, and teleporters
-      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.SHIELDER, EnemyType.TELEPORTER, EnemyType.SWARM]
-    } else if (floor < 45) {
-      // Introduce berserkers, bombers, and splitters
-      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.BOMBER, EnemyType.SHIELDER, EnemyType.SPLITTER, EnemyType.GHOST]
-    } else if (floor < 60) {
-      // Introduce assassins, healers, and vampires
-      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.HEALER, EnemyType.VAMPIRE, EnemyType.TELEPORTER]
-    } else if (floor < 80) {
-      // Elite mix - no more grunts, all special types
-      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.VAMPIRE, EnemyType.SPLITTER, EnemyType.GHOST]
+    } else if (floor < 10) {
+      // Early floors: Add chargers for excitement
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.SWARM, EnemyType.CHARGER]
+    } else if (floor < 15) {
+      // Introduce tanks, ghosts, and exploders
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SWARM, EnemyType.GHOST, EnemyType.EXPLODER, EnemyType.CHARGER]
+    } else if (floor < 25) {
+      // Introduce snipers, shielders, teleporters, and ninjas
+      return [EnemyType.GRUNT, EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.SHIELDER, EnemyType.TELEPORTER, EnemyType.NINJA, EnemyType.EXPLODER]
+    } else if (floor < 35) {
+      // Introduce berserkers, bombers, splitters, and juggernauts
+      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.BOMBER, EnemyType.SHIELDER, EnemyType.SPLITTER, EnemyType.JUGGERNAUT, EnemyType.CHARGER]
+    } else if (floor < 50) {
+      // Introduce assassins, healers, vampires, and necromancers
+      return [EnemyType.SCOUT, EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.HEALER, EnemyType.VAMPIRE, EnemyType.TELEPORTER, EnemyType.NECROMANCER, EnemyType.NINJA]
+    } else if (floor < 70) {
+      // Elite mix with all special types
+      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.VAMPIRE, EnemyType.SPLITTER, EnemyType.GHOST, EnemyType.JUGGERNAUT, EnemyType.NINJA, EnemyType.NECROMANCER, EnemyType.EXPLODER, EnemyType.CHARGER]
     } else {
       // Late game: EVERYTHING including mini-bosses - pure chaos!
-      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.TELEPORTER, EnemyType.VAMPIRE, EnemyType.SPLITTER, EnemyType.GHOST, EnemyType.BOSS]
+      return [EnemyType.TANK, EnemyType.SNIPER, EnemyType.BERSERKER, EnemyType.ASSASSIN, EnemyType.BOMBER, EnemyType.HEALER, EnemyType.SHIELDER, EnemyType.TELEPORTER, EnemyType.VAMPIRE, EnemyType.SPLITTER, EnemyType.GHOST, EnemyType.BOSS, EnemyType.JUGGERNAUT, EnemyType.NINJA, EnemyType.NECROMANCER, EnemyType.EXPLODER, EnemyType.CHARGER]
     }
   }
 
   private getDifficultyMultiplier(): number {
-    // REBALANCED: Steeper curve for late-game challenge
-    // Floor 1: 1.0x
-    // Floor 10: 1.5x
-    // Floor 25: 2.5x
-    // Floor 50: 5.0x
-    // Floor 75: 9.0x
-    // Floor 100: 15.0x
+    // MASSIVELY REBALANCED: Exponential curve to match player damage scaling!
+    // Player can do 30k+ damage at floor 20, enemies need to scale to match
+    // Floor 1: 1.0x (50 HP grunt)
+    // Floor 5: 5x (250 HP grunt)
+    // Floor 10: 25x (1,250 HP grunt)
+    // Floor 15: 80x (4,000 HP grunt)
+    // Floor 20: 200x (10,000 HP grunt)
+    // Floor 30: 600x (30,000 HP grunt)
+    // Floor 50: 2,500x (125,000 HP grunt)
+    // Floor 75: 8,000x
+    // Floor 100: 20,000x
     const floor = this.currentFloor
-    const linearPart = floor * 0.05
-    const exponentialPart = Math.pow(floor / 20, 2)
-    return 1 + linearPart + exponentialPart
+
+    // Aggressive exponential scaling that matches player power curve
+    const baseMult = Math.pow(floor, 2.2) / 5
+    const exponentialBoost = Math.pow(1.15, floor)
+
+    return Math.max(1, baseMult * exponentialBoost / 10)
   }
 
   private getItemDropChance(): number {

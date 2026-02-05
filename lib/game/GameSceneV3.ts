@@ -265,9 +265,27 @@ export default class GameSceneV3 extends Phaser.Scene {
       }
       window.addEventListener('splitterDeath', splitterHandler)
 
+      // Listen for necromancer summon events
+      const necromancerHandler = (event: Event) => {
+        const customEvent = event as CustomEvent
+        const { x, y, count } = customEvent.detail
+        this.spawnNecromancerMinions(x, y, count)
+      }
+      window.addEventListener('necromancerSummon', necromancerHandler)
+
+      // Listen for exploder death events
+      const exploderHandler = (event: Event) => {
+        const customEvent = event as CustomEvent
+        const { x, y, damage, radius } = customEvent.detail
+        this.handleExploderExplosion(x, y, damage, radius)
+      }
+      window.addEventListener('exploderDeath', exploderHandler)
+
       this.events.on('destroy', () => {
         window.removeEventListener('bossSummonMinions', summonHandler)
         window.removeEventListener('splitterDeath', splitterHandler)
+        window.removeEventListener('necromancerSummon', necromancerHandler)
+        window.removeEventListener('exploderDeath', exploderHandler)
       })
     }
 
@@ -1382,6 +1400,10 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private spawnEnemies(count: number, types: EnemyType[]) {
+    // Get difficulty multiplier for health scaling
+    const floor = this.floorManager.getCurrentFloor()
+    const difficultyMult = floor.difficultyMultiplier
+
     for (let i = 0; i < count; i++) {
       const x = Phaser.Math.Between(200, this.worldWidth - 200)
       const y = Phaser.Math.Between(200, this.worldHeight - 200)
@@ -1396,6 +1418,12 @@ export default class GameSceneV3 extends Phaser.Scene {
       // Pick random enemy type from allowed types
       const type = Phaser.Math.RND.pick(types)
       const enemy = new AdvancedEnemy(this, x, y, type)
+
+      // IMPORTANT: Apply floor-based health scaling!
+      if (difficultyMult > 1) {
+        enemy.health = Math.floor(enemy.health * difficultyMult)
+        enemy.maxHealth = Math.floor(enemy.maxHealth * difficultyMult)
+      }
 
       this.enemies.add(enemy)
     }
@@ -1505,17 +1533,97 @@ export default class GameSceneV3 extends Phaser.Scene {
     }
   }
 
-  private bulletHitEnemy(bullet: any, enemy: any) {
-    const damage = this.player.getCurrentWeaponDamage()
-    // Crit visual if damage is high (weapons deal more damage when upgraded)
-    const isCrit = damage > 80 || Math.random() < 0.15
+  // Necromancer: Spawn undead minions
+  private spawnNecromancerMinions(x: number, y: number, count: number) {
+    const minionTypes = [EnemyType.SWARM, EnemyType.GHOST]
+    const floor = this.floorManager.getCurrentFloor()
+    const difficultyMult = floor.difficultyMultiplier
 
-    // Visual feedback - hit sparks and damage number (with safety checks)
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5
+      const distance = 60 + Math.random() * 40
+      const minionX = Phaser.Math.Clamp(x + Math.cos(angle) * distance, 50, this.worldWidth - 50)
+      const minionY = Phaser.Math.Clamp(y + Math.sin(angle) * distance, 50, this.worldHeight - 50)
+
+      const type = Phaser.Math.RND.pick(minionTypes)
+      const minion = new AdvancedEnemy(this, minionX, minionY, type)
+
+      // Apply floor scaling
+      if (difficultyMult > 1) {
+        minion.health = Math.floor(minion.health * difficultyMult * 0.5) // Minions are weaker
+        minion.maxHealth = minion.health
+      }
+
+      this.enemies.add(minion)
+      this.totalEnemies++
+
+      // Spooky rise from ground animation
+      minion.setAlpha(0)
+      minion.setY(minionY + 30)
+      this.tweens.add({
+        targets: minion,
+        alpha: 1,
+        y: minionY,
+        duration: 400,
+        ease: 'Power2'
+      })
+    }
+  }
+
+  // Exploder: Deal area damage when dying
+  private handleExploderExplosion(x: number, y: number, damage: number, radius: number) {
+    // Check if player is in blast radius
+    const distToPlayer = Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y)
+    if (distToPlayer < radius) {
+      // Damage falls off with distance
+      const damageMultiplier = 1 - (distToPlayer / radius)
+      const actualDamage = Math.floor(damage * damageMultiplier)
+      this.player.takeDamage(actualDamage)
+
+      // Show damage to player
+      this.addKillFeedMessage(`💥 Explosion hit you for ${actualDamage} damage!`, '#ff4500', 2000)
+
+      if (this.player.isDead()) {
+        this.gameOver()
+      }
+    }
+
+    // Screen shake for explosion
     try {
       if (this.visualEffects) {
-        this.visualEffects.createHitSparks(enemy.x, enemy.y, 0xffff00, 6)
-        this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, isCrit)
-        this.visualEffects.createBloodSplatter(enemy.x, enemy.y, 0.5)
+        this.visualEffects.shakeScreen('medium')
+      }
+    } catch (e) {}
+  }
+
+  private hitCounter = 0 // Track hits to reduce visual spam
+
+  private bulletHitEnemy(bullet: any, enemy: any) {
+    const damage = this.player.getCurrentWeaponDamage()
+    // Actual crit calculation (15% base chance + shop bonus)
+    const critChance = 0.15 + this.player.shopCritBonus
+    const isCrit = Math.random() < critChance
+    const finalDamage = isCrit ? Math.floor(damage * 2) : damage
+
+    this.hitCounter++
+
+    // REDUCED VISUAL SPAM: Only show damage numbers for crits, kills, or every 8th hit
+    const shouldShowDamage = isCrit || this.hitCounter % 8 === 0 || enemy.health <= finalDamage
+
+    try {
+      if (this.visualEffects) {
+        // Always show small hit spark, but fewer particles
+        this.visualEffects.createHitSparks(enemy.x, enemy.y, isCrit ? 0xff6600 : 0xffff00, isCrit ? 8 : 3)
+
+        // Only show damage number when appropriate
+        if (shouldShowDamage) {
+          this.visualEffects.showDamageNumber(enemy.x, enemy.y, finalDamage, isCrit)
+        }
+
+        // Blood splatter only on crits
+        if (isCrit) {
+          this.visualEffects.createBloodSplatter(enemy.x, enemy.y, 0.5)
+        }
       }
     } catch (e) {
       // Silently ignore visual effect errors
@@ -1523,7 +1631,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     bullet.destroy()
 
-    const killed = enemy.takeDamage(damage)
+    const killed = enemy.takeDamage(finalDamage)
 
     if (killed) {
       this.enemiesKilled++
