@@ -287,6 +287,10 @@ interface GameState {
   // Cross-game synergy
   slayerFloorsCleared: number
   synergyBonus: number
+  // Ascension system (prestige of prestige)
+  ascensionLevel: number
+  totalAscensions: number
+  ascensionPoints: number
 }
 
 const INITIAL_BUILDINGS: Building[] = [
@@ -514,11 +518,32 @@ const INITIAL_PRESTIGE_UPGRADES: PrestigeUpgrade[] = [
   { id: 'p_crit_damage', name: 'Devastating Crits', description: '+50% crit multiplier', cost: 25, effect: 'critDamage', purchased: false, icon: '💥', tier: 3 },
   { id: 'p_synergy_boost', name: 'Synergy Amplifier', description: '2x cross-game synergy bonus', cost: 30, effect: 'synergyBoost', purchased: false, icon: '🔗', tier: 3 },
 
-  // Tier 4 - Legendary (30+ points)
+  // Tier 4 - Legendary (40-100 points)
   { id: 'p_mega_click', name: 'Mega Click', description: '5% chance for 100x click', cost: 40, effect: 'megaClick', purchased: false, icon: '💎', tier: 4 },
-  { id: 'p_double_prestige', name: 'Double Ascension', description: '2x prestige multiplier effect', cost: 50, effect: 'doublePrestige', purchased: false, icon: '🌈', tier: 4 },
+  { id: 'p_double_prestige', name: 'Double Ascension', description: '1.5x prestige multiplier effect', cost: 50, effect: 'doublePrestige', purchased: false, icon: '🌈', tier: 4 },
   { id: 'p_permanent_frenzy', name: 'Perpetual Frenzy', description: '+10% permanent frenzy bonus always active', cost: 75, effect: 'permanentFrenzy', purchased: false, icon: '🔥', tier: 4 },
   { id: 'p_ultimate_power', name: 'Ultimate Dot Power', description: '+100% to ALL bonuses', cost: 100, effect: 'ultimatePower', purchased: false, icon: '👑', tier: 4 },
+
+  // Tier 5 - Mythic (125-250 points)
+  { id: 'p_auto_clicker_2', name: 'Ghost Army', description: 'Auto-click 5 times per second', cost: 125, effect: 'autoClick5', purchased: false, icon: '👻', tier: 5 },
+  { id: 'p_building_boost', name: 'Industrial Revolution', description: '+50% all building production', cost: 150, effect: 'buildingBoost', purchased: false, icon: '🏭', tier: 5 },
+  { id: 'p_golden_rain', name: 'Golden Rain', description: 'Golden dots appear 3x more often', cost: 175, effect: 'goldenRain', purchased: false, icon: '🌧️', tier: 5 },
+  { id: 'p_crit_master', name: 'Critical Mastery', description: '+25% crit chance, +100% crit damage', cost: 200, effect: 'critMaster', purchased: false, icon: '⚔️', tier: 5 },
+  { id: 'p_time_warp', name: 'Time Warp', description: 'Gain 10 seconds of production every click', cost: 250, effect: 'timeWarp', purchased: false, icon: '⏰', tier: 5 },
+
+  // Tier 6 - Divine (300-500 points)
+  { id: 'p_ascension_boost', name: 'Ascension Catalyst', description: '+50% ascension point gain', cost: 300, effect: 'ascensionBoost', purchased: false, icon: '🌠', tier: 6 },
+  { id: 'p_combo_eternal', name: 'Eternal Combo', description: 'Combo never decays below 10', cost: 350, effect: 'comboEternal', purchased: false, icon: '♾️', tier: 6 },
+  { id: 'p_mega_buildings', name: 'Mega Structures', description: 'Buildings are 3x more effective', cost: 400, effect: 'megaBuildings', purchased: false, icon: '🏰', tier: 6 },
+  { id: 'p_lucky_star', name: 'Lucky Star', description: '10% chance for 1000x click', cost: 450, effect: 'luckyStar', purchased: false, icon: '⭐', tier: 6 },
+  { id: 'p_infinity_boost', name: 'Infinity Engine', description: '+200% to all production', cost: 500, effect: 'infinityBoost', purchased: false, icon: '∞', tier: 6 },
+
+  // Tier 7 - Transcendent (600-1000 points)
+  { id: 'p_auto_prestige', name: 'Auto Ascend', description: 'Automatically gain 1 prestige point per minute', cost: 600, effect: 'autoPrestige', purchased: false, icon: '🔄', tier: 7 },
+  { id: 'p_dot_singularity', name: 'Dot Singularity', description: '+500% passive DPS', cost: 700, effect: 'dotSingularity', purchased: false, icon: '🕳️', tier: 7 },
+  { id: 'p_omega_click', name: 'Omega Click', description: '1% chance for 10000x click', cost: 800, effect: 'omegaClick', purchased: false, icon: '🌟', tier: 7 },
+  { id: 'p_eternal_growth', name: 'Eternal Growth', description: '+1% production per second (stacks)', cost: 900, effect: 'eternalGrowth', purchased: false, icon: '📈', tier: 7 },
+  { id: 'p_god_mode', name: 'God Mode', description: '+1000% to EVERYTHING', cost: 1000, effect: 'godMode', purchased: false, icon: '🌌', tier: 7 },
 ]
 
 // ============= HELPER FUNCTIONS =============
@@ -581,6 +606,36 @@ function calculateDps(state: GameState): number {
     dps *= 2
   }
 
+  // Tier 5: +50% building production
+  if (state.prestigeUpgrades?.some(u => u.effect === 'buildingBoost' && u.purchased)) {
+    dps *= 1.5
+  }
+
+  // Tier 6: Buildings 3x effective
+  if (state.prestigeUpgrades?.some(u => u.effect === 'megaBuildings' && u.purchased)) {
+    dps *= 3
+  }
+
+  // Tier 6: +200% all production
+  if (state.prestigeUpgrades?.some(u => u.effect === 'infinityBoost' && u.purchased)) {
+    dps *= 3
+  }
+
+  // Tier 7: +500% passive DPS
+  if (state.prestigeUpgrades?.some(u => u.effect === 'dotSingularity' && u.purchased)) {
+    dps *= 6
+  }
+
+  // Tier 7: +1000% to everything
+  if (state.prestigeUpgrades?.some(u => u.effect === 'godMode' && u.purchased)) {
+    dps *= 11
+  }
+
+  // Ascension bonus: +15% per ascension level
+  if (state.ascensionLevel > 0) {
+    dps *= (1 + state.ascensionLevel * 0.15)
+  }
+
   return dps
 }
 
@@ -623,16 +678,88 @@ function calculateClickPower(state: GameState): number {
     power *= 2
   }
 
+  // Tier 5: Critical Mastery (+25% crit chance handled elsewhere, +100% crit damage)
+  // Tier 6: +200% all production
+  if (state.prestigeUpgrades?.some(u => u.effect === 'infinityBoost' && u.purchased)) {
+    power *= 3
+  }
+
+  // Tier 7: +1000% to everything
+  if (state.prestigeUpgrades?.some(u => u.effect === 'godMode' && u.purchased)) {
+    power *= 11
+  }
+
+  // Ascension bonus: +15% per ascension level
+  if (state.ascensionLevel > 0) {
+    power *= (1 + state.ascensionLevel * 0.15)
+  }
+
   return power
 }
 
+// Calculate ascension points based on prestige points spent
+function calculateAscensionPoints(prestigePoints: number, state?: GameState): number {
+  // Need 100 prestige points minimum to ascend
+  // Each ascension costs more points
+  // 100 PP = 1 AP, 500 PP = 2 AP, 1000 PP = 3 AP, 2500 PP = 5 AP, 5000 PP = 7 AP
+  if (prestigePoints < 100) return 0
+
+  const logPoints = Math.log10(prestigePoints / 100)
+  let points = Math.floor(logPoints * logPoints * 2) + 1
+
+  // Ascension boost prestige upgrade: +50% AP
+  if (state?.prestigeUpgrades?.some(u => u.effect === 'ascensionBoost' && u.purchased)) {
+    points = Math.floor(points * 1.5)
+  }
+
+  return points
+}
+
 function calculatePrestigePoints(totalDots: number, state?: GameState): number {
-  let points = Math.floor(Math.pow(totalDots / 1000000, 0.5))
+  // REBALANCED: Much harder prestige formula with diminishing returns
+  // Need 10 million dots for first prestige point
+  // Each subsequent point requires exponentially more
+  // 10M = 1, 100M = 2, 1B = 4, 10B = 6, 100B = 9, 1T = 12, 10T = 16, 100T = 20, 1Q = 25
+  if (totalDots < 10000000) return 0 // Need 10M minimum
+
+  // Logarithmic scaling: log10(dots / 10M) gives us a base, then scale down
+  const logDots = Math.log10(totalDots / 10000000)
+  let points = Math.floor(logDots * logDots * 1.5) + 1
+
   // Prestige upgrade: +20% more prestige points
   if (state?.prestigeUpgrades?.some(u => u.effect === 'prestigeBonus' && u.purchased)) {
     points = Math.floor(points * 1.2)
   }
+
+  // Ascension bonus: +5% per ascension level
+  const ascensionLevel = state?.ascensionLevel || 0
+  if (ascensionLevel > 0) {
+    points = Math.floor(points * (1 + ascensionLevel * 0.05))
+  }
+
   return points
+}
+
+// Calculate prestige multiplier with diminishing returns
+function calculatePrestigeMultiplier(prestigePoints: number, state?: GameState): number {
+  // REBALANCED: Logarithmic scaling instead of linear
+  // 0 points = 1x, 10 points = ~1.5x, 50 points = ~2.5x, 100 points = ~3.5x, 500 points = ~6x
+  if (prestigePoints <= 0) return 1
+
+  let multiplier = 1 + Math.log10(prestigePoints + 1) * 0.8
+
+  // Double Ascension prestige upgrade: 1.5x effect instead of 2x (nerfed)
+  if (state?.prestigeUpgrades?.some(u => u.effect === 'doublePrestige' && u.purchased)) {
+    multiplier = 1 + (multiplier - 1) * 1.5
+  }
+
+  // Ascension bonus: +10% prestige effectiveness per ascension level
+  const ascensionLevel = state?.ascensionLevel || 0
+  if (ascensionLevel > 0) {
+    multiplier = 1 + (multiplier - 1) * (1 + ascensionLevel * 0.1)
+  }
+
+  return multiplier
 }
 
 // ============= MAIN COMPONENT =============
@@ -843,6 +970,9 @@ export default function DotClicker() {
       highestDps: 0,
       slayerFloorsCleared: 0,
       synergyBonus: 0,
+      ascensionLevel: 0,
+      totalAscensions: 0,
+      ascensionPoints: 0,
     }
   }
 
@@ -951,12 +1081,55 @@ export default function DotClicker() {
   useEffect(() => {
     if (!gameState) return
 
+    // Auto-click counters (run at different rates)
+    let autoClickCounter = 0
+    let autoPrestigeCounter = 0
+    let eternalGrowthBonus = 0
+
     gameLoopRef.current = setInterval(() => {
       setGameState(prev => {
         if (!prev) return prev
-        const dps = calculateDps(prev) * (frenzyMode ? 7 : 1)
-        const newDots = prev.dots + dps / 20
-        const newTotalDots = prev.totalDots + dps / 20
+        let dps = calculateDps(prev) * (frenzyMode ? 7 : 1)
+
+        // Eternal Growth (Tier 7): +1% production per second (stacks)
+        if (prev.prestigeUpgrades?.some(u => u.effect === 'eternalGrowth' && u.purchased)) {
+          eternalGrowthBonus += 0.0005 // +1% per second = 0.05% per tick (20 ticks/sec)
+          dps *= (1 + eternalGrowthBonus)
+        }
+
+        let newDots = prev.dots + dps / 20
+        let newTotalDots = prev.totalDots + dps / 20
+
+        // Auto-click handling (every 20 ticks = 1 second, or every 4 ticks = 5/sec)
+        autoClickCounter++
+        const hasAutoClick = prev.prestigeUpgrades?.some(u => u.effect === 'autoClick' && u.purchased)
+        const hasAutoClick5 = prev.prestigeUpgrades?.some(u => u.effect === 'autoClick5' && u.purchased)
+
+        if (hasAutoClick5 && autoClickCounter % 4 === 0) {
+          // 5 clicks per second
+          const autoPower = calculateClickPower(prev)
+          newDots += autoPower
+          newTotalDots += autoPower
+        } else if (hasAutoClick && !hasAutoClick5 && autoClickCounter % 20 === 0) {
+          // 1 click per second
+          const autoPower = calculateClickPower(prev)
+          newDots += autoPower
+          newTotalDots += autoPower
+        }
+
+        // Auto-prestige (Tier 7): +1 prestige point per minute (every 1200 ticks)
+        autoPrestigeCounter++
+        if (prev.prestigeUpgrades?.some(u => u.effect === 'autoPrestige' && u.purchased) && autoPrestigeCounter >= 1200) {
+          autoPrestigeCounter = 0
+          return {
+            ...prev,
+            dots: newDots,
+            totalDots: newTotalDots,
+            dotsPerSecond: dps,
+            highestDps: Math.max(prev.highestDps, dps),
+            prestigePoints: prev.prestigePoints + 1,
+          }
+        }
 
         // Check achievements
         const newAchievements = prev.achievements.map(a => {
@@ -988,7 +1161,10 @@ export default function DotClicker() {
     cloudSaveTimerRef.current = setInterval(() => saveGameCloud(false), 60000)
 
     const goldenInterval = setInterval(() => {
-      if (gameState && Math.random() < (0.02 + gameState.goldenDotChance)) {
+      // Golden Rain (Tier 5): 3x golden dot spawn rate
+      const hasGoldenRain = gameState?.prestigeUpgrades?.some(u => u.effect === 'goldenRain' && u.purchased)
+      const goldenChance = (0.02 + (gameState?.goldenDotChance || 0)) * (hasGoldenRain ? 3 : 1)
+      if (gameState && Math.random() < goldenChance) {
         setGoldenDot({
           x: 20 + Math.random() * 60,
           y: 20 + Math.random() * 60,
@@ -1044,12 +1220,51 @@ export default function DotClicker() {
     const y = e.clientY - rect.top
 
     let clickPower = calculateClickPower(gameState) * (frenzyMode ? 7 : 1)
-    let isCrit = Math.random() < gameState.critChance
+
+    // Calculate crit chance with Crit Master bonus (+25%)
+    let critChance = gameState.critChance
+    if (gameState.prestigeUpgrades?.some(u => u.effect === 'critMaster' && u.purchased)) {
+      critChance += 0.25
+    }
+
+    let isCrit = Math.random() < critChance
     let color = '#00d9ff'
 
     if (isCrit) {
-      clickPower *= gameState.critMultiplier
+      // Crit multiplier with Crit Master bonus (+100% = 2x crit damage)
+      let critMult = gameState.critMultiplier
+      if (gameState.prestigeUpgrades?.some(u => u.effect === 'critDamage' && u.purchased)) {
+        critMult *= 1.5
+      }
+      if (gameState.prestigeUpgrades?.some(u => u.effect === 'critMaster' && u.purchased)) {
+        critMult *= 2
+      }
+      clickPower *= critMult
       color = '#f39c12'
+    }
+
+    // Mega Click (Tier 4): 5% chance for 100x
+    if (gameState.prestigeUpgrades?.some(u => u.effect === 'megaClick' && u.purchased) && Math.random() < 0.05) {
+      clickPower *= 100
+      color = '#e74c3c'
+    }
+
+    // Lucky Star (Tier 6): 10% chance for 1000x
+    if (gameState.prestigeUpgrades?.some(u => u.effect === 'luckyStar' && u.purchased) && Math.random() < 0.10) {
+      clickPower *= 1000
+      color = '#ffd700'
+    }
+
+    // Omega Click (Tier 7): 1% chance for 10000x
+    if (gameState.prestigeUpgrades?.some(u => u.effect === 'omegaClick' && u.purchased) && Math.random() < 0.01) {
+      clickPower *= 10000
+      color = '#ff00ff'
+    }
+
+    // Time Warp (Tier 5): Gain 10 seconds of production per click
+    let timeWarpBonus = 0
+    if (gameState.prestigeUpgrades?.some(u => u.effect === 'timeWarp' && u.purchased)) {
+      timeWarpBonus = calculateDps(gameState) * 10
     }
 
     const effectId = Date.now() + Math.random()
@@ -1064,18 +1279,29 @@ export default function DotClicker() {
       setClickEffects(prev => prev.filter(e => e.id !== effectId))
     }, 1000)
 
+    // Combo decay with Combo Keeper (50% slower) and Combo Eternal (never below 10)
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current)
-    comboTimerRef.current = setTimeout(() => {
-      setGameState(prev => prev ? { ...prev, combo: 0 } : prev)
-    }, 2000)
+    const hasComboDecay = gameState.prestigeUpgrades?.some(u => u.effect === 'comboDecay' && u.purchased)
+    const hasComboEternal = gameState.prestigeUpgrades?.some(u => u.effect === 'comboEternal' && u.purchased)
+    const comboDecayTime = hasComboDecay ? 3000 : 2000
 
+    comboTimerRef.current = setTimeout(() => {
+      setGameState(prev => {
+        if (!prev) return prev
+        // Combo Eternal: never drop below 10
+        const minCombo = hasComboEternal ? 10 : 0
+        return { ...prev, combo: Math.max(minCombo, 0) }
+      })
+    }, comboDecayTime)
+
+    const totalClickGain = clickPower + timeWarpBonus
     setGameState(prev => {
       if (!prev) return prev
       const newCombo = prev.combo + 1
       return {
         ...prev,
-        dots: prev.dots + clickPower,
-        totalDots: prev.totalDots + clickPower,
+        dots: prev.dots + totalClickGain,
+        totalDots: prev.totalDots + totalClickGain,
         totalClicks: prev.totalClicks + 1,
         totalCrits: isCrit ? prev.totalCrits + 1 : prev.totalCrits,
         combo: newCombo,
@@ -1087,7 +1313,13 @@ export default function DotClicker() {
   const handleGoldenClick = useCallback(() => {
     if (!gameState || !goldenDot) return
 
-    const bonus = gameState.dotsPerSecond * 120 // 2 minutes of production
+    let bonus = gameState.dotsPerSecond * 120 // 2 minutes of production
+
+    // Golden Fortune (Tier 3): +50% golden dot value
+    if (gameState.prestigeUpgrades?.some(u => u.effect === 'goldenValue' && u.purchased)) {
+      bonus *= 1.5
+    }
+
     setGameState(prev => prev ? {
       ...prev,
       dots: prev.dots + bonus,
@@ -1167,11 +1399,8 @@ export default function DotClicker() {
 
     const totalPrestige = gameState.prestigePoints + newPrestigePoints
 
-    // Calculate prestige multiplier (double if prestige upgrade purchased)
-    const hasDoublePrestige = gameState.prestigeUpgrades?.some(u => u.effect === 'doublePrestige' && u.purchased)
-    const prestigeMultiplier = hasDoublePrestige
-      ? 1 + totalPrestige * 0.2 // 20% per point
-      : 1 + totalPrestige * 0.1 // 10% per point
+    // Calculate prestige multiplier using balanced formula
+    const prestigeMultiplier = calculatePrestigeMultiplier(totalPrestige, gameState)
 
     // Check for start dots bonus
     const hasStartDots = gameState.prestigeUpgrades?.some(u => u.effect === 'startDots' && u.purchased)
@@ -1202,11 +1431,56 @@ export default function DotClicker() {
       highestDps: gameState.highestDps,
       slayerFloorsCleared: gameState.slayerFloorsCleared,
       synergyBonus: gameState.synergyBonus,
+      // Preserve ascension progress
+      ascensionLevel: gameState.ascensionLevel,
+      totalAscensions: gameState.totalAscensions,
+      ascensionPoints: gameState.ascensionPoints,
     })
 
     setShowPrestige(false)
-    setNotification(`⭐ Prestiged! +${newPrestigePoints} points. New bonus: ${(prestigeMultiplier * 100).toFixed(0)}%`)
+    setNotification(`⭐ Prestiged! +${newPrestigePoints} points. New multiplier: ${prestigeMultiplier.toFixed(2)}x`)
     setTimeout(() => setNotification(null), 5000)
+  }, [gameState])
+
+  // ASCENSION: Reset prestige points but gain permanent ascension bonuses
+  const handleAscension = useCallback(() => {
+    if (!gameState) return
+
+    const ascensionPointsGained = calculateAscensionPoints(gameState.prestigePoints, gameState)
+    if (ascensionPointsGained < 1) return
+
+    const newAscensionLevel = gameState.ascensionLevel + 1
+    const totalAscensionPoints = gameState.ascensionPoints + ascensionPointsGained
+
+    // Reset everything but keep ascension progress and some prestige upgrades
+    setGameState({
+      ...getInitialState(),
+      // Keep lifetime stats
+      achievements: gameState.achievements,
+      totalPrestiges: gameState.totalPrestiges,
+      totalGoldenClicks: gameState.totalGoldenClicks,
+      totalCrits: gameState.totalCrits,
+      highestDps: gameState.highestDps,
+      maxCombo: gameState.maxCombo,
+      slayerFloorsCleared: gameState.slayerFloorsCleared,
+      synergyBonus: gameState.synergyBonus,
+      // Reset prestige but keep Tier 4+ upgrades (hard-earned)
+      prestigePoints: 0,
+      prestigeMultiplier: 1,
+      prestigeUpgrades: gameState.prestigeUpgrades.map(u => ({
+        ...u,
+        // Keep upgrades Tier 4+ purchased, reset Tier 1-3
+        purchased: u.tier >= 4 ? u.purchased : false
+      })),
+      // Ascension progress
+      ascensionLevel: newAscensionLevel,
+      totalAscensions: gameState.totalAscensions + 1,
+      ascensionPoints: totalAscensionPoints,
+    })
+
+    setShowPrestige(false)
+    setNotification(`🌌 ASCENDED! Level ${newAscensionLevel}! +${ascensionPointsGained} Ascension Points. Permanent +${(newAscensionLevel * 15)}% bonus!`)
+    setTimeout(() => setNotification(null), 7000)
   }, [gameState])
 
   if (loading || !gameState) {
@@ -1472,14 +1746,20 @@ export default function DotClicker() {
           <div className="prestige-shop">
             <div className="prestige-shop-header">
               <span className="prestige-points-display">⭐ {gameState.prestigePoints} Prestige Points</span>
+              {gameState.ascensionLevel > 0 && (
+                <span className="ascension-display">🌌 Ascension Lv.{gameState.ascensionLevel} (+{gameState.ascensionLevel * 15}%)</span>
+              )}
             </div>
-            {[1, 2, 3, 4].map(tier => (
+            {[1, 2, 3, 4, 5, 6, 7].map(tier => (
               <div key={tier} className="prestige-tier">
                 <h4 className={`tier-title tier-${tier}`}>
                   {tier === 1 && '🌟 Tier 1 - Basic'}
                   {tier === 2 && '💫 Tier 2 - Intermediate'}
                   {tier === 3 && '✨ Tier 3 - Advanced'}
                   {tier === 4 && '👑 Tier 4 - Legendary'}
+                  {tier === 5 && '🔮 Tier 5 - Mythic'}
+                  {tier === 6 && '⚡ Tier 6 - Divine'}
+                  {tier === 7 && '🌌 Tier 7 - Transcendent'}
                 </h4>
                 <div className="prestige-upgrades-grid">
                   {gameState.prestigeUpgrades.filter(u => u.tier === tier).map(upgrade => (
@@ -1543,21 +1823,41 @@ export default function DotClicker() {
       {/* Prestige Modal */}
       {showPrestige && (
         <div className="modal-overlay" onClick={() => setShowPrestige(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal prestige-modal" onClick={e => e.stopPropagation()}>
             <h2>⭐ Prestige</h2>
             <p>Reset progress for permanent bonuses!</p>
             <div className="prestige-info">
               <p>Current points: <strong>{gameState.prestigePoints}</strong></p>
               <p>Points to gain: <strong className="gain">{potentialPrestige}</strong></p>
-              <p>New bonus: <strong>{(((gameState.prestigePoints + potentialPrestige) * 0.1 + 1) * 100).toFixed(0)}%</strong></p>
+              <p>New multiplier: <strong>{calculatePrestigeMultiplier(gameState.prestigePoints + potentialPrestige, gameState).toFixed(2)}x</strong></p>
             </div>
             {potentialPrestige > 0 ? (
               <button className="btn prestige-confirm" onClick={handlePrestige}>
                 Prestige Now!
               </button>
             ) : (
-              <p className="prestige-warning">Need 1M total dots to prestige!</p>
+              <p className="prestige-warning">Need 10M total dots to prestige!</p>
             )}
+
+            {/* Ascension Section */}
+            <div className="ascension-section">
+              <h3>🌌 Ascension</h3>
+              <p>Reset prestige for permanent power!</p>
+              <div className="ascension-info">
+                <p>Current level: <strong>{gameState.ascensionLevel}</strong></p>
+                <p>Ascension Points: <strong>{gameState.ascensionPoints}</strong></p>
+                <p>Points to gain: <strong className="gain">{calculateAscensionPoints(gameState.prestigePoints, gameState)}</strong></p>
+                <p>Current bonus: <strong>+{gameState.ascensionLevel * 15}% to everything</strong></p>
+              </div>
+              {calculateAscensionPoints(gameState.prestigePoints, gameState) > 0 ? (
+                <button className="btn ascension-confirm" onClick={handleAscension}>
+                  🌌 Ascend! (Resets Prestige)
+                </button>
+              ) : (
+                <p className="ascension-warning">Need 100 Prestige Points to ascend!</p>
+              )}
+            </div>
+
             <button className="btn close-btn" onClick={() => setShowPrestige(false)}>Close</button>
           </div>
         </div>
@@ -2005,6 +2305,16 @@ export default function DotClicker() {
         .tier-2 { color: #9b59b6; }
         .tier-3 { color: #f39c12; }
         .tier-4 { color: #e74c3c; }
+        .tier-5 { color: #ff6b9d; }
+        .tier-6 { color: #00d9ff; }
+        .tier-7 { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+
+        .ascension-display {
+          display: block;
+          font-size: 1.1rem;
+          color: #00d9ff;
+          margin-top: 8px;
+        }
 
         .prestige-upgrades-grid {
           display: flex;
@@ -2179,6 +2489,52 @@ export default function DotClicker() {
 
         .prestige-warning { color: #e74c3c; font-size: 0.9rem; }
         .close-btn { background: rgba(255, 255, 255, 0.1); color: #888; width: 100%; }
+
+        /* Ascension Section */
+        .ascension-section {
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 2px solid rgba(0, 217, 255, 0.3);
+        }
+
+        .ascension-section h3 {
+          color: #00d9ff;
+          margin-bottom: 10px;
+          font-size: 1.2rem;
+        }
+
+        .ascension-info {
+          background: rgba(0, 217, 255, 0.1);
+          padding: 12px;
+          border-radius: 10px;
+          margin: 12px 0;
+          border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .ascension-info p { margin: 6px 0; }
+        .ascension-info .gain { color: #00d9ff; font-size: 1.2rem; }
+
+        .ascension-confirm {
+          background: linear-gradient(135deg, #00d9ff, #0099cc);
+          color: white;
+          width: 100%;
+          padding: 12px;
+          font-size: 1rem;
+          margin: 10px 0;
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 5px rgba(0, 217, 255, 0.3); }
+          50% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.6); }
+        }
+
+        .ascension-warning { color: #888; font-size: 0.85rem; }
+
+        .prestige-modal {
+          max-height: 80vh;
+          overflow-y: auto;
+        }
 
         .last-save-time {
           display: block;

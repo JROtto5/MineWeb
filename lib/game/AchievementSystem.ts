@@ -18,6 +18,15 @@ export interface GameStats {
   bossesKilled: number
   deathCount: number
   totalPlayTime: number
+  // New stats
+  damageDealt: number
+  criticalHits: number
+  weaponsSwitched: number
+  floorsWithoutDamage: number
+  enemiesKilledThisRun: number
+  goldSpent: number
+  shopUpgradesBought: number
+  eliteEnemiesKilled: number
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -220,6 +229,207 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (stats) => stats.floorsCompleted >= 20 && stats.totalPlayTime < 30 * 60,
     tier: 'platinum',
     color: 0x00d9ff
+  },
+
+  // Damage achievements
+  {
+    id: 'damage_10k',
+    name: 'Heavy Hitter',
+    description: 'Deal 10,000 total damage',
+    icon: '💪',
+    condition: (stats) => stats.damageDealt >= 10000,
+    tier: 'bronze',
+    color: 0xcd7f32
+  },
+  {
+    id: 'damage_100k',
+    name: 'Devastator',
+    description: 'Deal 100,000 total damage',
+    icon: '💣',
+    condition: (stats) => stats.damageDealt >= 100000,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'damage_1m',
+    name: 'Annihilator',
+    description: 'Deal 1,000,000 total damage!',
+    icon: '☢️',
+    condition: (stats) => stats.damageDealt >= 1000000,
+    tier: 'gold',
+    color: 0xffd700
+  },
+
+  // Critical hit achievements
+  {
+    id: 'crits_50',
+    name: 'Critical Thinker',
+    description: 'Land 50 critical hits',
+    icon: '❗',
+    condition: (stats) => stats.criticalHits >= 50,
+    tier: 'bronze',
+    color: 0xcd7f32
+  },
+  {
+    id: 'crits_200',
+    name: 'Precision Strike',
+    description: 'Land 200 critical hits',
+    icon: '🎯',
+    condition: (stats) => stats.criticalHits >= 200,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'crits_500',
+    name: 'Critical Master',
+    description: 'Land 500 critical hits!',
+    icon: '⚡',
+    condition: (stats) => stats.criticalHits >= 500,
+    tier: 'gold',
+    color: 0xffd700
+  },
+
+  // Kill streak achievements
+  {
+    id: 'killstreak_25',
+    name: 'On Fire',
+    description: 'Kill 25 enemies in one run',
+    icon: '🔥',
+    condition: (stats) => stats.enemiesKilledThisRun >= 25,
+    tier: 'bronze',
+    color: 0xcd7f32
+  },
+  {
+    id: 'killstreak_100',
+    name: 'Rampage',
+    description: 'Kill 100 enemies in one run',
+    icon: '😈',
+    condition: (stats) => stats.enemiesKilledThisRun >= 100,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'killstreak_300',
+    name: 'One Man Army',
+    description: 'Kill 300 enemies in one run!',
+    icon: '🦾',
+    condition: (stats) => stats.enemiesKilledThisRun >= 300,
+    tier: 'gold',
+    color: 0xffd700
+  },
+  {
+    id: 'killstreak_500',
+    name: 'Genocide',
+    description: 'Kill 500 enemies in one run!',
+    icon: '💀',
+    condition: (stats) => stats.enemiesKilledThisRun >= 500,
+    tier: 'platinum',
+    color: 0x00d9ff
+  },
+
+  // Shop achievements
+  {
+    id: 'shop_5',
+    name: 'Window Shopper',
+    description: 'Buy 5 shop upgrades',
+    icon: '🛒',
+    condition: (stats) => stats.shopUpgradesBought >= 5,
+    tier: 'bronze',
+    color: 0xcd7f32
+  },
+  {
+    id: 'shop_15',
+    name: 'Big Spender',
+    description: 'Buy 15 shop upgrades',
+    icon: '🛍️',
+    condition: (stats) => stats.shopUpgradesBought >= 15,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'shop_30',
+    name: 'Maxed Out',
+    description: 'Buy 30 shop upgrades!',
+    icon: '💎',
+    condition: (stats) => stats.shopUpgradesBought >= 30,
+    tier: 'gold',
+    color: 0xffd700
+  },
+
+  // Elite enemy achievements
+  {
+    id: 'elite_5',
+    name: 'Elite Hunter',
+    description: 'Kill 5 elite enemies',
+    icon: '⭐',
+    condition: (stats) => stats.eliteEnemiesKilled >= 5,
+    tier: 'bronze',
+    color: 0xcd7f32
+  },
+  {
+    id: 'elite_20',
+    name: 'Elite Slayer',
+    description: 'Kill 20 elite enemies',
+    icon: '🌟',
+    condition: (stats) => stats.eliteEnemiesKilled >= 20,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'elite_50',
+    name: 'Elite Nemesis',
+    description: 'Kill 50 elite enemies!',
+    icon: '✨',
+    condition: (stats) => stats.eliteEnemiesKilled >= 50,
+    tier: 'gold',
+    color: 0xffd700
+  },
+
+  // Special achievements
+  {
+    id: 'perfect_floor',
+    name: 'Untouchable',
+    description: 'Complete a floor without taking damage',
+    icon: '🛡️',
+    condition: (stats) => stats.floorsWithoutDamage >= 1,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'perfect_5',
+    name: 'Ghost',
+    description: 'Complete 5 floors without taking damage',
+    icon: '👻',
+    condition: (stats) => stats.floorsWithoutDamage >= 5,
+    tier: 'gold',
+    color: 0xffd700
+  },
+  {
+    id: 'weapon_master',
+    name: 'Weapon Master',
+    description: 'Switch weapons 50 times',
+    icon: '🔫',
+    condition: (stats) => stats.weaponsSwitched >= 50,
+    tier: 'silver',
+    color: 0xc0c0c0
+  },
+  {
+    id: 'kills_5000',
+    name: 'Genocide Protocol',
+    description: 'Kill 5000 enemies total',
+    icon: '☠️',
+    condition: (stats) => stats.totalKills >= 5000,
+    tier: 'platinum',
+    color: 0x00d9ff
+  },
+  {
+    id: 'kills_10000',
+    name: 'Death Incarnate',
+    description: 'Kill 10000 enemies total!',
+    icon: '💀',
+    condition: (stats) => stats.totalKills >= 10000,
+    tier: 'platinum',
+    color: 0xff0266
   }
 ]
 

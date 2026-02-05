@@ -87,7 +87,15 @@ export default class GameSceneV3 extends Phaser.Scene {
     stagesCompleted: 0,
     bossesKilled: 0,
     damageDealt: 0,
-    damageTaken: 0
+    damageTaken: 0,
+    criticalHits: 0,
+    weaponsSwitched: 0,
+    floorsWithoutDamage: 0,
+    enemiesKilledThisRun: 0,
+    goldSpent: 0,
+    shopUpgradesBought: 0,
+    eliteEnemiesKilled: 0,
+    damageTakenThisFloor: 0
   }
 
   // Persistent UI elements
@@ -113,7 +121,15 @@ export default class GameSceneV3 extends Phaser.Scene {
       stagesCompleted: 0,
       bossesKilled: 0,
       damageDealt: 0,
-      damageTaken: 0
+      damageTaken: 0,
+      criticalHits: 0,
+      weaponsSwitched: 0,
+      floorsWithoutDamage: 0,
+      enemiesKilledThisRun: 0,
+      goldSpent: 0,
+      shopUpgradesBought: 0,
+      eliteEnemiesKilled: 0,
+      damageTakenThisFloor: 0
     }
 
     // Initialize systems
@@ -2061,7 +2077,16 @@ export default class GameSceneV3 extends Phaser.Scene {
       legendariesCollected: this.legendariesCollectedThisRun,
       bossesKilled: this.runStats.bossesKilled,
       deathCount: 0, // TODO: Track deaths
-      totalPlayTime: Math.floor((Date.now() - this.startTime) / 1000)
+      totalPlayTime: Math.floor((Date.now() - this.startTime) / 1000),
+      // New stats with defaults
+      damageDealt: this.runStats.damageDealt || 0,
+      criticalHits: this.runStats.criticalHits || 0,
+      weaponsSwitched: this.runStats.weaponsSwitched || 0,
+      floorsWithoutDamage: this.runStats.floorsWithoutDamage || 0,
+      enemiesKilledThisRun: this.runStats.enemiesKilledThisRun || this.runStats.totalKills,
+      goldSpent: this.runStats.goldSpent || 0,
+      shopUpgradesBought: this.runStats.shopUpgradesBought || 0,
+      eliteEnemiesKilled: this.runStats.eliteEnemiesKilled || 0,
     }
 
     this.achievementManager.checkAchievements(stats)
