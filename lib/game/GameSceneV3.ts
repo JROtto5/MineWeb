@@ -15,6 +15,9 @@ import { LeaderboardService } from '../supabase/LeaderboardService'
 import { FloorManager, FloorConfig } from './FloorSystem'
 import { ItemDrop, rollItemDrop, ItemRarity, ITEM_POOL } from './ItemSystem'
 import { AchievementManager, GameStats as AchievementStats } from './AchievementSystem'
+import { getDailyChallengeManager } from './DailyChallenges'
+import { slayerStatsService, RunStats } from '../supabase/SlayerStatsService'
+import { dailyChallengeService } from '../supabase/DailyChallengeService'
 // NEW SYSTEMS - Making the game awesome!
 import { VisualEffects } from './VisualEffects'
 import { FloorThemeRenderer, getThemeForFloor } from './FloorThemes'
@@ -189,6 +192,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     if (currentUser) {
       this.currentUserId = currentUser.id
       this.currentPlayerName = currentUser.displayName || 'Player'
+
+      // Set user ID on tracking systems for cloud sync
+      getDailyChallengeManager().setUserId(currentUser.id)
+      this.achievementManager.setUserId(currentUser.id)
     }
 
     // Check if we're loading a saved game
@@ -1595,6 +1602,7 @@ export default class GameSceneV3 extends Phaser.Scene {
       const damageMultiplier = 1 - (distToPlayer / radius)
       const actualDamage = Math.floor(damage * damageMultiplier)
       this.player.takeDamage(actualDamage)
+      this.runStats.damageTakenThisFloor += actualDamage // Track damage for daily challenge
 
       // Show damage to player
       this.addKillFeedMessage(`💥 Explosion hit you for ${actualDamage} damage!`, '#ff4500', 2000)
@@ -1620,6 +1628,14 @@ export default class GameSceneV3 extends Phaser.Scene {
     const critChance = 0.15 + this.player.shopCritBonus
     const isCrit = Math.random() < critChance
     const finalDamage = isCrit ? Math.floor(damage * 2) : damage
+
+    // Track damage dealt for stats and daily challenges
+    this.runStats.damageDealt += finalDamage
+    if (isCrit) {
+      this.runStats.criticalHits++
+    }
+    const dailyChallengeManager = getDailyChallengeManager()
+    dailyChallengeManager.updateProgress('damage', finalDamage)
 
     this.hitCounter++
 
@@ -1660,6 +1676,11 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // ROGUELIKE: Track run stats
       this.runStats.totalKills++
+      this.runStats.enemiesKilledThisRun++
+
+      // Update daily challenge progress for kills
+      const dailyChallengeManager = getDailyChallengeManager()
+      dailyChallengeManager.updateProgress('kills', 1)
 
       // Combo system
       const combo = this.comboSystem.addKill(this.time.now)
@@ -1667,7 +1688,12 @@ export default class GameSceneV3 extends Phaser.Scene {
       // ROGUELIKE: Track highest combo
       if (combo.combo > this.runStats.highestCombo) {
         this.runStats.highestCombo = combo.combo
+        // Update daily challenge progress for combo
+        dailyChallengeManager.updateProgress('combo', 0) // Will be handled by current combo value check
       }
+
+      // Check if current combo meets challenge targets (update with current value)
+      dailyChallengeManager.updateProgress('combo', combo.combo)
 
       // Calculate rewards with combo multiplier
       const money = Math.floor(enemy.getMoneyDrop() * combo.multiplier)
@@ -1678,6 +1704,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // ROGUELIKE: Track money earned
       this.runStats.totalMoney += money
+
+      // Update daily challenge progress for gold
+      dailyChallengeManager.updateProgress('gold', money)
 
       // REDUCED POPUPS: Only show kill messages for combo milestones or every 10 kills
       const shouldShowKillMessage = (combo.combo % 5 === 0 && combo.combo >= 5) || this.enemiesKilled % 10 === 0
@@ -1759,7 +1788,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private enemyBulletHitPlayer(player: any, bullet: any) {
     bullet.destroy()
-    player.takeDamage(10)
+    const damage = 10
+    player.takeDamage(damage)
+    this.runStats.damageTakenThisFloor += damage // Track damage for daily challenge
 
     if (player.isDead()) {
       this.gameOver()
@@ -1769,7 +1800,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   private playerHitEnemy(player: any, enemy: any) {
     // Throttle damage
     if (this.time.now % 500 < 50) {
-      player.takeDamage(enemy.getDamage())
+      const damage = enemy.getDamage()
+      player.takeDamage(damage)
+      this.runStats.damageTakenThisFloor += damage // Track damage for daily challenge
 
       if (player.isDead()) {
         this.gameOver()
@@ -1781,6 +1814,14 @@ export default class GameSceneV3 extends Phaser.Scene {
   private bulletHitBoss(bullet: any, boss: any) {
     const damage = this.player.getCurrentWeaponDamage()
     const isCrit = damage > 100 // Boss crits are special
+
+    // Track damage dealt for stats and daily challenges
+    this.runStats.damageDealt += damage
+    if (isCrit) {
+      this.runStats.criticalHits++
+    }
+    const dailyChallengeManager = getDailyChallengeManager()
+    dailyChallengeManager.updateProgress('damage', damage)
 
     // EPIC hit feedback for bosses (with safety checks)
     try {
@@ -1806,12 +1847,20 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.runStats.totalKills++
       this.runStats.bossesKilled++
 
+      // Update daily challenge progress for kills and bosses
+      const dailyChallengeManager = getDailyChallengeManager()
+      dailyChallengeManager.updateProgress('kills', 1)
+      dailyChallengeManager.updateProgress('boss', 1)
+
       const combo = this.comboSystem.addKill(this.time.now)
 
       // ROGUELIKE: Track highest combo
       if (combo.combo > this.runStats.highestCombo) {
         this.runStats.highestCombo = combo.combo
       }
+
+      // Update daily challenge progress for combo
+      dailyChallengeManager.updateProgress('combo', combo.combo)
 
       // EPIC rewards with combo multiplier
       const money = Math.floor(boss.getMoneyDrop() * combo.multiplier)
@@ -1822,6 +1871,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
       // ROGUELIKE: Track money earned
       this.runStats.totalMoney += money
+
+      // Update daily challenge progress for gold
+      dailyChallengeManager.updateProgress('gold', money)
 
       // Add skill point for boss kill!
       this.player.skillPoints++
@@ -1861,7 +1913,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   private playerHitBoss(player: any, boss: any) {
     // Throttle damage - bosses hit HARD
     if (this.time.now % 500 < 50) {
-      player.takeDamage(boss.getDamage())
+      const damage = boss.getDamage()
+      player.takeDamage(damage)
+      this.runStats.damageTakenThisFloor += damage // Track damage for daily challenge
 
       if (player.isDead()) {
         this.gameOver()
@@ -1997,6 +2051,18 @@ export default class GameSceneV3 extends Phaser.Scene {
     // ROGUELIKE: Track floors completed
     this.runStats.stagesCompleted = floorNum
 
+    // Track floors without damage for daily challenges
+    if (this.runStats.damageTakenThisFloor === 0) {
+      this.runStats.floorsWithoutDamage++
+      const dailyChallengeManager = getDailyChallengeManager()
+      dailyChallengeManager.updateProgress('no_damage', 1)
+    }
+    this.runStats.damageTakenThisFloor = 0 // Reset for next floor
+
+    // Update daily challenge progress for floors
+    const dailyChallengeManager = getDailyChallengeManager()
+    dailyChallengeManager.updateProgress('floors', 1)
+
     // Floor completion rewards (scaled by floor)
     const moneyReward = 100 + (floorNum * 50)
     const xpReward = 50 + (floorNum * 25)
@@ -2006,6 +2072,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // ROGUELIKE: Track money earned
     this.runStats.totalMoney += moneyReward
+
+    // Update daily challenge progress for gold
+    dailyChallengeManager.updateProgress('gold', moneyReward)
 
     this.addKillFeedMessage(`Floor ${floorNum} Complete! +$${moneyReward} +${xpReward}XP`, '#2ecc71', 6000)
 
@@ -3354,6 +3423,32 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.runStats.totalKills,
         timePlayed
       )
+
+      // Sync comprehensive stats to Supabase if logged in
+      if (this.currentUserId) {
+        const runStatsForSync: RunStats = {
+          kills: this.runStats.totalKills,
+          damageDealt: this.runStats.damageDealt || 0,
+          goldEarned: this.runStats.totalMoney,
+          goldSpent: this.runStats.goldSpent || 0,
+          floorsCompleted: this.runStats.stagesCompleted,
+          bossesKilled: this.runStats.bossesKilled,
+          eliteKills: this.runStats.eliteEnemiesKilled || 0,
+          criticalHits: this.runStats.criticalHits || 0,
+          itemsCollected: this.itemsCollectedThisRun,
+          legendariesCollected: this.legendariesCollectedThisRun,
+          weaponsSwitched: this.runStats.weaponsSwitched || 0,
+          shopUpgrades: this.runStats.shopUpgradesBought || 0,
+          highestCombo: this.runStats.highestCombo,
+          score: score,
+          playTime: timePlayed,
+          floorsWithoutDamage: this.runStats.floorsWithoutDamage || 0,
+          wasVictory: victory
+        }
+        slayerStatsService.recordRunEnd(this.currentUserId, runStatsForSync).catch(err => {
+          console.error('Failed to sync run stats:', err)
+        })
+      }
 
       // Show brief success message
       overlay.setAlpha(1)

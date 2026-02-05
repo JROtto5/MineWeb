@@ -128,5 +128,80 @@ export interface LeaderboardEntry {
   created_at?: string
 }
 
+// ============================================
+// DAILY CHALLENGES TYPES
+// ============================================
+
+export interface DailyChallengeProgress {
+  challengeId: string
+  progress: number
+  completed: boolean
+  claimed: boolean
+}
+
+export interface DailyChallengeRecord {
+  id?: string
+  user_id: string
+  challenge_date: string
+  challenges: DailyChallengeProgress[]
+  streak: number
+  last_completed_date: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+// ============================================
+// ACHIEVEMENTS TYPES
+// ============================================
+
+export interface AchievementRecord {
+  id?: string
+  user_id: string
+  unlocked: string[] // Array of achievement IDs
+  unlocked_count: number
+  created_at?: string
+  updated_at?: string
+}
+
+// ============================================
+// SLAYER STATS TYPES
+// ============================================
+
+export interface SlayerStats {
+  id?: string
+  user_id: string
+
+  // Lifetime stats
+  total_kills: number
+  total_damage_dealt: number
+  total_gold_earned: number
+  total_gold_spent: number
+  total_floors_completed: number
+  total_bosses_killed: number
+  total_elite_kills: number
+  total_critical_hits: number
+  total_items_collected: number
+  total_legendaries_collected: number
+  total_weapons_switched: number
+  total_shop_upgrades: number
+  total_deaths: number
+  total_play_time: number
+
+  // Best records
+  highest_combo: number
+  highest_floor: number
+  best_score: number
+  fastest_win_time: number | null
+  most_kills_in_run: number
+  highest_damage_in_run: number
+  most_gold_in_run: number
+
+  // Perfect floor tracking
+  floors_without_damage: number
+
+  created_at?: string
+  updated_at?: string
+}
+
 // Legacy types for backward compatibility
 export type SaveData = SlayerSave

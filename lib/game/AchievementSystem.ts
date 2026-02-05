@@ -1,3 +1,5 @@
+import { achievementService } from '../supabase/AchievementService'
+
 export interface Achievement {
   id: string
   name: string
@@ -436,9 +438,45 @@ export const ACHIEVEMENTS: Achievement[] = [
 export class AchievementManager {
   private unlockedAchievements: Set<string> = new Set()
   private onUnlockCallback?: (achievement: Achievement) => void
+  private userId: string | null = null
+  private isOnlineMode: boolean = false
 
   constructor() {
     this.loadUnlockedAchievements()
+  }
+
+  // Set user ID for cloud sync
+  setUserId(userId: string | null) {
+    this.userId = userId
+    this.isOnlineMode = !!userId
+    if (userId) {
+      this.syncWithCloud()
+    }
+  }
+
+  // Sync with Supabase
+  private async syncWithCloud() {
+    if (!this.userId) return
+
+    try {
+      const cloudAchievements = await achievementService.getUnlocked(this.userId)
+
+      // Merge local and cloud achievements
+      const localAchievements = Array.from(this.unlockedAchievements)
+      const allAchievements = localAchievements.concat(cloudAchievements)
+      const merged = allAchievements.filter((id, index) => allAchievements.indexOf(id) === index)
+
+      // Update local state
+      this.unlockedAchievements = new Set(merged)
+      this.saveUnlockedAchievements()
+
+      // Sync merged list back to cloud
+      if (merged.length > cloudAchievements.length) {
+        await achievementService.syncAchievements(this.userId, merged)
+      }
+    } catch (error) {
+      console.error('Failed to sync achievements with cloud:', error)
+    }
   }
 
   checkAchievements(stats: GameStats) {
@@ -457,6 +495,13 @@ export class AchievementManager {
   unlockAchievement(achievement: Achievement) {
     this.unlockedAchievements.add(achievement.id)
     this.saveUnlockedAchievements()
+
+    // Sync with cloud if online
+    if (this.isOnlineMode && this.userId) {
+      achievementService.unlock(this.userId, achievement.id).catch(err => {
+        console.error('Failed to sync achievement unlock:', err)
+      })
+    }
 
     if (this.onUnlockCallback) {
       this.onUnlockCallback(achievement)
@@ -509,5 +554,13 @@ export class AchievementManager {
   reset() {
     this.unlockedAchievements.clear()
     this.saveUnlockedAchievements()
+    // Note: Cloud achievements are not reset - they are permanent
+  }
+
+  // Force sync with cloud (call after login)
+  async forceSync() {
+    if (this.userId) {
+      await this.syncWithCloud()
+    }
   }
 }
