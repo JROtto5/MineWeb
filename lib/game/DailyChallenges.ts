@@ -129,11 +129,12 @@ export class DailyChallengeManager {
   }
 
   private createNewState(): DailyChallengeState {
+    const streak = 0
     return {
       date: this.getToday(),
-      challenges: this.generateDailyChallenges(),
+      challenges: this.generateDailyChallenges(streak),
       progress: [],
-      streak: 0,
+      streak,
       lastCompletedDate: null
     }
   }
@@ -172,7 +173,7 @@ export class DailyChallengeManager {
     }
   }
 
-  private generateDailyChallenges(): DailyChallenge[] {
+  private generateDailyChallenges(streak?: number): DailyChallenge[] {
     // Use date as seed for consistent daily challenges
     const seed = this.hashDate(this.getToday())
     const rng = this.seededRandom(seed)
@@ -189,7 +190,8 @@ export class DailyChallengeManager {
     ]
 
     // Apply streak bonus to rewards
-    const streakMultiplier = 1 + (this.state.streak * 0.1) // +10% per streak day
+    const currentStreak = streak !== undefined ? streak : (this.state?.streak || 0)
+    const streakMultiplier = 1 + (currentStreak * 0.1) // +10% per streak day
     challenges.forEach(c => {
       c.reward.gold = Math.floor(c.reward.gold * streakMultiplier)
     })
