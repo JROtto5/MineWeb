@@ -105,8 +105,9 @@ export default function ProfilePage() {
   const [displayName, setDisplayName] = useState('')
   const [stats, setStats] = useState<PlayerStats | null>(null)
   const [achievements, setAchievements] = useState<Achievement[]>([])
-  const [activeTab, setActiveTab] = useState<'stats' | 'achievements'>('stats')
+  const [activeTab, setActiveTab] = useState<'stats' | 'achievements' | 'milestones'>('stats')
   const [showShare, setShowShare] = useState(false)
+  const [recentRuns, setRecentRuns] = useState<any[]>([])
 
   useEffect(() => {
     if (!loading && !user) {
@@ -187,6 +188,16 @@ export default function ProfilePage() {
           unlockedAt: achievementsData?.find(ua => ua.achievement_id === a.id)?.unlocked_at,
         }))
         setAchievements(mappedAchievements)
+
+        // Load recent runs from leaderboard
+        const { data: recentRunsData } = await supabase
+          .from('leaderboard')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        setRecentRuns(recentRunsData || [])
 
       } catch (error) {
         console.error('Failed to load profile:', error)
@@ -275,6 +286,12 @@ export default function ProfilePage() {
           onClick={() => setActiveTab('achievements')}
         >
           🏆 Achievements ({stats?.achievementsUnlocked || 0}/{stats?.totalAchievements || 0})
+        </button>
+        <button
+          className={`tab ${activeTab === 'milestones' ? 'active' : ''}`}
+          onClick={() => setActiveTab('milestones')}
+        >
+          🎯 Milestones
         </button>
       </div>
 
@@ -370,6 +387,129 @@ export default function ProfilePage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'milestones' && stats && (
+          <div className="milestones-content">
+            {/* DotSlayer Milestones */}
+            <div className="milestone-section">
+              <h2>⚔️ DotSlayer Journey</h2>
+              <div className="milestone-track">
+                <div className={`milestone-node ${stats.slayer.highestFloor >= 1 ? 'completed' : ''}`}>
+                  <span className="node-icon">🏃</span>
+                  <span className="node-label">Floor 1</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.slayer.highestFloor >= 10 ? 'completed' : ''}`}>
+                  <span className="node-icon">⚡</span>
+                  <span className="node-label">Floor 10</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.slayer.highestFloor >= 25 ? 'completed' : ''}`}>
+                  <span className="node-icon">🔥</span>
+                  <span className="node-label">Floor 25</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.slayer.highestFloor >= 50 ? 'completed' : ''}`}>
+                  <span className="node-icon">💀</span>
+                  <span className="node-label">Floor 50</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.slayer.highestFloor >= 75 ? 'completed' : ''}`}>
+                  <span className="node-icon">👹</span>
+                  <span className="node-label">Floor 75</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.slayer.highestFloor >= 100 ? 'completed' : ''} legendary`}>
+                  <span className="node-icon">🏆</span>
+                  <span className="node-label">Floor 100</span>
+                </div>
+              </div>
+              <div className="milestone-progress">
+                <div className="progress-bar">
+                  <div className="progress-fill slayer" style={{ width: `${Math.min(stats.slayer.highestFloor, 100)}%` }}></div>
+                </div>
+                <span className="progress-text">{stats.slayer.highestFloor}/100 Floors</span>
+              </div>
+            </div>
+
+            {/* Dot Clicker Milestones */}
+            <div className="milestone-section">
+              <h2>● Dot Clicker Empire</h2>
+              <div className="milestone-track">
+                <div className={`milestone-node ${stats.clicker.totalDots >= 1000 ? 'completed' : ''}`}>
+                  <span className="node-icon">👆</span>
+                  <span className="node-label">1K Dots</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.clicker.totalDots >= 1000000 ? 'completed' : ''}`}>
+                  <span className="node-icon">💰</span>
+                  <span className="node-label">1M Dots</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.clicker.totalDots >= 1000000000 ? 'completed' : ''}`}>
+                  <span className="node-icon">🏦</span>
+                  <span className="node-label">1B Dots</span>
+                </div>
+                <div className="milestone-line"></div>
+                <div className={`milestone-node ${stats.clicker.totalDots >= 1000000000000 ? 'completed' : ''} legendary`}>
+                  <span className="node-icon">💎</span>
+                  <span className="node-label">1T Dots</span>
+                </div>
+              </div>
+              <div className="prestige-track">
+                <h3>Prestige Journey</h3>
+                <div className="prestige-badges">
+                  {[1, 5, 10, 25, 50, 100].map(p => (
+                    <div key={p} className={`prestige-badge ${stats.clicker.totalPrestiges >= p ? 'unlocked' : ''}`}>
+                      ⭐ {p}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Synergy Milestones */}
+            <div className="milestone-section synergy">
+              <h2>🔗 Cross-Game Synergy</h2>
+              <div className="synergy-meter">
+                <div className="synergy-level-display">
+                  <span className="level-number">{stats.synergyLevel}</span>
+                  <span className="level-label">Synergy Level</span>
+                </div>
+                <div className="synergy-bonuses">
+                  <div className="bonus-item">
+                    <span className="bonus-icon">⚔️</span>
+                    <span className="bonus-text">+{stats.slayer.highestFloor}% Clicker Bonus</span>
+                  </div>
+                  <div className="bonus-item">
+                    <span className="bonus-icon">●</span>
+                    <span className="bonus-text">+{stats.clicker.totalPrestiges * 5}% Slayer Bonus</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Runs */}
+            {recentRuns.length > 0 && (
+              <div className="milestone-section recent">
+                <h2>📜 Recent DotSlayer Runs</h2>
+                <div className="recent-runs">
+                  {recentRuns.map((run, i) => (
+                    <div key={run.id || i} className={`run-card ${run.was_victory ? 'victory' : ''}`}>
+                      <div className="run-floor">Floor {run.floor_reached}</div>
+                      <div className="run-stats">
+                        <span>💰 {formatNumber(run.score)}</span>
+                        <span>💀 {run.kills} kills</span>
+                        <span>⏱️ {formatTime(run.time_played / 60)}</span>
+                      </div>
+                      {run.was_victory && <span className="victory-badge">🏆 VICTORY</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -625,6 +765,259 @@ export default function ProfilePage() {
         .rarity-badge.rare { background: #2196f3; color: #fff; }
         .rarity-badge.epic { background: #9c27b0; color: #fff; }
         .rarity-badge.legendary { background: #ff9800; color: #000; }
+
+        /* Milestones Section */
+        .milestones-content {
+          display: flex;
+          flex-direction: column;
+          gap: 30px;
+        }
+
+        .milestone-section {
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
+          border-radius: 20px;
+          padding: 25px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .milestone-section h2 {
+          margin: 0 0 20px 0;
+          font-size: 1.3rem;
+          color: #ff6b00;
+        }
+
+        .milestone-section h2:first-child {
+          color: #ff6b00;
+        }
+
+        .milestone-section.synergy h2 {
+          color: #f1c40f;
+        }
+
+        .milestone-section.recent h2 {
+          color: #00d9ff;
+        }
+
+        .milestone-track {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          overflow-x: auto;
+          padding: 10px 0;
+        }
+
+        .milestone-node {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          min-width: 80px;
+        }
+
+        .node-icon {
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: rgba(100, 100, 100, 0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          border: 3px solid #555;
+          transition: all 0.3s;
+        }
+
+        .milestone-node.completed .node-icon {
+          background: linear-gradient(135deg, #27ae60, #2ecc71);
+          border-color: #2ecc71;
+          box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .milestone-node.legendary .node-icon {
+          background: linear-gradient(135deg, #f39c12, #f1c40f);
+          border-color: #f1c40f;
+        }
+
+        .milestone-node.legendary.completed .node-icon {
+          box-shadow: 0 0 30px rgba(241, 196, 15, 0.6);
+          animation: legendaryPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes legendaryPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        .node-label {
+          font-size: 0.75rem;
+          color: #888;
+        }
+
+        .milestone-node.completed .node-label {
+          color: #2ecc71;
+        }
+
+        .milestone-line {
+          flex: 1;
+          height: 4px;
+          background: #333;
+          min-width: 20px;
+        }
+
+        .milestone-progress {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+
+        .progress-bar {
+          flex: 1;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .progress-fill {
+          height: 100%;
+          border-radius: 4px;
+          transition: width 0.5s ease;
+        }
+
+        .progress-fill.slayer {
+          background: linear-gradient(90deg, #ff6b00, #ff4400);
+        }
+
+        .progress-text {
+          font-size: 0.9rem;
+          color: #888;
+          min-width: 100px;
+        }
+
+        .prestige-track {
+          margin-top: 20px;
+        }
+
+        .prestige-track h3 {
+          font-size: 1rem;
+          color: #00d9ff;
+          margin: 0 0 15px 0;
+        }
+
+        .prestige-badges {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .prestige-badge {
+          padding: 8px 16px;
+          background: rgba(100, 100, 100, 0.2);
+          border: 2px solid #555;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          color: #666;
+        }
+
+        .prestige-badge.unlocked {
+          background: linear-gradient(135deg, rgba(243, 156, 18, 0.2), rgba(241, 196, 15, 0.1));
+          border-color: #f1c40f;
+          color: #f1c40f;
+        }
+
+        .synergy-meter {
+          display: flex;
+          align-items: center;
+          gap: 40px;
+          flex-wrap: wrap;
+        }
+
+        .synergy-level-display {
+          text-align: center;
+        }
+
+        .level-number {
+          display: block;
+          font-size: 4rem;
+          font-weight: 900;
+          background: linear-gradient(135deg, #f39c12, #f1c40f);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .level-label {
+          display: block;
+          color: #888;
+          font-size: 0.9rem;
+        }
+
+        .synergy-bonuses {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .bonus-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 20px;
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 10px;
+        }
+
+        .bonus-icon {
+          font-size: 1.2rem;
+        }
+
+        .bonus-text {
+          color: #2ecc71;
+          font-weight: 600;
+        }
+
+        .recent-runs {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .run-card {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          padding: 15px 20px;
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .run-card.victory {
+          background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.05));
+          border-color: rgba(46, 204, 113, 0.3);
+        }
+
+        .run-floor {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: #ff6b00;
+          min-width: 100px;
+        }
+
+        .run-stats {
+          display: flex;
+          gap: 20px;
+          flex: 1;
+          color: #888;
+          font-size: 0.9rem;
+        }
+
+        .victory-badge {
+          color: #2ecc71;
+          font-weight: 700;
+          font-size: 0.9rem;
+        }
 
         @media (max-width: 768px) {
           .stats-grid {

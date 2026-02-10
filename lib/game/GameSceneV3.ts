@@ -3849,7 +3849,7 @@ export default class GameSceneV3 extends Phaser.Scene {
       submitBtn.destroy()
       submitLabel.destroy()
 
-      const successText = this.add.text(centerX, centerY - 30, '✅ Score Submitted!', {
+      const successText = this.add.text(centerX, centerY - 80, '✅ Score Submitted!', {
         fontSize: '36px',
         color: '#2ecc71',
         fontStyle: 'bold',
@@ -3857,16 +3857,85 @@ export default class GameSceneV3 extends Phaser.Scene {
         strokeThickness: 6
       }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
 
-      const returnText = this.add.text(centerX, centerY + 30, 'Returning to menu...', {
-        fontSize: '20px',
-        color: '#ffffff',
+      // Share your run section
+      const shareTitle = this.add.text(centerX, centerY - 20, '📤 Share Your Run!', {
+        fontSize: '24px',
+        color: '#00d9ff',
+        fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 3
+        strokeThickness: 4
       }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
 
-      // Return to menu after 1.5 seconds
-      this.time.delayedCall(1500, () => {
-        this.scene.start('MenuScene')
+      // Create share message
+      const shareMessage = victory
+        ? `🎉 I just CONQUERED DotSlayer! Floor ${this.runStats.stagesCompleted} | Score: $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
+        : `💀 Made it to Floor ${this.runStats.stagesCompleted} in DotSlayer! Score: $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
+      const shareUrl = 'https://dotslayer.vercel.app'
+
+      // Twitter/X Share Button
+      const twitterBtn = this.add.rectangle(centerX - 100, centerY + 30, 80, 50, 0x1da1f2)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0).setDepth(25001)
+
+      this.add.text(centerX - 100, centerY + 30, '𝕏', {
+        fontSize: '28px',
+        color: '#ffffff',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+
+      twitterBtn.on('pointerover', () => twitterBtn.setFillStyle(0x1991da))
+      twitterBtn.on('pointerout', () => twitterBtn.setFillStyle(0x1da1f2))
+      twitterBtn.on('pointerdown', () => {
+        const tweetText = encodeURIComponent(`${shareMessage}\n\nPlay free: ${shareUrl}\n#DotSlayer #BrowserGames #Roguelike`)
+        window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, '_blank')
+      })
+
+      // Reddit Share Button
+      const redditBtn = this.add.rectangle(centerX, centerY + 30, 80, 50, 0xff4500)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0).setDepth(25001)
+
+      this.add.text(centerX, centerY + 30, '📮', {
+        fontSize: '24px'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+
+      redditBtn.on('pointerover', () => redditBtn.setFillStyle(0xe63e00))
+      redditBtn.on('pointerout', () => redditBtn.setFillStyle(0xff4500))
+      redditBtn.on('pointerdown', () => {
+        const title = encodeURIComponent(shareMessage)
+        window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${title}`, '_blank')
+      })
+
+      // Copy Link Button
+      const copyBtn = this.add.rectangle(centerX + 100, centerY + 30, 80, 50, 0x2ecc71)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0).setDepth(25001)
+
+      const copyLabel = this.add.text(centerX + 100, centerY + 30, '📋', {
+        fontSize: '24px'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+
+      copyBtn.on('pointerover', () => copyBtn.setFillStyle(0x27ae60))
+      copyBtn.on('pointerout', () => copyBtn.setFillStyle(0x2ecc71))
+      copyBtn.on('pointerdown', () => {
+        navigator.clipboard.writeText(`${shareMessage}\n\nPlay free: ${shareUrl}`)
+        copyLabel.setText('✓')
+        this.time.delayedCall(1000, () => copyLabel.setText('📋'))
+      })
+
+      const returnText = this.add.text(centerX, centerY + 100, 'Click anywhere to return to menu...', {
+        fontSize: '16px',
+        color: '#888',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+
+      // Return to menu on click (after a brief delay)
+      this.time.delayedCall(1000, () => {
+        overlay.setInteractive()
+        overlay.on('pointerdown', () => {
+          this.scene.start('MenuScene')
+        })
       })
     }
 

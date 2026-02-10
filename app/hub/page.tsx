@@ -208,8 +208,9 @@ interface SynergyStats {
 }
 
 export default function GameHub() {
-  const { user, loading } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const [hoveredGame, setHoveredGame] = useState<string | null>(null)
   const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, size: number, speed: number, color: string, delay: number}>>([])
   const [synergyStats, setSynergyStats] = useState<SynergyStats>({
@@ -666,8 +667,40 @@ export default function GameHub() {
           </h1>
         </div>
         <p className="hub-subtitle">
-          Welcome back, <span className="player-name clickable" onClick={() => setShowNameModal(true)} title="Click to change display name">{displayName || 'Player'}</span> <span className="edit-icon" onClick={() => setShowNameModal(true)}>✏️</span>
+          Welcome back, <span className="player-name clickable" onClick={() => setShowUserMenu(!showUserMenu)} title="Click for options">{displayName || 'Player'}</span> <span className="dropdown-arrow" onClick={() => setShowUserMenu(!showUserMenu)}>▼</span>
         </p>
+
+        {/* User Menu Dropdown */}
+        {showUserMenu && (
+          <div className="user-menu">
+            <button className="user-menu-item" onClick={() => { setShowNameModal(true); setShowUserMenu(false); }}>
+              <span className="menu-icon">✏️</span> Change Name
+            </button>
+            <Link href="/profile" className="user-menu-item" onClick={() => setShowUserMenu(false)}>
+              <span className="menu-icon">👤</span> My Profile
+            </Link>
+            <Link href="/news" className="user-menu-item" onClick={() => setShowUserMenu(false)}>
+              <span className="menu-icon">📰</span> News & Updates
+            </Link>
+            <div className="menu-divider"></div>
+            <button className="user-menu-item danger" onClick={() => { setShowResetModal(true); setShowUserMenu(false); }}>
+              <span className="menu-icon">🔄</span> Reset Progress
+            </button>
+            <button
+              className="user-menu-item danger"
+              onClick={async () => {
+                await signOut()
+                router.push('/login')
+              }}
+            >
+              <span className="menu-icon">🚪</span> Sign Out
+            </button>
+          </div>
+        )}
+
+        {/* Click outside to close menu */}
+        {showUserMenu && <div className="menu-backdrop" onClick={() => setShowUserMenu(false)}></div>}
+
         <div className="header-decoration"></div>
       </header>
 
@@ -973,7 +1006,13 @@ export default function GameHub() {
             <Link href="/profile" className="footer-link">Profile</Link>
             <Link href="/news" className="footer-link">News</Link>
           </div>
-          <button onClick={() => router.push('/login')} className="logout-btn">
+          <button
+            onClick={async () => {
+              await signOut()
+              router.push('/login')
+            }}
+            className="logout-btn"
+          >
             <span>Sign Out</span>
           </button>
         </div>
@@ -1180,7 +1219,7 @@ export default function GameHub() {
           text-align: center;
           padding: 50px 20px 30px;
           position: relative;
-          z-index: 10;
+          z-index: 100;
         }
 
         .logo-container {
@@ -1270,15 +1309,82 @@ export default function GameHub() {
           filter: brightness(1.2);
         }
 
-        .edit-icon {
+        .dropdown-arrow {
           cursor: pointer;
-          font-size: 0.8rem;
+          font-size: 0.7rem;
+          color: #00d9ff;
           opacity: 0.6;
-          transition: opacity 0.2s;
+          transition: all 0.2s;
+          margin-left: 4px;
         }
 
-        .edit-icon:hover {
+        .dropdown-arrow:hover {
           opacity: 1;
+        }
+
+        /* User Menu Dropdown */
+        .user-menu {
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.98), rgba(10, 15, 30, 0.98));
+          border: 1px solid rgba(0, 217, 255, 0.3);
+          border-radius: 12px;
+          padding: 8px 0;
+          min-width: 200px;
+          z-index: 100;
+          animation: menuSlideIn 0.2s ease;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes menuSlideIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+          to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .user-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 12px 20px;
+          background: transparent;
+          border: none;
+          color: #ccc;
+          font-size: 0.9rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-decoration: none;
+        }
+
+        .user-menu-item:hover {
+          background: rgba(0, 217, 255, 0.1);
+          color: #00d9ff;
+        }
+
+        .user-menu-item.danger:hover {
+          background: rgba(231, 76, 60, 0.1);
+          color: #e74c3c;
+        }
+
+        .menu-icon {
+          font-size: 1rem;
+        }
+
+        .menu-divider {
+          height: 1px;
+          background: rgba(255, 255, 255, 0.1);
+          margin: 8px 0;
+        }
+
+        .menu-backdrop {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 99;
         }
 
         /* Modal Styles */
