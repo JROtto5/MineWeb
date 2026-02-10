@@ -633,13 +633,13 @@ export default class MenuScene extends Phaser.Scene {
       this.createClassCard(playerClass, x, y, cardWidth, cardHeight)
     })
 
-    // Back button - positioned below the cards
-    const buttonY = centerY + 180
-    const backBtn = this.add.rectangle(centerX - 100, buttonY, 150, 45, COLORS.panel, 0.9)
+    // Back button - positioned below the cards with more spacing
+    const buttonY = centerY + 200
+    const backBtn = this.add.rectangle(centerX - 130, buttonY, 150, 45, COLORS.panel, 0.9)
     backBtn.setStrokeStyle(2, COLORS.accent, 0.5)
     backBtn.setInteractive({ useHandCursor: true })
 
-    const backText = this.add.text(centerX - 100, buttonY, '← BACK', {
+    const backText = this.add.text(centerX - 130, buttonY, '← BACK', {
       fontSize: '20px',
       fontStyle: 'bold',
       color: `#${COLORS.text.toString(16).padStart(6, '0')}`,
@@ -651,12 +651,12 @@ export default class MenuScene extends Phaser.Scene {
 
     this.classSelectionContainer.add([backBtn, backText])
 
-    // Start button
-    const startBtn = this.add.rectangle(centerX + 100, buttonY, 150, 45, COLORS.accent, 0.9)
+    // Start button - with more spacing from back button
+    const startBtn = this.add.rectangle(centerX + 130, buttonY, 150, 45, COLORS.accent, 0.9)
     startBtn.setStrokeStyle(2, COLORS.accent2, 1)
     startBtn.setInteractive({ useHandCursor: true })
 
-    const startText = this.add.text(centerX + 100, buttonY, 'START →', {
+    const startText = this.add.text(centerX + 130, buttonY, 'START →', {
       fontSize: '20px',
       fontStyle: 'bold',
       color: '#ffffff',

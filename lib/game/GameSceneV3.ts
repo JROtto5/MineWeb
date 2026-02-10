@@ -565,7 +565,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     const margin = 50 // Increased margin from edge
     const maxWidth = Math.min(350, screenWidth * 0.35) // Reduced max width
 
-    const message = this.add.text(screenWidth - margin, 20 + this.killFeedMessages.length * 40, text, {
+    const message = this.add.text(screenWidth - margin, 200 + this.killFeedMessages.length * 40, text, {
       fontSize: '15px',
       color: color,
       fontStyle: 'bold',
@@ -618,11 +618,11 @@ export default class GameSceneV3 extends Phaser.Scene {
       return true
     })
 
-    // Reposition messages with updated spacing
+    // Reposition messages with updated spacing (below FLOOR banner)
     this.killFeedMessages.forEach((msg, index) => {
       this.tweens.add({
         targets: msg.text,
-        y: 20 + index * 40,
+        y: 200 + index * 40,
         duration: 200,
         ease: 'Sine.easeOut',
       })
