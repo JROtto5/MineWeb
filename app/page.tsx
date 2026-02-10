@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../lib/context/AuthContext'
 import Link from 'next/link'
@@ -8,9 +8,9 @@ import Link from 'next/link'
 export default function Home() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const [showContent, setShowContent] = useState(true)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [scrollY, setScrollY] = useState(0)
 
-  // Auto-redirect after a delay if logged in, but show content for SEO
   useEffect(() => {
     if (!loading && user) {
       const timer = setTimeout(() => {
@@ -20,251 +20,393 @@ export default function Home() {
     }
   }, [user, loading, router])
 
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY })
+    }
+    const handleScroll = () => setScrollY(window.scrollY)
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
   return (
     <div className="landing-page">
+      {/* Animated Background */}
+      <div className="bg-effects">
+        <div className="gradient-orb orb-1"></div>
+        <div className="gradient-orb orb-2"></div>
+        <div className="gradient-orb orb-3"></div>
+        <div className="grid-overlay"></div>
+        <div className="noise-overlay"></div>
+
+        {/* Floating Particles */}
+        <div className="particles">
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className={`particle particle-${i % 5}`}
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${15 + Math.random() * 10}s`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       {/* Hero Section */}
       <header className="hero">
         <div className="hero-content">
-          <div className="logo-container">
-            <div className="logo-dot"></div>
-            <h1>Dot Universe</h1>
+          {/* Logo */}
+          <div className="logo-area">
+            <div className="logo-ring"></div>
+            <div className="logo-dot">
+              <div className="logo-inner"></div>
+              <div className="logo-pulse"></div>
+            </div>
           </div>
-          <p className="tagline">Two Games. One Universe. Infinite Fun.</p>
-          <p className="subtitle">Free browser games with cross-game synergy - no download required!</p>
 
-          <div className="cta-buttons">
+          <h1 className="hero-title">
+            <span className="title-word">DOT</span>
+            <span className="title-word accent">UNIVERSE</span>
+          </h1>
+
+          <p className="hero-tagline">
+            <span className="tagline-line"></span>
+            Two Games. One Universe. Infinite Fun.
+            <span className="tagline-line"></span>
+          </p>
+
+          <p className="hero-subtitle">
+            Free browser games with cross-game synergy - no download required
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="cta-container">
             {user ? (
-              <Link href="/hub" className="btn btn-primary">
-                Enter Game Hub
+              <Link href="/hub" className="btn btn-primary glow-effect">
+                <span className="btn-bg"></span>
+                <span className="btn-content">
+                  <span className="btn-icon">&#x25B6;</span>
+                  Enter Game Hub
+                </span>
+                <span className="btn-shine"></span>
               </Link>
             ) : (
               <>
-                <Link href="/login" className="btn btn-primary">
-                  Play Now - Free!
+                <Link href="/login" className="btn btn-primary glow-effect">
+                  <span className="btn-bg"></span>
+                  <span className="btn-content">
+                    <span className="btn-icon">&#x25B6;</span>
+                    Play Now - Free!
+                  </span>
+                  <span className="btn-shine"></span>
                 </Link>
                 <Link href="/login" className="btn btn-secondary">
-                  Sign In
+                  <span className="btn-content">
+                    <span className="btn-icon">&#x2192;</span>
+                    Sign In
+                  </span>
                 </Link>
               </>
             )}
           </div>
+
+          {/* Quick Stats */}
+          <div className="hero-stats">
+            <div className="hero-stat">
+              <span className="stat-icon">&#x2694;</span>
+              <span className="stat-text">100 Floors</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="hero-stat">
+              <span className="stat-icon">&#x1F3C6;</span>
+              <span className="stat-text">Leaderboards</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="hero-stat">
+              <span className="stat-icon">&#x2601;</span>
+              <span className="stat-text">Cloud Saves</span>
+            </div>
+          </div>
         </div>
 
-        <div className="hero-visual">
-          <div className="floating-dots">
-            {[...Array(20)].map((_, i) => (
-              <div key={i} className="floating-dot" style={{
-                animationDelay: `${i * 0.2}s`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-              }}></div>
-            ))}
+        {/* Scroll Indicator */}
+        <div className="scroll-indicator">
+          <div className="scroll-mouse">
+            <div className="scroll-wheel"></div>
           </div>
+          <span>Scroll to explore</span>
         </div>
       </header>
 
       {/* Games Section */}
       <section className="games-section">
-        <h2>Our Games</h2>
-        <div className="games-grid">
+        <div className="section-header">
+          <span className="section-tag">CHOOSE YOUR GAME</span>
+          <h2>Our Games</h2>
+          <p className="section-subtitle">Two unique experiences, perfectly connected</p>
+        </div>
+
+        <div className="games-showcase">
           {/* DotSlayer Card */}
-          <article className="game-card slayer">
-            <div className="game-icon">
-              <span className="icon-target"></span>
+          <article className="game-card slayer-card">
+            <div className="card-glow"></div>
+            <div className="card-border"></div>
+            <div className="card-content">
+              <div className="card-badge">ACTION ROGUELIKE</div>
+
+              <div className="game-visual">
+                <div className="visual-ring"></div>
+                <div className="visual-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </div>
+                <div className="visual-particles">
+                  {[...Array(6)].map((_, i) => <span key={i}></span>)}
+                </div>
+              </div>
+
+              <h3>DotSlayer</h3>
+              <p className="game-subtitle">100 Floors of Chaos</p>
+
+              <p className="game-desc">
+                Battle through procedurally generated dungeons. Face 20+ enemy types,
+                unlock powerful skills, defeat epic bosses!
+              </p>
+
+              <div className="game-features">
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x1F3AE;</span>
+                  Roguelike Action
+                </div>
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x1F3C6;</span>
+                  Global Rankings
+                </div>
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x26A1;</span>
+                  Skill Trees
+                </div>
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x1F47E;</span>
+                  Epic Bosses
+                </div>
+              </div>
+
+              <Link href="/slayer" className="game-cta">
+                <span className="cta-text">Play DotSlayer</span>
+                <span className="cta-arrow">&#x2192;</span>
+              </Link>
             </div>
-            <h3>DotSlayer</h3>
-            <p className="game-genre">Roguelike Action</p>
-            <p className="game-description">
-              Battle through 100 procedurally generated floors! Face 20+ unique enemy types,
-              unlock powerful upgrades, and compete on global leaderboards. Every run is different.
-            </p>
-            <ul className="features-list">
-              <li>100 Procedural Floors</li>
-              <li>20+ Enemy Types</li>
-              <li>Skill Tree System</li>
-              <li>Global Leaderboards</li>
-              <li>Boss Battles</li>
-              <li>Multiple Weapons</li>
-            </ul>
-            <Link href="/slayer" className="game-link">Play DotSlayer</Link>
           </article>
+
+          {/* Synergy Bridge */}
+          <div className="synergy-bridge">
+            <div className="bridge-line"></div>
+            <div className="bridge-icon">
+              <span>&#x1F517;</span>
+            </div>
+            <div className="bridge-line"></div>
+            <p>Cross-Game<br/>Synergy</p>
+          </div>
 
           {/* Dot Clicker Card */}
-          <article className="game-card clicker">
-            <div className="game-icon">
-              <span className="icon-click"></span>
-            </div>
-            <h3>Dot Clicker</h3>
-            <p className="game-genre">Idle Incremental</p>
-            <p className="game-description">
-              Click your way to dot domination! Build an empire with 20+ buildings,
-              unlock prestige upgrades, and ascend to unlock permanent bonuses.
-            </p>
-            <ul className="features-list">
-              <li>20+ Buildings</li>
-              <li>7 Prestige Tiers</li>
-              <li>Ascension System</li>
-              <li>Achievements</li>
-              <li>Offline Progress</li>
-              <li>Auto-Clickers</li>
-            </ul>
-            <Link href="/clicker" className="game-link">Play Dot Clicker</Link>
-          </article>
-        </div>
-      </section>
+          <article className="game-card clicker-card">
+            <div className="card-glow"></div>
+            <div className="card-border"></div>
+            <div className="card-content">
+              <div className="card-badge">IDLE INCREMENTAL</div>
 
-      {/* Synergy Section */}
-      <section className="synergy-section">
-        <h2>Cross-Game Synergy</h2>
-        <p className="synergy-description">
-          Play both games and unlock special bonuses! Your progress in DotSlayer boosts
-          Dot Clicker production, and your Dot Clicker prestiges enhance your DotSlayer runs.
-        </p>
-        <div className="synergy-features">
-          <div className="synergy-item">
-            <span className="synergy-arrow">DotSlayer</span>
-            <span className="synergy-arrow">Dot Clicker</span>
-            <p>Floors cleared = Production bonus</p>
-          </div>
-          <div className="synergy-item">
-            <span className="synergy-arrow">Dot Clicker</span>
-            <span className="synergy-arrow">DotSlayer</span>
-            <p>Prestiges = Starting gold bonus</p>
-          </div>
+              <div className="game-visual">
+                <div className="visual-ring"></div>
+                <div className="visual-icon clicker-icon">
+                  <div className="click-dot"></div>
+                  <div className="click-plus">+1</div>
+                </div>
+                <div className="visual-ripple"></div>
+              </div>
+
+              <h3>Dot Clicker</h3>
+              <p className="game-subtitle">Build Your Empire</p>
+
+              <p className="game-desc">
+                Click, build, prestige, ascend! Grow from humble clicks to an
+                unstoppable dot empire with 20+ buildings.
+              </p>
+
+              <div className="game-features">
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x1F446;</span>
+                  Addictive Clicking
+                </div>
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x1F3ED;</span>
+                  20+ Buildings
+                </div>
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x2B50;</span>
+                  Prestige System
+                </div>
+                <div className="feature-pill">
+                  <span className="pill-icon">&#x1F4C8;</span>
+                  Offline Progress
+                </div>
+              </div>
+
+              <Link href="/clicker" className="game-cta clicker-cta">
+                <span className="cta-text">Play Dot Clicker</span>
+                <span className="cta-arrow">&#x2192;</span>
+              </Link>
+            </div>
+          </article>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="features-section">
-        <h2>Why Dot Universe?</h2>
+        <div className="section-header">
+          <span className="section-tag">WHY DOT UNIVERSE</span>
+          <h2>Game Features</h2>
+        </div>
+
         <div className="features-grid">
-          <div className="feature">
-            <span className="feature-icon">No Download</span>
-            <h3>Play Instantly</h3>
-            <p>No downloads, no installs. Just click and play in your browser.</p>
+          <div className="feature-card">
+            <div className="feature-icon-wrap">
+              <span className="feature-icon">&#x26A1;</span>
+            </div>
+            <h3>Instant Play</h3>
+            <p>No downloads, no installs. Click and play instantly in your browser.</p>
           </div>
-          <div className="feature">
-            <span className="feature-icon">Free</span>
+
+          <div className="feature-card highlight">
+            <div className="feature-icon-wrap">
+              <span className="feature-icon">&#x1F517;</span>
+            </div>
+            <h3>Cross-Game Synergy</h3>
+            <p>Progress in one game boosts the other. Play both for maximum rewards!</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon-wrap">
+              <span className="feature-icon">&#x1F4B0;</span>
+            </div>
             <h3>100% Free</h3>
-            <p>All games are completely free to play. No paywalls, no pay-to-win.</p>
+            <p>No paywalls, no ads, no pay-to-win. Just pure gaming fun.</p>
           </div>
-          <div className="feature">
-            <span className="feature-icon">Cloud</span>
+
+          <div className="feature-card">
+            <div className="feature-icon-wrap">
+              <span className="feature-icon">&#x2601;</span>
+            </div>
             <h3>Cloud Saves</h3>
-            <p>Your progress syncs automatically. Play on any device.</p>
+            <p>Your progress syncs automatically across all your devices.</p>
           </div>
-          <div className="feature">
-            <span className="feature-icon">Global</span>
+
+          <div className="feature-card">
+            <div className="feature-icon-wrap">
+              <span className="feature-icon">&#x1F3C6;</span>
+            </div>
             <h3>Leaderboards</h3>
-            <p>Compete against players worldwide. Climb the ranks!</p>
+            <p>Compete globally. Climb the ranks and prove you're the best!</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon-wrap">
+              <span className="feature-icon">&#x1F4F1;</span>
+            </div>
+            <h3>Mobile Ready</h3>
+            <p>Play on desktop, tablet, or phone. Your adventure, anywhere.</p>
           </div>
         </div>
       </section>
 
-      {/* Stats Counter Section */}
+      {/* Stats Section */}
       <section className="stats-section">
-        <h2>Join the Community</h2>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-number">100+</span>
-            <span className="stat-label">Floors to Conquer</span>
+        <div className="stats-container">
+          <div className="stat-box">
+            <span className="stat-num">100+</span>
+            <span className="stat-label">Floors</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-number">40+</span>
+          <div className="stat-box">
+            <span className="stat-num">20+</span>
+            <span className="stat-label">Enemy Types</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-num">40+</span>
             <span className="stat-label">Achievements</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-number">20+</span>
-            <span className="stat-label">Buildings</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">2</span>
-            <span className="stat-label">Connected Games</span>
+          <div className="stat-box">
+            <span className="stat-num">&#x221E;</span>
+            <span className="stat-label">Fun</span>
           </div>
         </div>
       </section>
 
-      {/* What's New Section */}
-      <section className="whats-new-section">
-        <h2>What's New</h2>
-        <div className="update-cards">
-          <div className="update-card featured">
-            <span className="update-tag">New</span>
-            <h3>Weekly Challenges</h3>
-            <p>Epic week-long challenges with massive gold rewards and exclusive badges!</p>
-          </div>
-          <div className="update-card">
-            <span className="update-tag">New</span>
-            <h3>Seasonal Events</h3>
-            <p>Special limited-time events with unique rewards throughout the year.</p>
-          </div>
-          <div className="update-card">
-            <span className="update-tag">New</span>
-            <h3>Player Profiles</h3>
-            <p>View your stats, achievements, and share your progress with friends.</p>
-          </div>
-        </div>
-        <Link href="/news" className="view-all-link">View All Updates</Link>
-      </section>
-
-      {/* Testimonials Section */}
+      {/* Testimonials */}
       <section className="testimonials-section">
-        <h2>What Players Say</h2>
-        <div className="testimonials-grid">
-          <div className="testimonial">
-            <div className="testimonial-stars">★★★★★</div>
-            <p className="testimonial-text">"Finally a browser roguelike that doesn't feel like a mobile port. The synergy system is genius!"</p>
-            <p className="testimonial-author">- r/WebGames user</p>
-          </div>
-          <div className="testimonial">
-            <div className="testimonial-stars">★★★★★</div>
-            <p className="testimonial-text">"Been playing Dot Clicker for a week straight. The prestige system is perfectly balanced."</p>
-            <p className="testimonial-author">- r/incremental_games user</p>
-          </div>
-          <div className="testimonial">
-            <div className="testimonial-stars">★★★★★</div>
-            <p className="testimonial-text">"Love that my progress in one game helps the other. Smart design!"</p>
-            <p className="testimonial-author">- Discord member</p>
-          </div>
+        <div className="section-header">
+          <span className="section-tag">PLAYER REVIEWS</span>
+          <h2>What Players Say</h2>
         </div>
-      </section>
 
-      {/* FAQ Section */}
-      <section className="faq-section">
-        <h2>Frequently Asked Questions</h2>
-        <div className="faq-grid">
-          <div className="faq-item">
-            <h3>Is Dot Universe completely free?</h3>
-            <p>Yes! Both DotSlayer and Dot Clicker are 100% free to play with no ads, no paywalls, and no pay-to-win mechanics.</p>
+        <div className="testimonials-grid">
+          <div className="testimonial-card">
+            <div className="stars">&#x2605;&#x2605;&#x2605;&#x2605;&#x2605;</div>
+            <p>"Finally a browser roguelike that doesn't feel like a mobile port. The synergy system is genius!"</p>
+            <div className="author">
+              <span className="author-avatar">R</span>
+              <span className="author-name">r/WebGames user</span>
+            </div>
           </div>
-          <div className="faq-item">
-            <h3>What is Cross-Game Synergy?</h3>
-            <p>Cross-Game Synergy rewards you for playing both games. Progress in DotSlayer gives bonuses in Dot Clicker and vice versa!</p>
+
+          <div className="testimonial-card featured">
+            <div className="stars">&#x2605;&#x2605;&#x2605;&#x2605;&#x2605;</div>
+            <p>"Been playing Dot Clicker for a week straight. The prestige system is perfectly balanced."</p>
+            <div className="author">
+              <span className="author-avatar">I</span>
+              <span className="author-name">r/incremental_games</span>
+            </div>
           </div>
-          <div className="faq-item">
-            <h3>Do I need an account?</h3>
-            <p>You can play without an account, but creating a free account unlocks cloud saves, leaderboards, and achievements tracking.</p>
-          </div>
-          <div className="faq-item">
-            <h3>What devices are supported?</h3>
-            <p>Dot Universe works on any device with a modern web browser - PC, Mac, tablets, and mobile phones!</p>
+
+          <div className="testimonial-card">
+            <div className="stars">&#x2605;&#x2605;&#x2605;&#x2605;&#x2605;</div>
+            <p>"Love that my progress in one game helps the other. Smart design!"</p>
+            <div className="author">
+              <span className="author-avatar">D</span>
+              <span className="author-name">Discord member</span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
       <section className="final-cta">
-        <h2>Ready to Play?</h2>
-        <p>Join thousands of players in the Dot Universe. Start your adventure now!</p>
-        <div className="cta-buttons final">
-          <Link href="/login" className="btn btn-primary btn-large">
-            Play Now - It's Free!
-          </Link>
-        </div>
+        <div className="cta-glow"></div>
+        <h2>Ready to Begin?</h2>
+        <p>Join the Dot Universe and start your adventure today!</p>
+        <Link href="/login" className="btn btn-mega">
+          <span className="btn-bg"></span>
+          <span className="btn-content">
+            <span className="btn-icon">&#x25B6;</span>
+            Start Playing - It's Free!
+          </span>
+          <span className="btn-shine"></span>
+        </Link>
       </section>
 
       {/* Footer */}
-      <footer className="landing-footer">
+      <footer className="footer">
         <div className="footer-content">
           <div className="footer-brand">
             <div className="footer-logo"></div>
@@ -274,375 +416,989 @@ export default function Home() {
             <Link href="/hub">Game Hub</Link>
             <Link href="/slayer">DotSlayer</Link>
             <Link href="/clicker">Dot Clicker</Link>
+            <Link href="/profile">Profile</Link>
             <Link href="/news">News</Link>
-            <Link href="/login">Sign In</Link>
           </nav>
-          <p className="copyright">Play free browser games at Dot Universe | 2025-2026</p>
+          <p className="copyright">2025-2026 Dot Universe. Play free browser games.</p>
         </div>
       </footer>
 
       <style jsx>{`
+        /* Base */
         .landing-page {
           min-height: 100vh;
-          background: linear-gradient(180deg, #0a0a1a 0%, #0a1929 50%, #1a0a2e 100%);
-          color: #e0e0e0;
-          font-family: system-ui, -apple-system, sans-serif;
-        }
-
-        /* Hero */
-        .hero {
-          min-height: 80vh;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          padding: 40px 20px;
+          background: #030308;
+          color: #fff;
+          font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+          overflow-x: hidden;
           position: relative;
-          overflow: hidden;
         }
 
-        .hero-content {
-          position: relative;
-          z-index: 2;
-        }
-
-        .logo-container {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 20px;
-          margin-bottom: 20px;
-        }
-
-        .logo-dot {
-          width: 60px;
-          height: 60px;
-          background: linear-gradient(135deg, #00d9ff, #0099cc);
-          border-radius: 50%;
-          animation: pulse 2s ease-in-out infinite;
-          box-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
-        }
-
-        h1 {
-          font-size: 3.5rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          margin: 0;
-        }
-
-        .tagline {
-          font-size: 1.8rem;
-          color: #00d9ff;
-          margin: 10px 0;
-          font-weight: 600;
-        }
-
-        .subtitle {
-          font-size: 1.2rem;
-          color: #888;
-          margin-bottom: 30px;
-        }
-
-        .cta-buttons {
-          display: flex;
-          gap: 15px;
-          justify-content: center;
-          flex-wrap: wrap;
-        }
-
-        .btn {
-          padding: 15px 40px;
-          font-size: 1.2rem;
-          font-weight: 600;
-          border-radius: 50px;
-          text-decoration: none;
-          transition: all 0.3s ease;
-          cursor: pointer;
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #00d9ff, #0099cc);
-          color: white;
-          box-shadow: 0 4px 20px rgba(0, 217, 255, 0.4);
-        }
-
-        .btn-primary:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 6px 30px rgba(0, 217, 255, 0.6);
-        }
-
-        .btn-secondary {
-          background: transparent;
-          color: #00d9ff;
-          border: 2px solid #00d9ff;
-        }
-
-        .btn-secondary:hover {
-          background: rgba(0, 217, 255, 0.1);
-        }
-
-        .hero-visual {
-          position: absolute;
+        /* Background Effects */
+        .bg-effects {
+          position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
           pointer-events: none;
+          z-index: 0;
         }
 
-        .floating-dots {
-          position: relative;
+        .gradient-orb {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(100px);
+          opacity: 0.5;
+        }
+
+        .orb-1 {
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(circle, rgba(0, 217, 255, 0.3), transparent 70%);
+          top: -200px;
+          right: -200px;
+          animation: orbFloat 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+          width: 500px;
+          height: 500px;
+          background: radial-gradient(circle, rgba(255, 107, 0, 0.25), transparent 70%);
+          bottom: -100px;
+          left: -100px;
+          animation: orbFloat 25s ease-in-out infinite reverse;
+        }
+
+        .orb-3 {
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(138, 43, 226, 0.2), transparent 70%);
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          animation: orbFloat 30s ease-in-out infinite;
+        }
+
+        @keyframes orbFloat {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(50px, -50px) scale(1.1); }
+          66% { transform: translate(-30px, 30px) scale(0.9); }
+        }
+
+        .grid-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image:
+            linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
+          background-size: 50px 50px;
+        }
+
+        .particles {
+          position: absolute;
           width: 100%;
           height: 100%;
         }
 
-        .floating-dot {
+        .particle {
           position: absolute;
-          width: 10px;
-          height: 10px;
-          background: rgba(0, 217, 255, 0.3);
+          width: 4px;
+          height: 4px;
           border-radius: 50%;
-          animation: float 6s ease-in-out infinite;
+          animation: particleFloat linear infinite;
         }
 
-        @keyframes float {
-          0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
-          50% { transform: translateY(-30px) scale(1.2); opacity: 0.6; }
+        .particle-0 { background: rgba(0, 217, 255, 0.6); }
+        .particle-1 { background: rgba(255, 107, 0, 0.6); }
+        .particle-2 { background: rgba(46, 204, 113, 0.6); }
+        .particle-3 { background: rgba(155, 89, 182, 0.6); }
+        .particle-4 { background: rgba(241, 196, 15, 0.6); }
+
+        @keyframes particleFloat {
+          0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
         }
 
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-
-        /* Games Section */
-        .games-section {
-          padding: 80px 20px;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .games-section h2 {
+        /* Hero Section */
+        .hero {
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           text-align: center;
-          font-size: 2.5rem;
-          color: #00d9ff;
-          margin-bottom: 50px;
+          padding: 40px 20px;
+          position: relative;
+          z-index: 1;
         }
 
-        .games-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-          gap: 40px;
+        .hero-content {
+          max-width: 800px;
         }
 
-        .game-card {
-          background: rgba(0, 0, 0, 0.4);
-          border-radius: 20px;
-          padding: 40px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          transition: all 0.3s ease;
+        /* Logo */
+        .logo-area {
+          position: relative;
+          width: 120px;
+          height: 120px;
+          margin: 0 auto 30px;
         }
 
-        .game-card:hover {
-          transform: translateY(-10px);
-          border-color: rgba(0, 217, 255, 0.3);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-        }
-
-        .game-card.slayer {
-          border-top: 4px solid #e74c3c;
-        }
-
-        .game-card.clicker {
-          border-top: 4px solid #9b59b6;
-        }
-
-        .game-icon {
+        .logo-dot {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
           width: 80px;
           height: 80px;
-          border-radius: 20px;
+          background: linear-gradient(135deg, #00d9ff, #0099cc);
+          border-radius: 50%;
+          box-shadow:
+            0 0 60px rgba(0, 217, 255, 0.6),
+            inset 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .logo-inner {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 30px;
+          height: 30px;
+          background: radial-gradient(circle, #fff 0%, transparent 70%);
+          border-radius: 50%;
+        }
+
+        .logo-pulse {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 100%;
+          height: 100%;
+          border: 3px solid rgba(0, 217, 255, 0.5);
+          border-radius: 50%;
+          animation: logoPulse 2s ease-out infinite;
+        }
+
+        .logo-ring {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 110px;
+          height: 110px;
+          border: 2px solid rgba(0, 217, 255, 0.3);
+          border-radius: 50%;
+          animation: logoSpin 10s linear infinite;
+        }
+
+        .logo-ring::before {
+          content: '';
+          position: absolute;
+          top: -5px;
+          left: 50%;
+          width: 10px;
+          height: 10px;
+          background: #00d9ff;
+          border-radius: 50%;
+          transform: translateX(-50%);
+        }
+
+        @keyframes logoPulse {
+          0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        @keyframes logoSpin {
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Hero Title */
+        .hero-title {
+          font-size: 5rem;
+          font-weight: 900;
+          letter-spacing: 10px;
+          margin: 0 0 20px 0;
+          line-height: 1.1;
+        }
+
+        .title-word {
+          display: block;
+          background: linear-gradient(180deg, #fff 0%, #888 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .title-word.accent {
+          background: linear-gradient(135deg, #00d9ff 0%, #00ff88 50%, #ff6b00 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          animation: titleGradient 5s ease infinite;
+          background-size: 200% 200%;
+        }
+
+        @keyframes titleGradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+
+        .hero-tagline {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 20px;
-          font-size: 2rem;
-        }
-
-        .slayer .game-icon {
-          background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-
-        .slayer .game-icon::before {
-          content: '\\1F3AF';
-        }
-
-        .clicker .game-icon {
-          background: linear-gradient(135deg, #9b59b6, #8e44ad);
-        }
-
-        .clicker .game-icon::before {
-          content: '\\1F446';
-        }
-
-        .game-card h3 {
-          font-size: 2rem;
-          margin: 0 0 5px 0;
-          color: white;
-        }
-
-        .game-genre {
-          color: #888;
-          font-size: 0.9rem;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 15px;
-        }
-
-        .game-description {
-          color: #bbb;
-          line-height: 1.6;
-          margin-bottom: 20px;
-        }
-
-        .features-list {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          list-style: none;
-          padding: 0;
-          margin: 0 0 25px 0;
-        }
-
-        .features-list li {
+          gap: 20px;
+          font-size: 1.5rem;
           color: #00d9ff;
-          font-size: 0.9rem;
+          margin: 0 0 15px 0;
+          font-weight: 600;
         }
 
-        .features-list li::before {
-          content: '\\2713 ';
-          color: #00ff88;
+        .tagline-line {
+          width: 60px;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #00d9ff, transparent);
         }
 
-        .game-link {
-          display: inline-block;
-          padding: 12px 30px;
-          background: rgba(0, 217, 255, 0.1);
-          color: #00d9ff;
+        .hero-subtitle {
+          font-size: 1.1rem;
+          color: #666;
+          margin: 0 0 40px 0;
+        }
+
+        /* CTA Buttons */
+        .cta-container {
+          display: flex;
+          gap: 20px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-bottom: 50px;
+        }
+
+        .btn {
+          position: relative;
+          padding: 18px 45px;
+          font-size: 1.1rem;
+          font-weight: 700;
+          border: none;
+          border-radius: 50px;
+          cursor: pointer;
           text-decoration: none;
-          border-radius: 25px;
-          border: 1px solid rgba(0, 217, 255, 0.3);
+          overflow: hidden;
           transition: all 0.3s ease;
         }
 
-        .game-link:hover {
-          background: rgba(0, 217, 255, 0.2);
-          transform: translateX(5px);
+        .btn-primary {
+          background: linear-gradient(135deg, #00d9ff, #0077ff);
+          color: #fff;
         }
 
-        /* Synergy Section */
-        .synergy-section {
-          padding: 80px 20px;
-          background: rgba(0, 217, 255, 0.05);
-          text-align: center;
+        .btn-bg {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, #00d9ff, #0077ff);
+          transition: all 0.3s;
         }
 
-        .synergy-section h2 {
-          font-size: 2.5rem;
-          color: #00d9ff;
-          margin-bottom: 20px;
+        .btn-primary:hover .btn-bg {
+          filter: brightness(1.2);
         }
 
-        .synergy-description {
-          max-width: 600px;
-          margin: 0 auto 40px;
-          color: #bbb;
-          font-size: 1.1rem;
-          line-height: 1.6;
-        }
-
-        .synergy-features {
+        .btn-content {
+          position: relative;
+          z-index: 2;
           display: flex;
-          justify-content: center;
-          gap: 60px;
-          flex-wrap: wrap;
-        }
-
-        .synergy-item {
-          display: flex;
-          flex-direction: column;
           align-items: center;
           gap: 10px;
         }
 
-        .synergy-arrow {
-          background: rgba(0, 217, 255, 0.1);
-          padding: 10px 20px;
-          border-radius: 10px;
-          color: #00d9ff;
-          font-weight: 600;
-        }
-
-        .synergy-item p {
-          color: #888;
+        .btn-icon {
           font-size: 0.9rem;
         }
 
-        /* Features Section */
+        .btn-shine {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+          animation: btnShine 3s infinite;
+        }
+
+        @keyframes btnShine {
+          0% { left: -100%; }
+          50%, 100% { left: 100%; }
+        }
+
+        .glow-effect {
+          box-shadow:
+            0 0 20px rgba(0, 217, 255, 0.4),
+            0 0 40px rgba(0, 217, 255, 0.2);
+        }
+
+        .glow-effect:hover {
+          transform: translateY(-3px);
+          box-shadow:
+            0 0 30px rgba(0, 217, 255, 0.6),
+            0 0 60px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn-secondary {
+          background: transparent;
+          border: 2px solid rgba(0, 217, 255, 0.5);
+          color: #00d9ff;
+        }
+
+        .btn-secondary:hover {
+          background: rgba(0, 217, 255, 0.1);
+          border-color: #00d9ff;
+        }
+
+        /* Hero Stats */
+        .hero-stats {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 30px;
+          flex-wrap: wrap;
+        }
+
+        .hero-stat {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #888;
+          font-size: 0.95rem;
+        }
+
+        .stat-icon {
+          font-size: 1.2rem;
+        }
+
+        .stat-divider {
+          width: 4px;
+          height: 4px;
+          background: #444;
+          border-radius: 50%;
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+          position: absolute;
+          bottom: 40px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          color: #555;
+          font-size: 0.85rem;
+          animation: scrollBounce 2s ease-in-out infinite;
+        }
+
+        .scroll-mouse {
+          width: 24px;
+          height: 38px;
+          border: 2px solid #444;
+          border-radius: 15px;
+          position: relative;
+        }
+
+        .scroll-wheel {
+          width: 4px;
+          height: 8px;
+          background: #00d9ff;
+          border-radius: 2px;
+          position: absolute;
+          top: 8px;
+          left: 50%;
+          transform: translateX(-50%);
+          animation: scrollWheel 1.5s ease-in-out infinite;
+        }
+
+        @keyframes scrollWheel {
+          0%, 100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+          100% { transform: translateX(-50%) translateY(10px); opacity: 0; }
+        }
+
+        @keyframes scrollBounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(10px); }
+        }
+
+        /* Section Styling */
+        section {
+          position: relative;
+          z-index: 1;
+          padding: 100px 20px;
+        }
+
+        .section-header {
+          text-align: center;
+          margin-bottom: 60px;
+        }
+
+        .section-tag {
+          display: inline-block;
+          padding: 8px 20px;
+          background: rgba(0, 217, 255, 0.1);
+          border: 1px solid rgba(0, 217, 255, 0.2);
+          border-radius: 20px;
+          color: #00d9ff;
+          font-size: 0.8rem;
+          font-weight: 700;
+          letter-spacing: 2px;
+          margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+          font-size: 3rem;
+          font-weight: 800;
+          margin: 0;
+          background: linear-gradient(180deg, #fff 0%, #888 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .section-subtitle {
+          color: #666;
+          margin-top: 15px;
+        }
+
+        /* Games Section */
+        .games-section {
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .games-showcase {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 30px;
+          flex-wrap: wrap;
+        }
+
+        /* Game Cards */
+        .game-card {
+          position: relative;
+          width: 400px;
+          max-width: 100%;
+          border-radius: 30px;
+          overflow: hidden;
+          transition: all 0.4s ease;
+        }
+
+        .card-glow {
+          position: absolute;
+          inset: 0;
+          border-radius: 30px;
+          opacity: 0;
+          transition: opacity 0.4s;
+        }
+
+        .slayer-card .card-glow {
+          box-shadow: 0 0 80px rgba(255, 107, 0, 0.4);
+        }
+
+        .clicker-card .card-glow {
+          box-shadow: 0 0 80px rgba(0, 217, 255, 0.4);
+        }
+
+        .game-card:hover .card-glow {
+          opacity: 1;
+        }
+
+        .card-border {
+          position: absolute;
+          inset: 0;
+          border-radius: 30px;
+          padding: 2px;
+          background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+        }
+
+        .slayer-card .card-border {
+          background: linear-gradient(135deg, rgba(255, 107, 0, 0.5), transparent, rgba(255, 107, 0, 0.3));
+        }
+
+        .clicker-card .card-border {
+          background: linear-gradient(135deg, rgba(0, 217, 255, 0.5), transparent, rgba(0, 217, 255, 0.3));
+        }
+
+        .card-content {
+          position: relative;
+          background: linear-gradient(180deg, rgba(10, 15, 30, 0.95) 0%, rgba(5, 10, 20, 0.98) 100%);
+          border-radius: 28px;
+          padding: 40px 30px;
+          backdrop-filter: blur(20px);
+        }
+
+        .card-badge {
+          display: inline-block;
+          padding: 6px 15px;
+          border-radius: 15px;
+          font-size: 0.7rem;
+          font-weight: 800;
+          letter-spacing: 2px;
+          margin-bottom: 25px;
+        }
+
+        .slayer-card .card-badge {
+          background: linear-gradient(135deg, #ff6b00, #ff4400);
+          color: #fff;
+        }
+
+        .clicker-card .card-badge {
+          background: linear-gradient(135deg, #00d9ff, #0099ff);
+          color: #fff;
+        }
+
+        /* Game Visual */
+        .game-visual {
+          position: relative;
+          width: 120px;
+          height: 120px;
+          margin: 0 auto 25px;
+        }
+
+        .visual-ring {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 3px dashed rgba(255, 255, 255, 0.1);
+          animation: visualSpin 20s linear infinite;
+        }
+
+        @keyframes visualSpin {
+          100% { transform: rotate(360deg); }
+        }
+
+        .visual-icon {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 70px;
+          height: 70px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .slayer-card .visual-icon svg {
+          width: 60px;
+          height: 60px;
+          color: #ff6b00;
+          filter: drop-shadow(0 0 10px rgba(255, 107, 0, 0.5));
+        }
+
+        .clicker-icon {
+          flex-direction: column;
+        }
+
+        .click-dot {
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #00d9ff, #0077ff);
+          border-radius: 50%;
+          box-shadow: 0 0 30px rgba(0, 217, 255, 0.5);
+        }
+
+        .click-plus {
+          position: absolute;
+          top: 5px;
+          right: 5px;
+          font-size: 1rem;
+          font-weight: 800;
+          color: #2ecc71;
+          animation: clickPlus 1s ease-out infinite;
+        }
+
+        @keyframes clickPlus {
+          0% { transform: translateY(0); opacity: 1; }
+          100% { transform: translateY(-15px); opacity: 0; }
+        }
+
+        .visual-ripple {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 60px;
+          height: 60px;
+          border: 2px solid rgba(0, 217, 255, 0.3);
+          border-radius: 50%;
+          animation: ripple 2s ease-out infinite;
+        }
+
+        @keyframes ripple {
+          0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        .visual-particles span {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          background: #ff6b00;
+          border-radius: 50%;
+          animation: particleBurst 1.5s ease-out infinite;
+        }
+
+        .visual-particles span:nth-child(1) { top: 0; left: 50%; animation-delay: 0s; }
+        .visual-particles span:nth-child(2) { top: 20%; right: 0; animation-delay: 0.25s; }
+        .visual-particles span:nth-child(3) { bottom: 20%; right: 0; animation-delay: 0.5s; }
+        .visual-particles span:nth-child(4) { bottom: 0; left: 50%; animation-delay: 0.75s; }
+        .visual-particles span:nth-child(5) { bottom: 20%; left: 0; animation-delay: 1s; }
+        .visual-particles span:nth-child(6) { top: 20%; left: 0; animation-delay: 1.25s; }
+
+        @keyframes particleBurst {
+          0% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(0); opacity: 0; }
+        }
+
+        .game-card h3 {
+          font-size: 2rem;
+          font-weight: 800;
+          margin: 0;
+        }
+
+        .slayer-card h3 { color: #ff6b00; }
+        .clicker-card h3 { color: #00d9ff; }
+
+        .game-subtitle {
+          color: #666;
+          margin: 5px 0 15px 0;
+          font-size: 0.95rem;
+        }
+
+        .game-desc {
+          color: #999;
+          font-size: 0.95rem;
+          line-height: 1.6;
+          margin: 0 0 20px 0;
+        }
+
+        /* Feature Pills */
+        .game-features {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 25px;
+        }
+
+        .feature-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          font-size: 0.8rem;
+          color: #aaa;
+        }
+
+        .pill-icon {
+          font-size: 1rem;
+        }
+
+        /* Game CTA */
+        .game-cta {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          padding: 14px 30px;
+          border-radius: 25px;
+          text-decoration: none;
+          font-weight: 700;
+          transition: all 0.3s;
+        }
+
+        .slayer-card .game-cta {
+          background: linear-gradient(135deg, rgba(255, 107, 0, 0.2), rgba(255, 50, 0, 0.1));
+          border: 2px solid rgba(255, 107, 0, 0.4);
+          color: #ff6b00;
+        }
+
+        .slayer-card .game-cta:hover {
+          background: linear-gradient(135deg, #ff6b00, #ff4400);
+          color: #fff;
+          transform: translateX(5px);
+          box-shadow: 0 0 30px rgba(255, 107, 0, 0.4);
+        }
+
+        .clicker-card .game-cta {
+          background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 150, 255, 0.1));
+          border: 2px solid rgba(0, 217, 255, 0.4);
+          color: #00d9ff;
+        }
+
+        .clicker-card .game-cta:hover {
+          background: linear-gradient(135deg, #00d9ff, #0077ff);
+          color: #fff;
+          transform: translateX(5px);
+          box-shadow: 0 0 30px rgba(0, 217, 255, 0.4);
+        }
+
+        .cta-arrow {
+          transition: transform 0.3s;
+        }
+
+        .game-cta:hover .cta-arrow {
+          transform: translateX(5px);
+        }
+
+        /* Synergy Bridge */
+        .synergy-bridge {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          padding: 20px 0;
+        }
+
+        .bridge-line {
+          width: 2px;
+          height: 40px;
+          background: linear-gradient(180deg, transparent, rgba(243, 156, 18, 0.5), transparent);
+        }
+
+        .bridge-icon {
+          width: 60px;
+          height: 60px;
+          background: linear-gradient(135deg, rgba(243, 156, 18, 0.2), rgba(241, 196, 15, 0.1));
+          border: 2px solid rgba(243, 156, 18, 0.3);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          animation: bridgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes bridgePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        .synergy-bridge p {
+          color: #666;
+          font-size: 0.85rem;
+          text-align: center;
+          margin: 0;
+        }
+
+        /* Features Grid */
         .features-section {
-          padding: 80px 20px;
           max-width: 1200px;
           margin: 0 auto;
         }
 
-        .features-section h2 {
-          text-align: center;
-          font-size: 2.5rem;
-          color: #00d9ff;
-          margin-bottom: 50px;
-        }
-
         .features-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 30px;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 25px;
         }
 
-        .feature {
-          text-align: center;
-          padding: 30px;
-          background: rgba(0, 0, 0, 0.2);
+        .feature-card {
+          background: linear-gradient(145deg, rgba(15, 20, 35, 0.8), rgba(10, 15, 25, 0.9));
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          padding: 35px 30px;
+          transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+          transform: translateY(-5px);
+          border-color: rgba(0, 217, 255, 0.2);
+        }
+
+        .feature-card.highlight {
+          border-color: rgba(0, 217, 255, 0.3);
+          background: linear-gradient(145deg, rgba(0, 217, 255, 0.1), rgba(10, 15, 25, 0.9));
+        }
+
+        .feature-icon-wrap {
+          width: 60px;
+          height: 60px;
+          background: rgba(0, 217, 255, 0.1);
           border-radius: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 20px;
         }
 
         .feature-icon {
-          display: block;
-          font-size: 0.8rem;
-          color: #00ff88;
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          margin-bottom: 10px;
+          font-size: 1.8rem;
         }
 
-        .feature h3 {
-          color: white;
+        .feature-card h3 {
+          font-size: 1.3rem;
           margin: 0 0 10px 0;
+          color: #fff;
         }
 
-        .feature p {
+        .feature-card p {
           color: #888;
-          font-size: 0.95rem;
-          line-height: 1.5;
           margin: 0;
+          line-height: 1.6;
+        }
+
+        /* Stats Section */
+        .stats-section {
+          background: linear-gradient(180deg, rgba(0, 217, 255, 0.05) 0%, transparent 50%, rgba(255, 107, 0, 0.05) 100%);
+        }
+
+        .stats-container {
+          display: flex;
+          justify-content: center;
+          gap: 60px;
+          flex-wrap: wrap;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .stat-box {
+          text-align: center;
+          padding: 30px;
+        }
+
+        .stat-num {
+          display: block;
+          font-size: 4rem;
+          font-weight: 900;
+          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          line-height: 1;
+        }
+
+        .stat-label {
+          display: block;
+          color: #666;
+          font-size: 1rem;
+          margin-top: 10px;
+        }
+
+        /* Testimonials */
+        .testimonials-section {
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .testimonials-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 25px;
+        }
+
+        .testimonial-card {
+          background: linear-gradient(145deg, rgba(15, 20, 35, 0.8), rgba(10, 15, 25, 0.9));
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          padding: 30px;
+          transition: all 0.3s;
+        }
+
+        .testimonial-card:hover {
+          transform: translateY(-5px);
+        }
+
+        .testimonial-card.featured {
+          border-color: rgba(243, 156, 18, 0.3);
+          background: linear-gradient(145deg, rgba(243, 156, 18, 0.1), rgba(10, 15, 25, 0.9));
+        }
+
+        .stars {
+          color: #f39c12;
+          font-size: 1.3rem;
+          margin-bottom: 15px;
+        }
+
+        .testimonial-card p {
+          color: #bbb;
+          font-style: italic;
+          line-height: 1.6;
+          margin: 0 0 20px 0;
+        }
+
+        .author {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .author-avatar {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #00d9ff, #0077ff);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 1rem;
+        }
+
+        .author-name {
+          color: #888;
+          font-size: 0.9rem;
+        }
+
+        /* Final CTA */
+        .final-cta {
+          text-align: center;
+          padding: 120px 20px;
+          position: relative;
+        }
+
+        .cta-glow {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 600px;
+          height: 600px;
+          background: radial-gradient(circle, rgba(0, 217, 255, 0.15), transparent 70%);
+          pointer-events: none;
+        }
+
+        .final-cta h2 {
+          font-size: 3.5rem;
+          font-weight: 900;
+          margin: 0 0 15px 0;
+          position: relative;
+        }
+
+        .final-cta p {
+          color: #888;
+          font-size: 1.2rem;
+          margin: 0 0 40px 0;
+          position: relative;
+        }
+
+        .btn-mega {
+          padding: 22px 60px;
+          font-size: 1.3rem;
+          position: relative;
         }
 
         /* Footer */
-        .landing-footer {
-          padding: 40px 20px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        .footer {
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+          padding: 50px 20px;
         }
 
         .footer-content {
@@ -651,22 +1407,22 @@ export default function Home() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 20px;
+          gap: 25px;
         }
 
         .footer-brand {
           display: flex;
           align-items: center;
-          gap: 10px;
-          color: #00d9ff;
-          font-weight: 600;
-          font-size: 1.2rem;
+          gap: 12px;
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: #fff;
         }
 
         .footer-logo {
-          width: 30px;
-          height: 30px;
-          background: #00d9ff;
+          width: 35px;
+          height: 35px;
+          background: linear-gradient(135deg, #00d9ff, #0077ff);
           border-radius: 50%;
         }
 
@@ -678,7 +1434,7 @@ export default function Home() {
         }
 
         .footer-nav a {
-          color: #888;
+          color: #666;
           text-decoration: none;
           transition: color 0.2s;
         }
@@ -688,281 +1444,53 @@ export default function Home() {
         }
 
         .copyright {
-          color: #555;
+          color: #444;
           font-size: 0.9rem;
         }
 
-        /* Stats Section */
-        .stats-section {
-          padding: 80px 20px;
-          background: linear-gradient(180deg, rgba(0, 217, 255, 0.05) 0%, transparent 100%);
+        /* Responsive */
+        @media (max-width: 900px) {
+          .synergy-bridge {
+            display: none;
+          }
         }
 
-        .stats-section h2 {
-          text-align: center;
-          font-size: 2.5rem;
-          color: #00d9ff;
-          margin-bottom: 50px;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 30px;
-          max-width: 800px;
-          margin: 0 auto;
-        }
-
-        .stat-item {
-          text-align: center;
-          padding: 30px;
-        }
-
-        .stat-number {
-          display: block;
-          font-size: 3.5rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, #00d9ff, #00ff88);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .stat-label {
-          display: block;
-          color: #888;
-          font-size: 1rem;
-          margin-top: 10px;
-        }
-
-        /* What's New Section */
-        .whats-new-section {
-          padding: 80px 20px;
-          max-width: 1000px;
-          margin: 0 auto;
-        }
-
-        .whats-new-section h2 {
-          text-align: center;
-          font-size: 2.5rem;
-          color: #f39c12;
-          margin-bottom: 50px;
-        }
-
-        .update-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 25px;
-          margin-bottom: 30px;
-        }
-
-        .update-card {
-          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 15px;
-          padding: 25px;
-          transition: all 0.3s;
-        }
-
-        .update-card:hover {
-          transform: translateY(-5px);
-          border-color: rgba(243, 156, 18, 0.3);
-        }
-
-        .update-card.featured {
-          border-color: rgba(243, 156, 18, 0.3);
-          background: linear-gradient(145deg, rgba(243, 156, 18, 0.1), rgba(20, 25, 40, 0.9));
-        }
-
-        .update-tag {
-          display: inline-block;
-          padding: 4px 12px;
-          background: #f39c12;
-          color: #000;
-          font-size: 0.7rem;
-          font-weight: 700;
-          border-radius: 15px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          margin-bottom: 12px;
-        }
-
-        .update-card h3 {
-          color: #fff;
-          margin: 0 0 10px 0;
-          font-size: 1.2rem;
-        }
-
-        .update-card p {
-          color: #888;
-          margin: 0;
-          font-size: 0.95rem;
-          line-height: 1.5;
-        }
-
-        .view-all-link {
-          display: block;
-          text-align: center;
-          color: #f39c12;
-          text-decoration: none;
-          font-weight: 600;
-          transition: color 0.2s;
-        }
-
-        .view-all-link:hover {
-          color: #fff;
-        }
-
-        /* FAQ Section */
-        .faq-section {
-          padding: 80px 20px;
-          max-width: 900px;
-          margin: 0 auto;
-        }
-
-        .faq-section h2 {
-          text-align: center;
-          font-size: 2.5rem;
-          color: #00d9ff;
-          margin-bottom: 50px;
-        }
-
-        .faq-grid {
-          display: grid;
-          gap: 20px;
-        }
-
-        .faq-item {
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 12px;
-          padding: 25px;
-          border-left: 4px solid #00d9ff;
-        }
-
-        .faq-item h3 {
-          color: #fff;
-          margin: 0 0 12px 0;
-          font-size: 1.1rem;
-        }
-
-        .faq-item p {
-          color: #aaa;
-          margin: 0;
-          line-height: 1.6;
-        }
-
-        /* Testimonials Section */
-        .testimonials-section {
-          padding: 80px 20px;
-          background: rgba(0, 217, 255, 0.03);
-        }
-
-        .testimonials-section h2 {
-          text-align: center;
-          font-size: 2.5rem;
-          color: #00d9ff;
-          margin-bottom: 50px;
-        }
-
-        .testimonials-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 25px;
-          max-width: 1000px;
-          margin: 0 auto;
-        }
-
-        .testimonial {
-          background: rgba(0, 0, 0, 0.3);
-          padding: 25px;
-          border-radius: 15px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .testimonial-stars {
-          color: #f39c12;
-          font-size: 1.2rem;
-          margin-bottom: 15px;
-        }
-
-        .testimonial-text {
-          color: #ccc;
-          font-style: italic;
-          line-height: 1.6;
-          margin: 0 0 15px 0;
-        }
-
-        .testimonial-author {
-          color: #00d9ff;
-          font-size: 0.9rem;
-          font-weight: 600;
-          margin: 0;
-        }
-
-        /* Final CTA Section */
-        .final-cta {
-          padding: 100px 20px;
-          text-align: center;
-          background: linear-gradient(180deg, transparent 0%, rgba(0, 217, 255, 0.1) 50%, transparent 100%);
-        }
-
-        .final-cta h2 {
-          font-size: 3rem;
-          color: #fff;
-          margin-bottom: 15px;
-        }
-
-        .final-cta p {
-          color: #888;
-          font-size: 1.2rem;
-          margin-bottom: 30px;
-        }
-
-        .btn-large {
-          padding: 20px 60px;
-          font-size: 1.4rem;
-        }
-
-        .cta-buttons.final {
-          margin-top: 30px;
-        }
-
-        /* Mobile Responsive */
         @media (max-width: 768px) {
-          h1 {
+          .hero-title {
+            font-size: 3rem;
+          }
+
+          .hero-tagline {
+            font-size: 1.2rem;
+          }
+
+          .tagline-line {
+            display: none;
+          }
+
+          .section-header h2 {
+            font-size: 2rem;
+          }
+
+          .game-card {
+            width: 100%;
+          }
+
+          .stat-num {
             font-size: 2.5rem;
           }
 
-          .tagline {
-            font-size: 1.3rem;
-          }
-
-          .games-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .synergy-features {
-            flex-direction: column;
+          .stats-container {
             gap: 30px;
           }
 
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-          }
-
-          .stat-number {
+          .final-cta h2 {
             font-size: 2.5rem;
           }
 
-          .update-cards {
-            grid-template-columns: 1fr;
-          }
-
-          .stats-section h2,
-          .whats-new-section h2,
-          .faq-section h2 {
-            font-size: 1.8rem;
+          .btn-mega {
+            padding: 18px 40px;
+            font-size: 1.1rem;
           }
         }
       `}</style>
