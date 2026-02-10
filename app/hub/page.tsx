@@ -354,18 +354,36 @@ export default function GameHub() {
     setResetStatus('resetting')
 
     try {
-      // Clear localStorage
+      // Clear localStorage - ALL game-related keys
       const keysToRemove = [
+        // DotSlayer keys
         'dotslayer_progress',
         'dotslayer_daily_challenges',
         'dotslayer_weekly_challenges',
         'dotslayer_event_progress',
-        'dotclicker_save',
         'dotslayer_synergy',
+        'dotslayer_synergy_stats',
+        'dotslayer_save',
+        'dotslayer_achievements',
+        // Dot Clicker keys
+        'dotclicker_save',
         'dotclicker_synergy',
-        'crossGameSynergy'
+        'dotclicker_synergy_stats',
+        'dotclicker_achievements',
+        // Cross-game synergy keys
+        'crossGameSynergy',
+        'dot_universe_level',
+        'cross_game_bonuses'
       ]
       keysToRemove.forEach(key => localStorage.removeItem(key))
+
+      // Also clear any keys that start with these prefixes (catch-all)
+      const prefixes = ['dotslayer_', 'dotclicker_', 'dot_universe_', 'cross_game_']
+      Object.keys(localStorage).forEach(key => {
+        if (prefixes.some(prefix => key.startsWith(prefix))) {
+          localStorage.removeItem(key)
+        }
+      })
 
       // Clear Supabase data
       await Promise.all([
@@ -1814,46 +1832,116 @@ export default function GameHub() {
         .quick-link {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 15px 30px;
-          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 15px;
-          color: #aab;
+          gap: 12px;
+          padding: 16px 32px;
+          border-radius: 20px;
+          color: #fff;
           text-decoration: none;
-          font-weight: 600;
-          transition: all 0.3s;
+          font-weight: 700;
+          font-size: 0.95rem;
+          letter-spacing: 0.5px;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          cursor: pointer;
+          border: none;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .quick-link::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+          animation: buttonShine 4s infinite;
+        }
+
+        @keyframes buttonShine {
+          0% { left: -100%; }
+          50%, 100% { left: 100%; }
         }
 
         .quick-link:hover {
-          transform: translateY(-3px);
-          border-color: rgba(0, 217, 255, 0.3);
-          color: #fff;
+          transform: translateY(-4px) scale(1.02);
+        }
+
+        .quick-link:active {
+          transform: translateY(-2px) scale(0.98);
+        }
+
+        /* Profile Button - Cyan/Blue Theme */
+        .profile-link {
+          background: linear-gradient(135deg, #00d9ff, #0099ff, #00d9ff);
+          background-size: 200% 200%;
+          animation: btnGradient 4s ease infinite;
+          border: 2px solid rgba(100, 220, 255, 0.5);
+          box-shadow:
+            0 4px 15px rgba(0, 217, 255, 0.4),
+            0 0 30px rgba(0, 217, 255, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         .profile-link:hover {
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 150, 255, 0.1));
-          box-shadow: 0 5px 20px rgba(0, 217, 255, 0.2);
+          box-shadow:
+            0 8px 30px rgba(0, 217, 255, 0.5),
+            0 0 50px rgba(0, 217, 255, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          border-color: rgba(150, 240, 255, 0.7);
+        }
+
+        /* News Button - Green Theme */
+        .news-link {
+          background: linear-gradient(135deg, #2ecc71, #27ae60, #2ecc71);
+          background-size: 200% 200%;
+          animation: btnGradient 4s ease infinite;
+          animation-delay: 0.5s;
+          border: 2px solid rgba(100, 220, 150, 0.5);
+          box-shadow:
+            0 4px 15px rgba(46, 204, 113, 0.4),
+            0 0 30px rgba(46, 204, 113, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         .news-link:hover {
-          background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.1));
-          box-shadow: 0 5px 20px rgba(46, 204, 113, 0.2);
+          box-shadow:
+            0 8px 30px rgba(46, 204, 113, 0.5),
+            0 0 50px rgba(46, 204, 113, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          border-color: rgba(150, 255, 180, 0.7);
         }
 
+        /* Reset Button - Red Theme */
         .reset-link {
-          cursor: pointer;
-          border: 1px solid rgba(231, 76, 60, 0.3);
+          background: linear-gradient(135deg, #e74c3c, #c0392b, #e74c3c);
+          background-size: 200% 200%;
+          animation: btnGradient 4s ease infinite;
+          animation-delay: 1s;
+          border: 2px solid rgba(255, 120, 100, 0.5);
+          box-shadow:
+            0 4px 15px rgba(231, 76, 60, 0.4),
+            0 0 30px rgba(231, 76, 60, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
         .reset-link:hover {
-          background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(192, 57, 43, 0.1));
-          border-color: rgba(231, 76, 60, 0.5);
-          box-shadow: 0 5px 20px rgba(231, 76, 60, 0.2);
+          box-shadow:
+            0 8px 30px rgba(231, 76, 60, 0.5),
+            0 0 50px rgba(231, 76, 60, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          border-color: rgba(255, 150, 140, 0.7);
+        }
+
+        @keyframes btnGradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
 
         .link-icon {
-          font-size: 1.2rem;
+          font-size: 1.3rem;
+          filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
         }
 
         /* Reset Modal */
