@@ -560,9 +560,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
-    // FIX V12: Position kill feed more to the right
+    // FIX V13: Position kill feed a bit more to the right
     const screenWidth = this.scale.width
-    const xPos = screenWidth * 0.73 // Position at 73% from left (27% from right)
+    const xPos = screenWidth * 0.78 // Position at 78% from left (22% from right)
     const yStart = 280 // Lower starting position
     const maxWidth = Math.min(300, screenWidth * 0.32)
 
