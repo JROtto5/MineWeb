@@ -398,6 +398,7 @@ export default function GameHub() {
       console.log('Keys after clear:', Object.keys(localStorage))
 
       // Clear Supabase data - run each delete and log errors
+      // NOTE: Table is 'leaderboard' (singular), not 'leaderboards'!
       const deleteResults = await Promise.allSettled([
         supabase.from('slayer_progress').delete().eq('user_id', user.id),
         supabase.from('slayer_saves').delete().eq('user_id', user.id),
@@ -405,7 +406,7 @@ export default function GameHub() {
         supabase.from('clicker_saves').delete().eq('user_id', user.id),
         supabase.from('achievements').delete().eq('user_id', user.id),
         supabase.from('daily_challenges').delete().eq('user_id', user.id),
-        supabase.from('leaderboards').delete().eq('user_id', user.id),
+        supabase.from('leaderboard').delete().eq('user_id', user.id),
         // Reset synergy data in user_profiles (don't delete the profile itself)
         supabase.from('user_profiles').update({
           slayer_highest_floor: 0,
@@ -418,7 +419,7 @@ export default function GameHub() {
       ])
 
       // Log any failures for debugging
-      const tableNames = ['slayer_progress', 'slayer_saves', 'slayer_stats', 'clicker_saves', 'achievements', 'daily_challenges', 'leaderboards', 'user_profiles']
+      const tableNames = ['slayer_progress', 'slayer_saves', 'slayer_stats', 'clicker_saves', 'achievements', 'daily_challenges', 'leaderboard', 'user_profiles']
       let errorMessages: string[] = []
       deleteResults.forEach((result, index) => {
         const tableName = tableNames[index] || `operation ${index}`
@@ -440,21 +441,51 @@ export default function GameHub() {
 
       // Also try to reset clicker_saves by updating instead of deleting
       // (in case RLS prevents delete but allows update)
-      await supabase.from('clicker_saves').update({
-        total_dots: 0,
-        total_prestiges: 0,
+      const clickerResetResult = await supabase.from('clicker_saves').update({
         dots: 0,
+        total_dots: 0,
+        total_clicks: 0,
+        dots_per_click: 1,
+        crit_chance: 0.05,
+        crit_multiplier: 5,
+        golden_dot_chance: 0.01,
         global_multiplier: 1,
-        buildings: {},
-        upgrades: {},
-        stats: {
-          totalClicks: 0,
-          highestDps: 0,
-          buildingsPurchased: 0,
-          totalPlaytime: 0
-        },
+        combo_multiplier: 1,
+        offline_multiplier: 0,
+        prestige_points: 0,
+        prestige_multiplier: 1,
+        total_prestiges: 0,
+        buildings: [],
+        upgrades: [],
+        achievements: [],
+        prestige_upgrades: [],
+        stats: {},
+        slayer_floors_cleared: 0,
+        synergy_bonus: 0,
+        ascension_level: 0,
+        total_ascensions: 0,
+        ascension_points: 0,
         updated_at: new Date().toISOString()
       }).eq('user_id', user.id)
+
+      if (clickerResetResult.error) {
+        console.error('Clicker reset update failed:', clickerResetResult.error)
+      } else {
+        console.log('Clicker reset update success')
+      }
+
+      // Also reset achievements table
+      const achievementsResetResult = await supabase.from('achievements').update({
+        unlocked: [],
+        unlocked_count: 0,
+        updated_at: new Date().toISOString()
+      }).eq('user_id', user.id)
+
+      if (achievementsResetResult.error) {
+        console.error('Achievements reset update failed:', achievementsResetResult.error)
+      } else {
+        console.log('Achievements reset update success')
+      }
 
       setResetStatus('success')
 
