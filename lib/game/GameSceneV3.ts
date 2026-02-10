@@ -2881,20 +2881,11 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.audioManager.playSound('death')
     this.audioManager.stopMusic()
 
-    this.addKillFeedMessage('💀 GAME OVER 💀', '#e74c3c', 3000)
-    this.showRunStats(false)
-
     // Save cross-game synergy stats
     this.saveSynergyStats(false)
 
-    // Submit to leaderboard
-    this.time.delayedCall(2000, () => {
-      this.showLeaderboardPrompt(false)
-    })
-
-    this.time.delayedCall(12000, () => {
-      this.scene.restart()
-    })
+    // Show single unified game over screen (no more overlapping popups!)
+    this.showLeaderboardPrompt(false)
   }
 
   // Save stats to cross-game synergy service
@@ -2916,67 +2907,11 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private gameWon() {
-    this.addKillFeedMessage('🏆 YOU WON! ALL STAGES CLEARED! 🏆', '#2ecc71', 6000)
-    this.showRunStats(true)
-
     // Save cross-game synergy stats - VICTORY!
     this.saveSynergyStats(true)
 
-    // Submit to leaderboard
-    this.time.delayedCall(2000, () => {
-      this.showLeaderboardPrompt(true)
-    })
-
-    this.time.delayedCall(14000, () => {
-      this.scene.restart()
-    })
-  }
-
-  // ROGUELIKE: Show run statistics!
-  private showRunStats(victory: boolean) {
-    const screenWidth = this.scale.width
-    const screenHeight = this.scale.height
-    const centerX = screenWidth / 2
-    const centerY = screenHeight / 2
-
-    // Calculate run time
-    const runTime = Math.floor((Date.now() - this.runStats.startTime) / 1000)
-    const minutes = Math.floor(runTime / 60)
-    const seconds = runTime % 60
-
-    // Create stats display
-    const title = this.add.text(centerX, centerY - 200, victory ? '🏆 VICTORY! 🏆' : '💀 RUN ENDED 💀', {
-      fontSize: '48px',
-      color: victory ? '#2ecc71' : '#e74c3c',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 6
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
-
-    const stats = [
-      `⏱️  Time: ${minutes}m ${seconds}s`,
-      `🎯  Kills: ${this.runStats.totalKills}`,
-      `👑  Bosses: ${this.runStats.bossesKilled}`,
-      `💰  Money: $${this.runStats.totalMoney}`,
-      `🔥  Max Combo: ${this.runStats.highestCombo}x`,
-      `📊  Stages: ${this.runStats.stagesCompleted}`,
-      `⚔️  Level: ${this.player.level}`
-    ]
-
-    stats.forEach((stat, index) => {
-      this.add.text(centerX, centerY - 120 + index * 40, stat, {
-        fontSize: '24px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 4
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
-    })
-
-    this.add.text(centerX, centerY + 180, 'Restarting...', {
-      fontSize: '20px',
-      color: '#95a5a6',
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(20000)
+    // Show single unified victory screen (no more overlapping popups!)
+    this.showLeaderboardPrompt(true)
   }
 
   private createInitialBackground() {
@@ -4361,7 +4296,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     })
   }
 
-  // Show leaderboard after game over/victory with name input
+  // Show unified game over screen with stats, name input, and share options
   private async showLeaderboardPrompt(victory: boolean) {
     // Mark save as dead if playing from a save slot
     if (this.currentSaveSlot !== null && this.currentUserId) {
@@ -4373,51 +4308,89 @@ export default class GameSceneV3 extends Phaser.Scene {
     const centerX = screenWidth / 2
     const centerY = screenHeight / 2
 
-    // Calculate score
+    // Calculate score and time
     const score = this.runStats.totalMoney + this.runStats.totalKills * 100 + this.runStats.stagesCompleted * 1000
+    const runTime = Math.floor((Date.now() - this.runStats.startTime) / 1000)
+    const minutes = Math.floor(runTime / 60)
+    const seconds = runTime % 60
+
+    // Track all UI elements for cleanup
+    const uiElements: Phaser.GameObjects.GameObject[] = []
 
     // Create full screen black overlay
     const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.95)
       .setOrigin(0).setScrollFactor(0).setDepth(25000)
+    uiElements.push(overlay)
 
     // Game Over title
-    const gameOverText = this.add.text(centerX, centerY - 150, victory ? '🎉 VICTORY!' : '💀 GAME OVER', {
-      fontSize: '48px',
+    const gameOverText = this.add.text(centerX, 60, victory ? '🎉 VICTORY!' : '💀 GAME OVER', {
+      fontSize: '42px',
       color: victory ? '#2ecc71' : '#e74c3c',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 8
+      strokeThickness: 6
     }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+    uiElements.push(gameOverText)
 
-    // Score display
-    const scoreText = this.add.text(centerX, centerY - 90, `Final Score: $${score.toLocaleString()}`, {
-      fontSize: '24px',
+    // Run Stats in a compact grid (left side)
+    const statsX = centerX - 180
+    const statsY = 120
+    const statsData = [
+      { label: '⏱️ Time', value: `${minutes}m ${seconds}s` },
+      { label: '🎯 Kills', value: this.runStats.totalKills.toString() },
+      { label: '👑 Bosses', value: this.runStats.bossesKilled.toString() },
+      { label: '💰 Gold', value: `$${this.runStats.totalMoney.toLocaleString()}` },
+      { label: '🔥 Combo', value: `${this.runStats.highestCombo}x` },
+      { label: '📊 Floor', value: this.runStats.stagesCompleted.toString() },
+    ]
+
+    statsData.forEach((stat, i) => {
+      const row = Math.floor(i / 2)
+      const col = i % 2
+      const x = statsX + col * 180
+      const y = statsY + row * 35
+
+      const statText = this.add.text(x, y, `${stat.label}: ${stat.value}`, {
+        fontSize: '16px',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setScrollFactor(0).setDepth(25001)
+      uiElements.push(statText)
+    })
+
+    // Final Score (centered, prominent)
+    const scoreText = this.add.text(centerX, statsY + 120, `Final Score: $${score.toLocaleString()}`, {
+      fontSize: '28px',
       color: '#f39c12',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4
     }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+    uiElements.push(scoreText)
 
-    // Enter name prompt
-    const promptText = this.add.text(centerX, centerY - 40, 'Enter your name:', {
-      fontSize: '20px',
-      color: '#ffffff',
+    // Name input section
+    const inputY = statsY + 180
+    const promptText = this.add.text(centerX, inputY, 'Enter name for leaderboard:', {
+      fontSize: '18px',
+      color: '#aaa',
       stroke: '#000000',
-      strokeThickness: 3
+      strokeThickness: 2
     }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+    uiElements.push(promptText)
 
-    // Input field background
-    const inputBg = this.add.rectangle(centerX, centerY + 10, 400, 60, 0x2c3e50)
-      .setStrokeStyle(3, 0x3498db)
+    const inputBg = this.add.rectangle(centerX, inputY + 40, 300, 45, 0x1a1a2e)
+      .setStrokeStyle(2, 0x3498db)
       .setScrollFactor(0).setDepth(25001)
+    uiElements.push(inputBg)
 
-    // Player name text (start with cursor)
     let playerName = ''
-    const nameText = this.add.text(centerX, centerY + 10, '_', {
-      fontSize: '28px',
+    const nameText = this.add.text(centerX, inputY + 40, '_', {
+      fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+    uiElements.push(nameText)
 
     // Keyboard input
     const keyboard = this.input.keyboard!
@@ -4427,23 +4400,67 @@ export default class GameSceneV3 extends Phaser.Scene {
         nameText.setText(playerName || '_')
       } else if (event.key === 'Enter' && playerName.length > 0) {
         submitScore()
-      } else if (event.key.length === 1 && playerName.length < 20) {
+      } else if (event.key === 'Escape') {
+        skipToMenu()
+      } else if (event.key.length === 1 && playerName.length < 15) {
         playerName += event.key
         nameText.setText(playerName + '_')
       }
     }
     keyboard.on('keydown', handleKeyPress)
 
-    // Submit function
+    // Button row
+    const buttonY = inputY + 100
+
+    // Submit button
+    const submitBtn = this.add.rectangle(centerX - 80, buttonY, 140, 45, 0x27ae60)
+      .setInteractive({ useHandCursor: true })
+      .setScrollFactor(0).setDepth(25001)
+    uiElements.push(submitBtn)
+
+    const submitLabel = this.add.text(centerX - 80, buttonY, 'SUBMIT', {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+    uiElements.push(submitLabel)
+
+    // Skip button
+    const skipBtn = this.add.rectangle(centerX + 80, buttonY, 140, 45, 0x555555)
+      .setInteractive({ useHandCursor: true })
+      .setScrollFactor(0).setDepth(25001)
+    uiElements.push(skipBtn)
+
+    const skipLabel = this.add.text(centerX + 80, buttonY, 'SKIP', {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+    uiElements.push(skipLabel)
+
+    // Helper: Clear all UI elements
+    const clearUI = () => {
+      keyboard.off('keydown', handleKeyPress)
+      uiElements.forEach(el => el.destroy())
+      uiElements.length = 0
+    }
+
+    // Skip to menu without submitting
+    const skipToMenu = () => {
+      clearUI()
+      this.scene.start('MenuScene')
+    }
+
+    // Submit score and show share screen
     const submitScore = async () => {
       keyboard.off('keydown', handleKeyPress)
       submitBtn.disableInteractive()
+      skipBtn.disableInteractive()
 
-      // Calculate time played in seconds
       const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
-
-      // Submit to leaderboard (use current user ID and entered name as display name)
       const userId = this.currentUserId || 'anonymous'
+
+      // Submit to leaderboard
       await this.leaderboardService.submitScore(
         userId,
         playerName,
@@ -4453,7 +4470,7 @@ export default class GameSceneV3 extends Phaser.Scene {
         timePlayed
       )
 
-      // Sync comprehensive stats to Supabase if logged in
+      // Sync stats to Supabase if logged in
       if (this.currentUserId) {
         const runStatsForSync: RunStats = {
           kills: this.runStats.totalKills,
@@ -4479,119 +4496,113 @@ export default class GameSceneV3 extends Phaser.Scene {
         })
       }
 
-      // Show brief success message
-      overlay.setAlpha(1)
-      gameOverText.destroy()
-      scoreText.destroy()
-      promptText.destroy()
-      inputBg.destroy()
-      nameText.destroy()
-      submitBtn.destroy()
-      submitLabel.destroy()
+      // Clear name input UI, keep overlay
+      uiElements.forEach(el => {
+        if (el !== overlay) el.destroy()
+      })
 
-      const successText = this.add.text(centerX, centerY - 80, '✅ Score Submitted!', {
-        fontSize: '36px',
+      // Show success + share screen
+      const successText = this.add.text(centerX, 100, '✅ Score Submitted!', {
+        fontSize: '32px',
         color: '#2ecc71',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 6
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
-
-      // Share your run section
-      const shareTitle = this.add.text(centerX, centerY - 20, '📤 Share Your Run!', {
-        fontSize: '24px',
-        color: '#00d9ff',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 4
       }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
 
-      // Create share message
+      const shareTitle = this.add.text(centerX, 160, '📤 Share Your Run', {
+        fontSize: '22px',
+        color: '#00d9ff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+
       const shareMessage = victory
-        ? `🎉 I just CONQUERED DotSlayer! Floor ${this.runStats.stagesCompleted} | Score: $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
-        : `💀 Made it to Floor ${this.runStats.stagesCompleted} in DotSlayer! Score: $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
+        ? `🎉 I CONQUERED DotSlayer! Floor ${this.runStats.stagesCompleted} | $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
+        : `💀 Floor ${this.runStats.stagesCompleted} in DotSlayer! $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
       const shareUrl = 'https://dotslayer.vercel.app'
 
-      // Twitter/X Share Button
-      const twitterBtn = this.add.rectangle(centerX - 100, centerY + 30, 80, 50, 0x1da1f2)
+      // Share buttons row
+      const shareBtnY = 220
+
+      // Twitter/X
+      const twitterBtn = this.add.rectangle(centerX - 100, shareBtnY, 70, 45, 0x1da1f2)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0).setDepth(25001)
-
-      this.add.text(centerX - 100, centerY + 30, '𝕏', {
-        fontSize: '28px',
-        color: '#ffffff',
-        fontStyle: 'bold'
+      this.add.text(centerX - 100, shareBtnY, '𝕏', {
+        fontSize: '24px', color: '#ffffff', fontStyle: 'bold'
       }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
 
       twitterBtn.on('pointerover', () => twitterBtn.setFillStyle(0x1991da))
       twitterBtn.on('pointerout', () => twitterBtn.setFillStyle(0x1da1f2))
       twitterBtn.on('pointerdown', () => {
-        const tweetText = encodeURIComponent(`${shareMessage}\n\nPlay free: ${shareUrl}\n#DotSlayer #BrowserGames #Roguelike`)
-        window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, '_blank')
+        const text = encodeURIComponent(`${shareMessage}\n\nPlay: ${shareUrl}\n#DotSlayer #BrowserGames`)
+        window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank')
       })
 
-      // Reddit Share Button
-      const redditBtn = this.add.rectangle(centerX, centerY + 30, 80, 50, 0xff4500)
+      // Reddit
+      const redditBtn = this.add.rectangle(centerX, shareBtnY, 70, 45, 0xff4500)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0).setDepth(25001)
-
-      this.add.text(centerX, centerY + 30, '📮', {
-        fontSize: '24px'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+      this.add.text(centerX, shareBtnY, '📮', { fontSize: '20px' })
+        .setOrigin(0.5).setScrollFactor(0).setDepth(25002)
 
       redditBtn.on('pointerover', () => redditBtn.setFillStyle(0xe63e00))
       redditBtn.on('pointerout', () => redditBtn.setFillStyle(0xff4500))
       redditBtn.on('pointerdown', () => {
-        const title = encodeURIComponent(shareMessage)
-        window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${title}`, '_blank')
+        window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareMessage)}`, '_blank')
       })
 
-      // Copy Link Button
-      const copyBtn = this.add.rectangle(centerX + 100, centerY + 30, 80, 50, 0x2ecc71)
+      // Copy
+      const copyBtn = this.add.rectangle(centerX + 100, shareBtnY, 70, 45, 0x2ecc71)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0).setDepth(25001)
-
-      const copyLabel = this.add.text(centerX + 100, centerY + 30, '📋', {
-        fontSize: '24px'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+      const copyLabel = this.add.text(centerX + 100, shareBtnY, '📋', { fontSize: '20px' })
+        .setOrigin(0.5).setScrollFactor(0).setDepth(25002)
 
       copyBtn.on('pointerover', () => copyBtn.setFillStyle(0x27ae60))
       copyBtn.on('pointerout', () => copyBtn.setFillStyle(0x2ecc71))
       copyBtn.on('pointerdown', () => {
-        navigator.clipboard.writeText(`${shareMessage}\n\nPlay free: ${shareUrl}`)
+        navigator.clipboard.writeText(`${shareMessage}\n\n${shareUrl}`)
         copyLabel.setText('✓')
         this.time.delayedCall(1000, () => copyLabel.setText('📋'))
       })
 
-      const returnText = this.add.text(centerX, centerY + 100, 'Click anywhere to return to menu...', {
-        fontSize: '16px',
-        color: '#888',
-        stroke: '#000000',
-        strokeThickness: 2
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
+      // Play Again button
+      const playAgainBtn = this.add.rectangle(centerX, 300, 200, 50, 0x3498db)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0).setDepth(25001)
+      this.add.text(centerX, 300, '🎮 PLAY AGAIN', {
+        fontSize: '20px', color: '#ffffff', fontStyle: 'bold'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
 
-      // Return to menu on click (after a brief delay)
-      this.time.delayedCall(1000, () => {
-        overlay.setInteractive()
-        overlay.on('pointerdown', () => {
-          this.scene.start('MenuScene')
-        })
-      })
+      playAgainBtn.on('pointerover', () => playAgainBtn.setFillStyle(0x2980b9))
+      playAgainBtn.on('pointerout', () => playAgainBtn.setFillStyle(0x3498db))
+      playAgainBtn.on('pointerdown', () => this.scene.restart())
+
+      // Main Menu button
+      const menuBtn = this.add.rectangle(centerX, 360, 200, 50, 0x555555)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0).setDepth(25001)
+      this.add.text(centerX, 360, 'MAIN MENU', {
+        fontSize: '18px', color: '#ffffff', fontStyle: 'bold'
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+
+      menuBtn.on('pointerover', () => menuBtn.setFillStyle(0x666666))
+      menuBtn.on('pointerout', () => menuBtn.setFillStyle(0x555555))
+      menuBtn.on('pointerdown', () => this.scene.start('MenuScene'))
     }
 
-    // Submit button
-    const submitBtn = this.add.rectangle(centerX, centerY + 90, 250, 60, 0x27ae60)
-      .setInteractive({ useHandCursor: true })
-      .setScrollFactor(0).setDepth(25001)
-
+    // Wire up button events (after functions are declared)
     submitBtn.on('pointerover', () => submitBtn.setFillStyle(0x2ecc71))
     submitBtn.on('pointerout', () => submitBtn.setFillStyle(0x27ae60))
-    submitBtn.on('pointerdown', submitScore)
+    submitBtn.on('pointerdown', () => {
+      if (playerName.length > 0) submitScore()
+    })
 
-    const submitLabel = this.add.text(centerX, centerY + 90, 'SUBMIT', {
-      fontSize: '28px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
+    skipBtn.on('pointerover', () => skipBtn.setFillStyle(0x666666))
+    skipBtn.on('pointerout', () => skipBtn.setFillStyle(0x555555))
+    skipBtn.on('pointerdown', skipToMenu)
   }
 }
