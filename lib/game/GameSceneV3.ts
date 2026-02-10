@@ -105,6 +105,7 @@ export default class GameSceneV3 extends Phaser.Scene {
   private comboDisplay!: Phaser.GameObjects.Container
   private killFeedContainer!: Phaser.GameObjects.Container
   private killFeedMessages: Array<{ text: Phaser.GameObjects.Text; time: number }> = []
+  private killFeedBox!: { container: Phaser.GameObjects.Container; bg: Phaser.GameObjects.Graphics }
 
   constructor() {
     super({ key: 'GameSceneV3' })
@@ -396,8 +397,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.comboDisplay.add([comboBg, comboIcon, comboText])
     this.comboDisplay.setVisible(false)
 
-    // Kill feed (top right, shows last 5 kills)
-    this.killFeedContainer = this.add.container(0, 0).setDepth(5000).setScrollFactor(0)
+    // Kill feed box (top right, shows messages in a contained box)
+    this.createKillFeedBox()
 
     // PROMINENT FLOOR DISPLAY (top center)
     this.createFloorDisplay()
@@ -559,34 +560,61 @@ export default class GameSceneV3 extends Phaser.Scene {
     }
   }
 
-  private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
-    // FIX V13: Position kill feed a bit more to the right
+  private createKillFeedBox() {
     const screenWidth = this.scale.width
-    const xPos = screenWidth * 0.78 // Position at 78% from left (22% from right)
-    const yStart = 280 // Lower starting position
-    const maxWidth = Math.min(300, screenWidth * 0.32)
+    const boxWidth = 320
+    const boxHeight = 180
+    const boxX = screenWidth - boxWidth - 20 // 20px from right edge
+    const boxY = 180 // Below the floor info
 
-    const message = this.add.text(xPos, yStart + this.killFeedMessages.length * 38, text, {
-      fontSize: '14px',
+    const container = this.add.container(boxX, boxY).setDepth(5000).setScrollFactor(0)
+
+    // Background box
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.75)
+    bg.fillRoundedRect(0, 0, boxWidth, boxHeight, 8)
+    bg.lineStyle(2, 0x00d9ff, 0.6)
+    bg.strokeRoundedRect(0, 0, boxWidth, boxHeight, 8)
+
+    // Title
+    const title = this.add.text(boxWidth / 2, 12, '📢 ACTIVITY', {
+      fontSize: '12px',
+      color: '#00d9ff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5, 0)
+
+    container.add([bg, title])
+
+    this.killFeedBox = { container, bg }
+    this.killFeedContainer = container
+  }
+
+  private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
+    if (!this.killFeedBox) return
+
+    const boxWidth = 320
+    const maxWidth = boxWidth - 20 // Padding inside box
+    const startY = 32 // Below title
+
+    const message = this.add.text(10, startY + this.killFeedMessages.length * 28, text, {
+      fontSize: '13px',
       color: color,
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
-      align: 'left',
+      strokeThickness: 2,
       wordWrap: { width: maxWidth, useAdvancedWrap: true },
-      maxLines: 2,
-    }).setOrigin(0, 0).setScrollFactor(0).setDepth(5000)
+      maxLines: 1,
+    }).setOrigin(0, 0)
 
-    // Slide in animation from right
+    // Add to container
+    this.killFeedBox.container.add(message)
+
+    // Fade in
     message.setAlpha(0)
-    message.setX(screenWidth)
-
     this.tweens.add({
       targets: message,
-      x: xPos,
       alpha: 1,
-      duration: 300,
-      ease: 'Power2',
+      duration: 200,
     })
 
     this.killFeedMessages.push({ text: message, time: this.time.now + duration })
@@ -602,7 +630,7 @@ export default class GameSceneV3 extends Phaser.Scene {
 
   private updateKillFeed() {
     const currentTime = this.time.now
-    const screenWidth = this.scale.width
+    const startY = 32
 
     // Remove expired messages
     this.killFeedMessages = this.killFeedMessages.filter(msg => {
@@ -610,8 +638,7 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.tweens.add({
           targets: msg.text,
           alpha: 0,
-          x: screenWidth + 20,
-          duration: 300,
+          duration: 200,
           onComplete: () => msg.text.destroy(),
         })
         return false
@@ -619,12 +646,12 @@ export default class GameSceneV3 extends Phaser.Scene {
       return true
     })
 
-    // Reposition messages with updated spacing
+    // Reposition messages smoothly
     this.killFeedMessages.forEach((msg, index) => {
       this.tweens.add({
         targets: msg.text,
-        y: 280 + index * 38,
-        duration: 200,
+        y: startY + index * 28,
+        duration: 150,
         ease: 'Sine.easeOut',
       })
     })
