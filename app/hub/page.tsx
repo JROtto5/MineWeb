@@ -229,6 +229,9 @@ export default function GameHub() {
   const [newDisplayName, setNewDisplayName] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [nameUpdateStatus, setNameUpdateStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [resetStatus, setResetStatus] = useState<'idle' | 'resetting' | 'success' | 'error'>('idle')
 
   useEffect(() => {
     if (!loading && !user) {
@@ -341,6 +344,62 @@ export default function GameHub() {
     } catch (error) {
       console.error('Failed to update display name:', error)
       setNameUpdateStatus('error')
+    }
+  }
+
+  // Reset all progress function
+  const resetAllProgress = async () => {
+    if (resetConfirmText !== 'DELETE' || !user) return
+
+    setResetStatus('resetting')
+
+    try {
+      // Clear localStorage
+      const keysToRemove = [
+        'dotslayer_progress',
+        'dotslayer_daily_challenges',
+        'dotslayer_weekly_challenges',
+        'dotslayer_event_progress',
+        'dotclicker_save',
+        'dotslayer_synergy',
+        'dotclicker_synergy',
+        'crossGameSynergy'
+      ]
+      keysToRemove.forEach(key => localStorage.removeItem(key))
+
+      // Clear Supabase data
+      await Promise.all([
+        supabase.from('slayer_progress').delete().eq('user_id', user.id),
+        supabase.from('slayer_saves').delete().eq('user_id', user.id),
+        supabase.from('slayer_stats').delete().eq('user_id', user.id),
+        supabase.from('clicker_saves').delete().eq('user_id', user.id),
+        supabase.from('achievements').delete().eq('user_id', user.id),
+        supabase.from('daily_challenges').delete().eq('user_id', user.id),
+        supabase.from('leaderboards').delete().eq('user_id', user.id),
+      ])
+
+      setResetStatus('success')
+
+      // Reset local state
+      setSynergyStats({
+        slayerFloorsCleared: 0,
+        slayerHighestFloor: 0,
+        slayerGamesWon: 0,
+        clickerPrestiges: 0,
+        clickerTotalDots: 0,
+        synergyBonus: 0
+      })
+
+      // Close modal and refresh after success
+      setTimeout(() => {
+        setShowResetModal(false)
+        setResetConfirmText('')
+        setResetStatus('idle')
+        window.location.reload()
+      }, 1500)
+    } catch (error) {
+      console.error('Failed to reset progress:', error)
+      setResetStatus('error')
     }
   }
 
@@ -736,7 +795,66 @@ export default function GameHub() {
           <span className="link-icon">📰</span>
           <span>News & Updates</span>
         </Link>
+        <button className="quick-link reset-link" onClick={() => setShowResetModal(true)}>
+          <span className="link-icon">🔄</span>
+          <span>Reset Progress</span>
+        </button>
       </section>
+
+      {/* Reset Progress Modal */}
+      {showResetModal && (
+        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
+          <div className="modal-content reset-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">⚠️ Reset All Progress</h3>
+            <p className="reset-warning">
+              This will permanently delete ALL your game data including:
+            </p>
+            <ul className="reset-list">
+              <li>DotSlayer progress, saves, and stats</li>
+              <li>Dot Clicker saves and prestiges</li>
+              <li>All achievements</li>
+              <li>Daily & weekly challenge progress</li>
+              <li>Leaderboard entries</li>
+              <li>Cross-game synergy bonuses</li>
+            </ul>
+            <p className="reset-confirm-text">
+              Type <strong>DELETE</strong> to confirm:
+            </p>
+            <input
+              type="text"
+              className="reset-input"
+              value={resetConfirmText}
+              onChange={(e) => setResetConfirmText(e.target.value.toUpperCase())}
+              placeholder="Type DELETE here"
+              disabled={resetStatus === 'resetting'}
+            />
+
+            {resetStatus === 'error' && (
+              <p className="error-text">Failed to reset. Please try again.</p>
+            )}
+            {resetStatus === 'success' && (
+              <p className="success-text">Progress reset successfully! Refreshing...</p>
+            )}
+
+            <div className="modal-buttons">
+              <button
+                className="reset-confirm-btn"
+                onClick={resetAllProgress}
+                disabled={resetConfirmText !== 'DELETE' || resetStatus === 'resetting'}
+              >
+                {resetStatus === 'resetting' ? 'Resetting...' : '🗑️ Reset Everything'}
+              </button>
+              <button
+                className="cancel-btn"
+                onClick={() => { setShowResetModal(false); setResetConfirmText(''); }}
+                disabled={resetStatus === 'resetting'}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="hub-footer">
@@ -1281,24 +1399,73 @@ export default function GameHub() {
 
         .game-badge {
           display: inline-block;
-          padding: 4px 14px;
-          border-radius: 20px;
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 2px;
+          padding: 8px 20px;
+          border-radius: 25px;
+          font-size: 0.75rem;
+          font-weight: 800;
+          letter-spacing: 3px;
           margin-bottom: 15px;
+          text-transform: uppercase;
+          position: relative;
+          overflow: hidden;
+          cursor: default;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-badge::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+          animation: badgeShine 3s infinite;
+        }
+
+        @keyframes badgeShine {
+          0% { left: -100%; }
+          50%, 100% { left: 100%; }
         }
 
         .slayer-card .game-badge {
-          background: linear-gradient(135deg, rgba(255, 107, 0, 0.2), rgba(255, 50, 0, 0.2));
-          color: #ff6b00;
-          border: 1px solid rgba(255, 107, 0, 0.3);
+          background: linear-gradient(135deg, #ff6b00, #ff4500, #ff6b00);
+          background-size: 200% 200%;
+          animation: badgeGradient 3s ease infinite, badgePulse 2s ease-in-out infinite;
+          color: #fff;
+          border: 2px solid rgba(255, 150, 50, 0.6);
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 4px 20px rgba(255, 107, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
         .clicker-card .game-badge {
-          background: linear-gradient(135deg, rgba(0, 217, 255, 0.2), rgba(0, 150, 255, 0.2));
-          color: #00d9ff;
-          border: 1px solid rgba(0, 217, 255, 0.3);
+          background: linear-gradient(135deg, #00d9ff, #0099ff, #00d9ff);
+          background-size: 200% 200%;
+          animation: badgeGradient 3s ease infinite, badgePulse 2s ease-in-out infinite;
+          color: #fff;
+          border: 2px solid rgba(100, 200, 255, 0.6);
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 4px 20px rgba(0, 217, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes badgeGradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+
+        @keyframes badgePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+
+        .game-card:hover .game-badge {
+          transform: scale(1.1) translateY(-2px);
+          box-shadow: 0 6px 25px rgba(255, 107, 0, 0.5);
+        }
+
+        .clicker-card:hover .game-badge {
+          box-shadow: 0 6px 25px rgba(0, 217, 255, 0.5);
         }
 
         .game-icon {
@@ -1674,8 +1841,113 @@ export default function GameHub() {
           box-shadow: 0 5px 20px rgba(46, 204, 113, 0.2);
         }
 
+        .reset-link {
+          cursor: pointer;
+          border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .reset-link:hover {
+          background: linear-gradient(135deg, rgba(231, 76, 60, 0.15), rgba(192, 57, 43, 0.1));
+          border-color: rgba(231, 76, 60, 0.5);
+          box-shadow: 0 5px 20px rgba(231, 76, 60, 0.2);
+        }
+
         .link-icon {
           font-size: 1.2rem;
+        }
+
+        /* Reset Modal */
+        .reset-modal {
+          max-width: 450px;
+        }
+
+        .reset-warning {
+          color: #e74c3c;
+          font-weight: 600;
+          margin-bottom: 15px;
+        }
+
+        .reset-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 20px 0;
+          background: rgba(231, 76, 60, 0.1);
+          border: 1px solid rgba(231, 76, 60, 0.2);
+          border-radius: 10px;
+          padding: 15px 20px;
+        }
+
+        .reset-list li {
+          color: #ccc;
+          padding: 5px 0;
+          font-size: 0.9rem;
+        }
+
+        .reset-list li::before {
+          content: '✗ ';
+          color: #e74c3c;
+        }
+
+        .reset-confirm-text {
+          color: #f39c12;
+          font-size: 0.95rem;
+          margin-bottom: 10px;
+        }
+
+        .reset-confirm-text strong {
+          color: #e74c3c;
+          font-size: 1.1rem;
+        }
+
+        .reset-input {
+          width: 100%;
+          padding: 12px 15px;
+          background: rgba(0, 0, 0, 0.3);
+          border: 2px solid rgba(231, 76, 60, 0.3);
+          border-radius: 10px;
+          color: #fff;
+          font-size: 1.1rem;
+          font-weight: 700;
+          text-align: center;
+          letter-spacing: 3px;
+          margin-bottom: 15px;
+          transition: all 0.3s;
+        }
+
+        .reset-input:focus {
+          outline: none;
+          border-color: #e74c3c;
+          box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .reset-input::placeholder {
+          color: #666;
+          letter-spacing: 1px;
+          font-weight: 400;
+        }
+
+        .reset-confirm-btn {
+          background: linear-gradient(135deg, #e74c3c, #c0392b);
+          color: white;
+          border: none;
+          padding: 12px 25px;
+          border-radius: 10px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+          font-size: 1rem;
+        }
+
+        .reset-confirm-btn:hover:not(:disabled) {
+          background: linear-gradient(135deg, #c0392b, #a93226);
+          transform: translateY(-2px);
+          box-shadow: 0 5px 20px rgba(231, 76, 60, 0.4);
+        }
+
+        .reset-confirm-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
         }
 
         /* Footer */
