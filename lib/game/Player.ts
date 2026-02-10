@@ -316,29 +316,41 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   activateMagnet(duration: number) {
+    const wasActive = this.magnetActive
     this.magnetActive = true
     this.magnetEnd = Math.max(this.magnetEnd, this.scene.time.now + duration)
-    this.emitMessage('🧲 MAGNET ACTIVATED!', 'success')
+    if (!wasActive) {
+      this.emitMessage('🧲 MAGNET ACTIVATED!', 'success')
+    }
   }
 
   activateFreeze(duration: number) {
+    const wasActive = this.freezeActive
     this.freezeActive = true
     this.freezeEnd = Math.max(this.freezeEnd, this.scene.time.now + duration)
     // Emit event for GameScene to freeze enemies
     this.scene.events.emit('freezeEnemies', { duration })
-    this.emitMessage('❄️ ENEMIES FROZEN!', 'success')
+    if (!wasActive) {
+      this.emitMessage('❄️ ENEMIES FROZEN!', 'success')
+    }
   }
 
   activateXPBoost(duration: number) {
+    const wasActive = this.xpBoostActive
     this.xpBoostActive = true
     this.xpBoostEnd = Math.max(this.xpBoostEnd, this.scene.time.now + duration)
-    this.emitMessage('✨ DOUBLE XP!', 'success')
+    if (!wasActive) {
+      this.emitMessage('✨ DOUBLE XP!', 'success')
+    }
   }
 
   activateGoldRush(duration: number) {
+    const wasActive = this.goldRushActive
     this.goldRushActive = true
     this.goldRushEnd = Math.max(this.goldRushEnd, this.scene.time.now + duration)
-    this.emitMessage('💰 GOLD RUSH!', 'warning')
+    if (!wasActive) {
+      this.emitMessage('💰 GOLD RUSH!', 'warning')
+    }
   }
 
   activateNuke() {
@@ -350,11 +362,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   activateRegen(duration: number, healPerSecond: number) {
+    const wasActive = this.regenActive
     this.regenActive = true
     this.regenEnd = Math.max(this.regenEnd, this.scene.time.now + duration)
     this.regenAmount = healPerSecond
     this.lastRegenTick = this.scene.time.now
-    this.emitMessage('💗 REGENERATION ACTIVE!', 'success')
+    if (!wasActive) {
+      this.emitMessage('💗 REGENERATION ACTIVE!', 'success')
+    }
   }
 
   // Getters for new power-ups
