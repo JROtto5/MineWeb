@@ -125,7 +125,7 @@ export function SocialShare({ data, onClose, compact = false }: SocialShareProps
         <p className="share-preview">{shareText}</p>
 
         <div className="share-buttons">
-          {typeof navigator !== 'undefined' && navigator.share && (
+          {typeof navigator !== 'undefined' && 'share' in navigator && (
             <button onClick={() => handleShare('native')} className="share-option native">
               <span className="icon">📤</span>
               <span>Share</span>
