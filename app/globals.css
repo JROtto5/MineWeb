@@ -183,14 +183,14 @@ canvas {
   margin-bottom: 3px;
 }
 
-/* Message System - positioned above nearest enemy indicator */
+/* Message System - positioned just above nearest enemy indicator */
 #messages {
   position: absolute;
-  bottom: 300px;
+  bottom: 220px;
   left: 50%;
   transform: translateX(-50%);
   width: 600px;
-  max-height: 200px;
+  max-height: 150px;
   overflow: hidden;
   z-index: 1000;
 }

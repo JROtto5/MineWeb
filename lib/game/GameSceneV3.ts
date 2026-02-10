@@ -560,13 +560,13 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
-    // FIX V9: Move kill feed further from edge to prevent clipping
+    // FIX V10: Position kill feed with larger margin and smaller width
     const screenWidth = this.scale.width
-    const margin = 50 // Increased margin from edge
-    const maxWidth = Math.min(350, screenWidth * 0.35) // Reduced max width
+    const margin = 120 // Large margin from right edge
+    const maxWidth = Math.min(280, screenWidth * 0.3) // Narrower width
 
     const message = this.add.text(screenWidth - margin, 200 + this.killFeedMessages.length * 40, text, {
-      fontSize: '15px',
+      fontSize: '14px',
       color: color,
       fontStyle: 'bold',
       stroke: '#000000',
@@ -578,14 +578,14 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Slide in animation
     message.setAlpha(0)
-    message.setX(screenWidth + 20)
+    message.setX(screenWidth)
 
     this.tweens.add({
       targets: message,
       x: screenWidth - margin,
       alpha: 1,
       duration: 300,
-      ease: 'Back.easeOut',
+      ease: 'Power2',
     })
 
     this.killFeedMessages.push({ text: message, time: this.time.now + duration })

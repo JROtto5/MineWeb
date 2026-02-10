@@ -69,7 +69,7 @@ export default function Home() {
           break
         case 'message':
           const newMessage = { ...data, id: Date.now() }
-          setMessages(prev => [...prev.slice(-2), newMessage]) // Keep only last 3 messages
+          setMessages(prev => [...prev.slice(-1), newMessage]) // Keep only last 2 messages
           setTimeout(() => {
             setMessages(prev => prev.filter(m => m.id !== newMessage.id))
           }, 2500) // Reduced from 5000ms to 2500ms

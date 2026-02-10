@@ -368,8 +368,8 @@ export default class MenuScene extends Phaser.Scene {
     const isSmallScreen = width < 600
     const bottomY = height - (isSmallScreen ? 180 : 200)
 
-    // Save slots label - responsive
-    const label = this.add.text(centerX, bottomY - 50, 'SAVE SLOTS', {
+    // Save slots label - positioned above slots
+    const label = this.add.text(centerX, bottomY - 90, 'SAVE SLOTS', {
       fontSize: isSmallScreen ? '18px' : '24px',
       fontStyle: 'bold',
       color: `#${COLORS.accent2.toString(16).padStart(6, '0')}`,
