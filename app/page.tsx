@@ -395,7 +395,7 @@ export default function Home() {
         <div className="cta-glow"></div>
         <h2>Ready to Begin?</h2>
         <p>Join the Dot Universe and start your adventure today!</p>
-        <Link href="/login" className="btn btn-mega">
+        <Link href="/login" className="btn btn-primary btn-mega glow-effect">
           <span className="btn-bg"></span>
           <span className="btn-content">
             <span className="btn-icon">&#x25B6;</span>
@@ -434,7 +434,7 @@ export default function Home() {
           position: relative;
         }
 
-        /* Background Effects */
+        /* Background Effects - Simplified for browser compatibility */
         .bg-effects {
           position: fixed;
           top: 0;
@@ -443,86 +443,68 @@ export default function Home() {
           bottom: 0;
           pointer-events: none;
           z-index: 0;
+          background:
+            radial-gradient(ellipse 80% 50% at 20% 30%, rgba(0, 150, 200, 0.12) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 40% at 80% 20%, rgba(100, 50, 150, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 70% 50% at 70% 80%, rgba(200, 80, 0, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 50% at 30% 70%, rgba(0, 180, 100, 0.06) 0%, transparent 50%);
         }
 
         .gradient-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(100px);
-          opacity: 0.5;
-        }
-
-        .orb-1 {
-          width: 600px;
-          height: 600px;
-          background: radial-gradient(circle, rgba(0, 217, 255, 0.3), transparent 70%);
-          top: -200px;
-          right: -200px;
-          animation: orbFloat 20s ease-in-out infinite;
-        }
-
-        .orb-2 {
-          width: 500px;
-          height: 500px;
-          background: radial-gradient(circle, rgba(255, 107, 0, 0.25), transparent 70%);
-          bottom: -100px;
-          left: -100px;
-          animation: orbFloat 25s ease-in-out infinite reverse;
-        }
-
-        .orb-3 {
-          width: 400px;
-          height: 400px;
-          background: radial-gradient(circle, rgba(138, 43, 226, 0.2), transparent 70%);
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          animation: orbFloat 30s ease-in-out infinite;
-        }
-
-        @keyframes orbFloat {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(50px, -50px) scale(1.1); }
-          66% { transform: translate(-30px, 30px) scale(0.9); }
+          display: none;
         }
 
         .grid-overlay {
-          position: absolute;
+          position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
           background-image:
-            linear-gradient(rgba(0, 217, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 217, 255, 0.03) 1px, transparent 1px);
-          background-size: 50px 50px;
+            linear-gradient(rgba(0, 217, 255, 0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 217, 255, 0.02) 1px, transparent 1px);
+          background-size: 60px 60px;
+          pointer-events: none;
+        }
+
+        .noise-overlay {
+          display: none;
         }
 
         .particles {
-          position: absolute;
+          position: fixed;
           width: 100%;
           height: 100%;
+          overflow: hidden;
+          pointer-events: none;
         }
 
         .particle {
           position: absolute;
-          width: 4px;
-          height: 4px;
+          width: 3px;
+          height: 3px;
           border-radius: 50%;
-          animation: particleFloat linear infinite;
+          animation: particleDrift 20s linear infinite;
+          opacity: 0.4;
         }
 
-        .particle-0 { background: rgba(0, 217, 255, 0.6); }
-        .particle-1 { background: rgba(255, 107, 0, 0.6); }
-        .particle-2 { background: rgba(46, 204, 113, 0.6); }
-        .particle-3 { background: rgba(155, 89, 182, 0.6); }
-        .particle-4 { background: rgba(241, 196, 15, 0.6); }
+        .particle-0 { background: #00d9ff; }
+        .particle-1 { background: #ff6b00; }
+        .particle-2 { background: #2ecc71; }
+        .particle-3 { background: #9b59b6; }
+        .particle-4 { background: #f1c40f; }
 
-        @keyframes particleFloat {
-          0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+        @keyframes particleDrift {
+          0% {
+            transform: translateY(100vh) translateX(0);
+            opacity: 0;
+          }
+          5% { opacity: 0.4; }
+          95% { opacity: 0.4; }
+          100% {
+            transform: translateY(-20vh) translateX(30px);
+            opacity: 0;
+          }
         }
 
         /* Hero Section */
@@ -1362,6 +1344,8 @@ export default function Home() {
           text-align: center;
           padding: 120px 20px;
           position: relative;
+          z-index: 1;
+          background: linear-gradient(180deg, transparent 0%, rgba(0, 30, 60, 0.3) 50%, transparent 100%);
         }
 
         .cta-glow {
@@ -1369,10 +1353,11 @@ export default function Home() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          width: 600px;
-          height: 600px;
-          background: radial-gradient(circle, rgba(0, 217, 255, 0.15), transparent 70%);
+          width: 500px;
+          height: 300px;
+          background: radial-gradient(ellipse, rgba(0, 150, 200, 0.1) 0%, transparent 60%);
           pointer-events: none;
+          z-index: -1;
         }
 
         .final-cta h2 {
@@ -1380,6 +1365,11 @@ export default function Home() {
           font-weight: 900;
           margin: 0 0 15px 0;
           position: relative;
+          z-index: 2;
+          background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .final-cta p {
@@ -1387,12 +1377,15 @@ export default function Home() {
           font-size: 1.2rem;
           margin: 0 0 40px 0;
           position: relative;
+          z-index: 2;
         }
 
         .btn-mega {
           padding: 22px 60px;
           font-size: 1.3rem;
           position: relative;
+          z-index: 2;
+          display: inline-flex;
         }
 
         /* Footer */
