@@ -394,6 +394,15 @@ export default function GameHub() {
         supabase.from('achievements').delete().eq('user_id', user.id),
         supabase.from('daily_challenges').delete().eq('user_id', user.id),
         supabase.from('leaderboards').delete().eq('user_id', user.id),
+        // Reset synergy data in user_profiles (don't delete the profile itself)
+        supabase.from('user_profiles').update({
+          slayer_highest_floor: 0,
+          slayer_games_won: 0,
+          clicker_total_prestiges: 0,
+          clicker_total_dots: 0,
+          synergy_bonus: 0,
+          updated_at: new Date().toISOString()
+        }).eq('id', user.id),
       ])
 
       setResetStatus('success')
@@ -1827,16 +1836,18 @@ export default function GameHub() {
           padding: 20px;
           position: relative;
           z-index: 10;
+          flex-wrap: wrap;
         }
 
-        .quick-link {
+        /* Use :global() for Link components */
+        .quick-links :global(.quick-link) {
           display: flex;
           align-items: center;
           gap: 12px;
           padding: 16px 32px;
           border-radius: 20px;
-          color: #fff;
-          text-decoration: none;
+          color: #fff !important;
+          text-decoration: none !important;
           font-weight: 700;
           font-size: 0.95rem;
           letter-spacing: 0.5px;
@@ -1848,7 +1859,7 @@ export default function GameHub() {
           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        .quick-link::before {
+        .quick-links :global(.quick-link)::before {
           content: '';
           position: absolute;
           top: 0;
@@ -1864,74 +1875,74 @@ export default function GameHub() {
           50%, 100% { left: 100%; }
         }
 
-        .quick-link:hover {
+        .quick-links :global(.quick-link):hover {
           transform: translateY(-4px) scale(1.02);
         }
 
-        .quick-link:active {
+        .quick-links :global(.quick-link):active {
           transform: translateY(-2px) scale(0.98);
         }
 
         /* Profile Button - Cyan/Blue Theme */
-        .profile-link {
-          background: linear-gradient(135deg, #00d9ff, #0099ff, #00d9ff);
-          background-size: 200% 200%;
+        .quick-links :global(.profile-link) {
+          background: linear-gradient(135deg, #00d9ff, #0099ff, #00d9ff) !important;
+          background-size: 200% 200% !important;
           animation: btnGradient 4s ease infinite;
-          border: 2px solid rgba(100, 220, 255, 0.5);
+          border: 2px solid rgba(100, 220, 255, 0.5) !important;
           box-shadow:
             0 4px 15px rgba(0, 217, 255, 0.4),
             0 0 30px rgba(0, 217, 255, 0.2),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
-        .profile-link:hover {
+        .quick-links :global(.profile-link):hover {
           box-shadow:
             0 8px 30px rgba(0, 217, 255, 0.5),
             0 0 50px rgba(0, 217, 255, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          border-color: rgba(150, 240, 255, 0.7);
+          border-color: rgba(150, 240, 255, 0.7) !important;
         }
 
         /* News Button - Green Theme */
-        .news-link {
-          background: linear-gradient(135deg, #2ecc71, #27ae60, #2ecc71);
-          background-size: 200% 200%;
+        .quick-links :global(.news-link) {
+          background: linear-gradient(135deg, #2ecc71, #27ae60, #2ecc71) !important;
+          background-size: 200% 200% !important;
           animation: btnGradient 4s ease infinite;
           animation-delay: 0.5s;
-          border: 2px solid rgba(100, 220, 150, 0.5);
+          border: 2px solid rgba(100, 220, 150, 0.5) !important;
           box-shadow:
             0 4px 15px rgba(46, 204, 113, 0.4),
             0 0 30px rgba(46, 204, 113, 0.2),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
-        .news-link:hover {
+        .quick-links :global(.news-link):hover {
           box-shadow:
             0 8px 30px rgba(46, 204, 113, 0.5),
             0 0 50px rgba(46, 204, 113, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          border-color: rgba(150, 255, 180, 0.7);
+          border-color: rgba(150, 255, 180, 0.7) !important;
         }
 
         /* Reset Button - Red Theme */
-        .reset-link {
-          background: linear-gradient(135deg, #e74c3c, #c0392b, #e74c3c);
-          background-size: 200% 200%;
+        .quick-links :global(.reset-link) {
+          background: linear-gradient(135deg, #e74c3c, #c0392b, #e74c3c) !important;
+          background-size: 200% 200% !important;
           animation: btnGradient 4s ease infinite;
           animation-delay: 1s;
-          border: 2px solid rgba(255, 120, 100, 0.5);
+          border: 2px solid rgba(255, 120, 100, 0.5) !important;
           box-shadow:
             0 4px 15px rgba(231, 76, 60, 0.4),
             0 0 30px rgba(231, 76, 60, 0.2),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
-        .reset-link:hover {
+        .quick-links :global(.reset-link):hover {
           box-shadow:
             0 8px 30px rgba(231, 76, 60, 0.5),
             0 0 50px rgba(231, 76, 60, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          border-color: rgba(255, 150, 140, 0.7);
+          border-color: rgba(255, 150, 140, 0.7) !important;
         }
 
         @keyframes btnGradient {
@@ -1939,7 +1950,7 @@ export default function GameHub() {
           50% { background-position: 100% 50%; }
         }
 
-        .link-icon {
+        .quick-links :global(.link-icon) {
           font-size: 1.3rem;
           filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
         }
