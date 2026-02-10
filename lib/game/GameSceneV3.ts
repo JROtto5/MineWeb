@@ -107,6 +107,21 @@ export default class GameSceneV3 extends Phaser.Scene {
   private killFeedMessages: Array<{ text: Phaser.GameObjects.Text; time: number }> = []
   private killFeedBox!: { container: Phaser.GameObjects.Container; bg: Phaser.GameObjects.Graphics }
 
+  // UI Settings system
+  private uiSettings: {
+    activityBox: { visible: boolean; position: string };
+    floorDisplay: { visible: boolean; position: string };
+    enemyTracker: { visible: boolean; position: string };
+    abilityBar: { visible: boolean; position: string };
+  } = {
+    activityBox: { visible: true, position: 'middle-left' },
+    floorDisplay: { visible: true, position: 'top-center' },
+    enemyTracker: { visible: true, position: 'bottom-center' },
+    abilityBar: { visible: true, position: 'bottom-center' },
+  }
+  private uiSettingsMenuUI: any[] = []
+  private isUISettingsOpen = false
+
   constructor() {
     super({ key: 'GameSceneV3' })
   }
@@ -116,6 +131,9 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   create() {
+    // Load UI settings from localStorage
+    this.loadUISettings()
+
     // ROGUELIKE: Initialize run statistics
     this.runStats = {
       startTime: Date.now(),
@@ -411,6 +429,9 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Add resize event listener for responsive UI
     this.scale.on('resize', this.handleResize, this)
+
+    // Apply saved UI settings (visibility)
+    this.applyUISettings()
   }
 
   private handleResize() {
@@ -879,6 +900,7 @@ export default class GameSceneV3 extends Phaser.Scene {
       TWO: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
       THREE: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
       ESC: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC), // FIX V8: Add ESC key!
+      U: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.U), // UI Settings
     }
 
     // Shooting - FIX V8: Block if casino is open too!
@@ -972,9 +994,18 @@ export default class GameSceneV3 extends Phaser.Scene {
     // Shop (B key)
     this.input.keyboard!.on('keydown-B', () => this.shopUI.toggle())
 
+    // U key: UI Settings menu
+    this.input.keyboard!.on('keydown-U', () => {
+      if (!this.skillTreeUI && !this.shopUI.isShopOpen() && !this.casinoUI.isOpen && !this.isPaused) {
+        this.toggleUISettings()
+      }
+    })
+
     // ESC key: closes UIs or toggles pause menu
     this.input.keyboard!.on('keydown-ESC', () => {
-      if (this.skillTreeUI) {
+      if (this.isUISettingsOpen) {
+        this.closeUISettingsMenu()
+      } else if (this.skillTreeUI) {
         this.closeSkillTree()
       } else if (this.shopUI.isShopOpen()) {
         this.shopUI.close()
@@ -2402,19 +2433,37 @@ export default class GameSceneV3 extends Phaser.Scene {
         this.scene.restart()
       })
 
-    // Audio controls title
-    const audioTitle = this.add.text(centerX, centerY + 180, '🔊 AUDIO CONTROLS', {
+    // UI Settings button
+    const uiSettingsBg = this.add.rectangle(centerX, centerY + 165, 300, 50, 0x00d9ff)
+      .setScrollFactor(0).setDepth(15001)
+    const uiSettingsLabel = this.add.text(centerX, centerY + 165, '⚙️ UI Settings (U)', {
       fontSize: '20px',
+      color: '#000000',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
+
+    uiSettingsBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => uiSettingsBg.setFillStyle(0x00b8d4))
+      .on('pointerout', () => uiSettingsBg.setFillStyle(0x00d9ff))
+      .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
+        event.stopPropagation()
+        this.closePauseMenu()
+        this.showUISettingsMenu()
+      })
+
+    // Audio controls title
+    const audioTitle = this.add.text(centerX, centerY + 220, '🔊 AUDIO', {
+      fontSize: '16px',
       color: '#3498db',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15001)
 
     // Mute All button
-    const muteAllBg = this.add.rectangle(centerX, centerY + 230, 300, 50, 0x3498db)
+    const muteAllBg = this.add.rectangle(centerX, centerY + 260, 300, 40, 0x3498db)
       .setScrollFactor(0).setDepth(15001)
-    const muteAllLabel = this.add.text(centerX, centerY + 230,
+    const muteAllLabel = this.add.text(centerX, centerY + 260,
       this.audioManager.isMusicMuted() ? '🔇 Unmute All' : '🔊 Mute All', {
-      fontSize: '20px',
+      fontSize: '18px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
 
@@ -2428,11 +2477,11 @@ export default class GameSceneV3 extends Phaser.Scene {
       })
 
     // Mute Music button
-    const muteMusicBg = this.add.rectangle(centerX - 160, centerY + 295, 140, 45, 0x9b59b6)
+    const muteMusicBg = this.add.rectangle(centerX - 160, centerY + 310, 140, 40, 0x9b59b6)
       .setScrollFactor(0).setDepth(15001)
-    const muteMusicLabel = this.add.text(centerX - 160, centerY + 295,
-      this.audioManager.isMusicMuted() ? '🎵 Music: OFF' : '🎵 Music: ON', {
-      fontSize: '16px',
+    const muteMusicLabel = this.add.text(centerX - 160, centerY + 310,
+      this.audioManager.isMusicMuted() ? '🎵 OFF' : '🎵 ON', {
+      fontSize: '14px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
 
@@ -2442,15 +2491,15 @@ export default class GameSceneV3 extends Phaser.Scene {
       .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
         event.stopPropagation()
         const muted = this.audioManager.toggleMusicMute()
-        muteMusicLabel.setText(muted ? '🎵 Music: OFF' : '🎵 Music: ON')
+        muteMusicLabel.setText(muted ? '🎵 OFF' : '🎵 ON')
       })
 
     // Mute SFX button
-    const muteSfxBg = this.add.rectangle(centerX + 160, centerY + 295, 140, 45, 0xe67e22)
+    const muteSfxBg = this.add.rectangle(centerX + 160, centerY + 310, 140, 40, 0xe67e22)
       .setScrollFactor(0).setDepth(15001)
-    const muteSfxLabel = this.add.text(centerX + 160, centerY + 295,
-      this.audioManager.isSfxMuted() ? '🔔 SFX: OFF' : '🔔 SFX: ON', {
-      fontSize: '16px',
+    const muteSfxLabel = this.add.text(centerX + 160, centerY + 310,
+      this.audioManager.isSfxMuted() ? '🔔 OFF' : '🔔 ON', {
+      fontSize: '14px',
       color: '#ffffff',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
 
@@ -2460,13 +2509,13 @@ export default class GameSceneV3 extends Phaser.Scene {
       .on('pointerdown', (pointer: any, x: number, y: number, event: any) => {
         event.stopPropagation()
         const muted = this.audioManager.toggleSfxMute()
-        muteSfxLabel.setText(muted ? '🔔 SFX: OFF' : '🔔 SFX: ON')
+        muteSfxLabel.setText(muted ? '🔔 OFF' : '🔔 ON')
       })
 
     // Save Game button
-    const saveBg = this.add.rectangle(centerX - 160, centerY + 360, 280, 55, 0x1abc9c)
+    const saveBg = this.add.rectangle(centerX - 160, centerY + 365, 280, 50, 0x1abc9c)
       .setScrollFactor(0).setDepth(15001)
-    const saveLabel = this.add.text(centerX - 160, centerY + 360, '💾 Save', {
+    const saveLabel = this.add.text(centerX - 160, centerY + 365, '💾 Save', {
       fontSize: '22px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -2506,10 +2555,10 @@ export default class GameSceneV3 extends Phaser.Scene {
       })
 
     // Return to Menu button
-    const menuBg = this.add.rectangle(centerX + 160, centerY + 360, 280, 55, 0x9b59b6)
+    const menuBg = this.add.rectangle(centerX + 160, centerY + 365, 280, 50, 0x9b59b6)
       .setScrollFactor(0).setDepth(15001)
-    const menuLabel = this.add.text(centerX + 160, centerY + 360, '🏠 Menu', {
-      fontSize: '22px',
+    const menuLabel = this.add.text(centerX + 160, centerY + 365, '🏠 Menu', {
+      fontSize: '20px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5).setScrollFactor(0).setDepth(15002)
@@ -2524,6 +2573,7 @@ export default class GameSceneV3 extends Phaser.Scene {
       })
 
     this.pauseMenuUI = [overlay, title, stats, resumeBg, resumeLabel, restartBg, restartLabel,
+      uiSettingsBg, uiSettingsLabel,
       audioTitle, muteAllBg, muteAllLabel, muteMusicBg, muteMusicLabel, muteSfxBg, muteSfxLabel,
       saveBg, saveLabel, menuBg, menuLabel]
   }
@@ -2534,6 +2584,161 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     this.pauseMenuUI.forEach(el => el.destroy())
     this.pauseMenuUI = []
+  }
+
+  // ========== UI SETTINGS SYSTEM ==========
+  private loadUISettings() {
+    try {
+      const saved = localStorage.getItem('dotslayer_ui_settings')
+      if (saved) {
+        this.uiSettings = JSON.parse(saved)
+      }
+    } catch (e) {
+      console.warn('Failed to load UI settings')
+    }
+  }
+
+  private saveUISettings() {
+    try {
+      localStorage.setItem('dotslayer_ui_settings', JSON.stringify(this.uiSettings))
+    } catch (e) {
+      console.warn('Failed to save UI settings')
+    }
+  }
+
+  private applyUISettings() {
+    // Apply visibility settings
+    if (this.killFeedBox?.container) {
+      this.killFeedBox.container.setVisible(this.uiSettings.activityBox.visible)
+    }
+    if (this.floorDisplayUI?.container) {
+      this.floorDisplayUI.container.setVisible(this.uiSettings.floorDisplay.visible)
+    }
+    if (this.enemyTrackerUI?.container) {
+      this.enemyTrackerUI.container.setVisible(this.uiSettings.enemyTracker.visible)
+    }
+    // Ability bar visibility
+    this.abilityHotbarUI.forEach((slot: any) => {
+      if (slot.slotBg) slot.slotBg.setVisible(this.uiSettings.abilityBar.visible)
+      if (slot.slotBorder) slot.slotBorder.setVisible(this.uiSettings.abilityBar.visible)
+      if (slot.keyText) slot.keyText.setVisible(this.uiSettings.abilityBar.visible)
+      if (slot.icon) slot.icon.setVisible(this.uiSettings.abilityBar.visible)
+      if (slot.emptyText) slot.emptyText.setVisible(this.uiSettings.abilityBar.visible)
+    })
+  }
+
+  private toggleUISettings() {
+    if (this.isUISettingsOpen) {
+      this.closeUISettingsMenu()
+    } else {
+      this.showUISettingsMenu()
+    }
+  }
+
+  private showUISettingsMenu() {
+    this.isUISettingsOpen = true
+    this.physics.pause()
+
+    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
+    const centerX = screenWidth / 2
+    const centerY = screenHeight / 2
+
+    // Dark overlay
+    const overlay = this.add.rectangle(centerX, centerY, screenWidth * 2, screenHeight * 2, 0x000000, 0.9)
+      .setScrollFactor(0).setDepth(16000)
+      .setInteractive()
+      .on('pointerdown', (p: any, x: number, y: number, e: any) => e.stopPropagation())
+
+    // Title
+    const title = this.add.text(centerX, centerY - 200, '⚙️ UI SETTINGS', {
+      fontSize: '48px',
+      color: '#00d9ff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    const subtitle = this.add.text(centerX, centerY - 150, 'Toggle visibility of HUD elements • Press U or ESC to close', {
+      fontSize: '16px',
+      color: '#888888',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16001)
+
+    this.uiSettingsMenuUI = [overlay, title, subtitle]
+
+    // UI Element toggles
+    const elements = [
+      { key: 'activityBox', name: '📢 Activity Feed', icon: '📢' },
+      { key: 'floorDisplay', name: '🏢 Floor Display', icon: '🏢' },
+      { key: 'enemyTracker', name: '🎯 Enemy Tracker', icon: '🎯' },
+      { key: 'abilityBar', name: '⚡ Ability Bar (1-9)', icon: '⚡' },
+    ]
+
+    elements.forEach((el, index) => {
+      const y = centerY - 60 + index * 70
+      const setting = this.uiSettings[el.key as keyof typeof this.uiSettings]
+
+      // Toggle background
+      const toggleBg = this.add.rectangle(centerX, y, 400, 55, setting.visible ? 0x2ecc71 : 0x555555, 0.9)
+        .setScrollFactor(0).setDepth(16001)
+        .setStrokeStyle(2, 0x00d9ff, 0.5)
+
+      // Label
+      const label = this.add.text(centerX - 150, y, el.name, {
+        fontSize: '22px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(16002)
+
+      // Status
+      const status = this.add.text(centerX + 150, y, setting.visible ? '✅ ON' : '❌ OFF', {
+        fontSize: '20px',
+        color: setting.visible ? '#2ecc71' : '#e74c3c',
+        fontStyle: 'bold',
+      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(16002)
+
+      toggleBg.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => toggleBg.setStrokeStyle(3, 0x00d9ff, 1))
+        .on('pointerout', () => toggleBg.setStrokeStyle(2, 0x00d9ff, 0.5))
+        .on('pointerdown', (p: any, x: number, y: number, e: any) => {
+          e.stopPropagation()
+          // Toggle setting
+          setting.visible = !setting.visible
+          toggleBg.setFillStyle(setting.visible ? 0x2ecc71 : 0x555555, 0.9)
+          status.setText(setting.visible ? '✅ ON' : '❌ OFF')
+          status.setColor(setting.visible ? '#2ecc71' : '#e74c3c')
+          this.applyUISettings()
+          this.saveUISettings()
+        })
+
+      this.uiSettingsMenuUI.push(toggleBg, label, status)
+    })
+
+    // Close button
+    const closeBg = this.add.rectangle(centerX, centerY + 200, 200, 50, 0xe74c3c)
+      .setScrollFactor(0).setDepth(16001)
+    const closeLabel = this.add.text(centerX, centerY + 200, 'Close (U/ESC)', {
+      fontSize: '20px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(16002)
+
+    closeBg.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => closeBg.setFillStyle(0xc0392b))
+      .on('pointerout', () => closeBg.setFillStyle(0xe74c3c))
+      .on('pointerdown', (p: any, x: number, y: number, e: any) => {
+        e.stopPropagation()
+        this.closeUISettingsMenu()
+      })
+
+    this.uiSettingsMenuUI.push(closeBg, closeLabel)
+  }
+
+  private closeUISettingsMenu() {
+    this.isUISettingsOpen = false
+    if (!this.isPaused) {
+      this.physics.resume()
+    }
+    this.uiSettingsMenuUI.forEach(el => el.destroy())
+    this.uiSettingsMenuUI = []
   }
 
   // Auto-save system
