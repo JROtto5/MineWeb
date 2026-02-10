@@ -4296,7 +4296,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     })
   }
 
-  // Show unified game over screen with stats, name input, and share options
+  // Show unified game over screen with modern dark UI
   private async showLeaderboardPrompt(victory: boolean) {
     // Mark save as dead if playing from a save slot
     if (this.currentSaveSlot !== null && this.currentUserId) {
@@ -4313,296 +4313,246 @@ export default class GameSceneV3 extends Phaser.Scene {
     const runTime = Math.floor((Date.now() - this.runStats.startTime) / 1000)
     const minutes = Math.floor(runTime / 60)
     const seconds = runTime % 60
+    const timePlayed = runTime
 
-    // Track all UI elements for cleanup
-    const uiElements: Phaser.GameObjects.GameObject[] = []
+    // Create container for all game over UI (easy cleanup)
+    const gameOverContainer = this.add.container(0, 0).setDepth(25000).setScrollFactor(0)
 
-    // Create full screen black overlay
-    const overlay = this.add.rectangle(0, 0, screenWidth * 2, screenHeight * 2, 0x000000, 0.95)
-      .setOrigin(0).setScrollFactor(0).setDepth(25000)
-    uiElements.push(overlay)
+    // Full screen dark overlay with gradient effect
+    const overlay = this.add.rectangle(centerX, centerY, screenWidth, screenHeight, 0x000000, 0.97)
+    gameOverContainer.add(overlay)
 
-    // Game Over title
-    const gameOverText = this.add.text(centerX, 60, victory ? '🎉 VICTORY!' : '💀 GAME OVER', {
-      fontSize: '42px',
-      color: victory ? '#2ecc71' : '#e74c3c',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 6
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
-    uiElements.push(gameOverText)
+    // Decorative top bar
+    const topBar = this.add.rectangle(centerX, 30, screenWidth, 60, 0x1a1a2e)
+    gameOverContainer.add(topBar)
 
-    // Run Stats in a compact grid (left side)
-    const statsX = centerX - 180
-    const statsY = 120
-    const statsData = [
-      { label: '⏱️ Time', value: `${minutes}m ${seconds}s` },
-      { label: '🎯 Kills', value: this.runStats.totalKills.toString() },
-      { label: '👑 Bosses', value: this.runStats.bossesKilled.toString() },
-      { label: '💰 Gold', value: `$${this.runStats.totalMoney.toLocaleString()}` },
-      { label: '🔥 Combo', value: `${this.runStats.highestCombo}x` },
-      { label: '📊 Floor', value: this.runStats.stagesCompleted.toString() },
-    ]
+    // Main panel background
+    const panelWidth = Math.min(500, screenWidth - 40)
+    const panelHeight = Math.min(450, screenHeight - 80)
+    const panel = this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x0d1117)
+      .setStrokeStyle(2, victory ? 0x2ecc71 : 0xe74c3c)
+    gameOverContainer.add(panel)
 
-    statsData.forEach((stat, i) => {
-      const row = Math.floor(i / 2)
-      const col = i % 2
-      const x = statsX + col * 180
-      const y = statsY + row * 35
+    // Inner glow effect
+    const innerGlow = this.add.rectangle(centerX, centerY, panelWidth - 4, panelHeight - 4, 0x161b22)
+    gameOverContainer.add(innerGlow)
 
-      const statText = this.add.text(x, y, `${stat.label}: ${stat.value}`, {
-        fontSize: '16px',
-        color: '#ffffff',
-        stroke: '#000000',
-        strokeThickness: 2
-      }).setScrollFactor(0).setDepth(25001)
-      uiElements.push(statText)
-    })
+    // Title with icon
+    const titleColor = victory ? '#2ecc71' : '#e74c3c'
+    const titleIcon = victory ? '🏆' : '💀'
+    const titleText = victory ? 'VICTORY' : 'GAME OVER'
 
-    // Final Score (centered, prominent)
-    const scoreText = this.add.text(centerX, statsY + 120, `Final Score: $${score.toLocaleString()}`, {
-      fontSize: '28px',
-      color: '#f39c12',
-      fontStyle: 'bold',
+    const title = this.add.text(centerX, centerY - 180, `${titleIcon} ${titleText}`, {
+      fontSize: '36px',
+      color: titleColor,
+      fontFamily: 'Arial Black, sans-serif',
       stroke: '#000000',
       strokeThickness: 4
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
-    uiElements.push(scoreText)
+    }).setOrigin(0.5)
+    gameOverContainer.add(title)
 
-    // Name input section
-    const inputY = statsY + 180
-    const promptText = this.add.text(centerX, inputY, 'Enter name for leaderboard:', {
-      fontSize: '18px',
-      color: '#aaa',
-      stroke: '#000000',
-      strokeThickness: 2
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
-    uiElements.push(promptText)
-
-    const inputBg = this.add.rectangle(centerX, inputY + 40, 300, 45, 0x1a1a2e)
-      .setStrokeStyle(2, 0x3498db)
-      .setScrollFactor(0).setDepth(25001)
-    uiElements.push(inputBg)
-
-    let playerName = ''
-    const nameText = this.add.text(centerX, inputY + 40, '_', {
-      fontSize: '22px',
-      color: '#ffffff',
+    // Score display with glow
+    const scoreDisplay = this.add.text(centerX, centerY - 130, `SCORE: $${score.toLocaleString()}`, {
+      fontSize: '28px',
+      color: '#f39c12',
+      fontFamily: 'Arial, sans-serif',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-    uiElements.push(nameText)
+    }).setOrigin(0.5)
+    gameOverContainer.add(scoreDisplay)
 
-    // Keyboard input
-    const keyboard = this.input.keyboard!
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'Backspace') {
-        playerName = playerName.slice(0, -1)
-        nameText.setText(playerName || '_')
-      } else if (event.key === 'Enter' && playerName.length > 0) {
-        submitScore()
-      } else if (event.key === 'Escape') {
-        skipToMenu()
-      } else if (event.key.length === 1 && playerName.length < 15) {
-        playerName += event.key
-        nameText.setText(playerName + '_')
-      }
-    }
-    keyboard.on('keydown', handleKeyPress)
+    // Stats grid - modern card style
+    const statsStartY = centerY - 80
+    const stats = [
+      { icon: '⏱️', label: 'Time', value: `${minutes}:${seconds.toString().padStart(2, '0')}`, color: '#3498db' },
+      { icon: '🎯', label: 'Kills', value: this.runStats.totalKills.toString(), color: '#e74c3c' },
+      { icon: '👑', label: 'Bosses', value: this.runStats.bossesKilled.toString(), color: '#f39c12' },
+      { icon: '🔥', label: 'Combo', value: `${this.runStats.highestCombo}x`, color: '#e67e22' },
+      { icon: '📊', label: 'Floor', value: this.runStats.stagesCompleted.toString(), color: '#9b59b6' },
+      { icon: '⚔️', label: 'Level', value: this.player.level.toString(), color: '#1abc9c' },
+    ]
 
-    // Button row
-    const buttonY = inputY + 100
+    stats.forEach((stat, i) => {
+      const col = i % 3
+      const row = Math.floor(i / 3)
+      const x = centerX - 140 + col * 140
+      const y = statsStartY + row * 50
 
-    // Submit button
-    const submitBtn = this.add.rectangle(centerX - 80, buttonY, 140, 45, 0x27ae60)
-      .setInteractive({ useHandCursor: true })
-      .setScrollFactor(0).setDepth(25001)
-    uiElements.push(submitBtn)
+      // Stat card background
+      const cardBg = this.add.rectangle(x, y, 120, 40, 0x21262d).setStrokeStyle(1, 0x30363d)
+      gameOverContainer.add(cardBg)
 
-    const submitLabel = this.add.text(centerX - 80, buttonY, 'SUBMIT', {
-      fontSize: '18px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-    uiElements.push(submitLabel)
-
-    // Skip button
-    const skipBtn = this.add.rectangle(centerX + 80, buttonY, 140, 45, 0x555555)
-      .setInteractive({ useHandCursor: true })
-      .setScrollFactor(0).setDepth(25001)
-    uiElements.push(skipBtn)
-
-    const skipLabel = this.add.text(centerX + 80, buttonY, 'SKIP', {
-      fontSize: '18px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-    uiElements.push(skipLabel)
-
-    // Helper: Clear all UI elements
-    const clearUI = () => {
-      keyboard.off('keydown', handleKeyPress)
-      uiElements.forEach(el => el.destroy())
-      uiElements.length = 0
-    }
-
-    // Skip to menu without submitting
-    const skipToMenu = () => {
-      clearUI()
-      this.scene.start('MenuScene')
-    }
-
-    // Submit score and show share screen
-    const submitScore = async () => {
-      keyboard.off('keydown', handleKeyPress)
-      submitBtn.disableInteractive()
-      skipBtn.disableInteractive()
-
-      const timePlayed = Math.floor((Date.now() - this.runStats.startTime) / 1000)
-      const userId = this.currentUserId || 'anonymous'
-
-      // Submit to leaderboard
-      await this.leaderboardService.submitScore(
-        userId,
-        playerName,
-        score,
-        this.runStats.stagesCompleted,
-        this.runStats.totalKills,
-        timePlayed
-      )
-
-      // Sync stats to Supabase if logged in
-      if (this.currentUserId) {
-        const runStatsForSync: RunStats = {
-          kills: this.runStats.totalKills,
-          damageDealt: this.runStats.damageDealt || 0,
-          goldEarned: this.runStats.totalMoney,
-          goldSpent: this.runStats.goldSpent || 0,
-          floorsCompleted: this.runStats.stagesCompleted,
-          bossesKilled: this.runStats.bossesKilled,
-          eliteKills: this.runStats.eliteEnemiesKilled || 0,
-          criticalHits: this.runStats.criticalHits || 0,
-          itemsCollected: this.itemsCollectedThisRun,
-          legendariesCollected: this.legendariesCollectedThisRun,
-          weaponsSwitched: this.runStats.weaponsSwitched || 0,
-          shopUpgrades: this.runStats.shopUpgradesBought || 0,
-          highestCombo: this.runStats.highestCombo,
-          score: score,
-          playTime: timePlayed,
-          floorsWithoutDamage: this.runStats.floorsWithoutDamage || 0,
-          wasVictory: victory
-        }
-        slayerStatsService.recordRunEnd(this.currentUserId, runStatsForSync).catch(err => {
-          console.error('Failed to sync run stats:', err)
-        })
-      }
-
-      // Clear name input UI, keep overlay
-      uiElements.forEach(el => {
-        if (el !== overlay) el.destroy()
-      })
-
-      // Show success + share screen
-      const successText = this.add.text(centerX, 100, '✅ Score Submitted!', {
-        fontSize: '32px',
-        color: '#2ecc71',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 4
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
-
-      const shareTitle = this.add.text(centerX, 160, '📤 Share Your Run', {
-        fontSize: '22px',
-        color: '#00d9ff',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25001)
-
-      const shareMessage = victory
-        ? `🎉 I CONQUERED DotSlayer! Floor ${this.runStats.stagesCompleted} | $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
-        : `💀 Floor ${this.runStats.stagesCompleted} in DotSlayer! $${score.toLocaleString()} | ${this.runStats.totalKills} kills`
-      const shareUrl = 'https://dotslayer.vercel.app'
-
-      // Share buttons row
-      const shareBtnY = 220
-
-      // Twitter/X
-      const twitterBtn = this.add.rectangle(centerX - 100, shareBtnY, 70, 45, 0x1da1f2)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0).setDepth(25001)
-      this.add.text(centerX - 100, shareBtnY, '𝕏', {
-        fontSize: '24px', color: '#ffffff', fontStyle: 'bold'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-
-      twitterBtn.on('pointerover', () => twitterBtn.setFillStyle(0x1991da))
-      twitterBtn.on('pointerout', () => twitterBtn.setFillStyle(0x1da1f2))
-      twitterBtn.on('pointerdown', () => {
-        const text = encodeURIComponent(`${shareMessage}\n\nPlay: ${shareUrl}\n#DotSlayer #BrowserGames`)
-        window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank')
-      })
-
-      // Reddit
-      const redditBtn = this.add.rectangle(centerX, shareBtnY, 70, 45, 0xff4500)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0).setDepth(25001)
-      this.add.text(centerX, shareBtnY, '📮', { fontSize: '20px' })
-        .setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-
-      redditBtn.on('pointerover', () => redditBtn.setFillStyle(0xe63e00))
-      redditBtn.on('pointerout', () => redditBtn.setFillStyle(0xff4500))
-      redditBtn.on('pointerdown', () => {
-        window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareMessage)}`, '_blank')
-      })
-
-      // Copy
-      const copyBtn = this.add.rectangle(centerX + 100, shareBtnY, 70, 45, 0x2ecc71)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0).setDepth(25001)
-      const copyLabel = this.add.text(centerX + 100, shareBtnY, '📋', { fontSize: '20px' })
-        .setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-
-      copyBtn.on('pointerover', () => copyBtn.setFillStyle(0x27ae60))
-      copyBtn.on('pointerout', () => copyBtn.setFillStyle(0x2ecc71))
-      copyBtn.on('pointerdown', () => {
-        navigator.clipboard.writeText(`${shareMessage}\n\n${shareUrl}`)
-        copyLabel.setText('✓')
-        this.time.delayedCall(1000, () => copyLabel.setText('📋'))
-      })
-
-      // Play Again button
-      const playAgainBtn = this.add.rectangle(centerX, 300, 200, 50, 0x3498db)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0).setDepth(25001)
-      this.add.text(centerX, 300, '🎮 PLAY AGAIN', {
-        fontSize: '20px', color: '#ffffff', fontStyle: 'bold'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-
-      playAgainBtn.on('pointerover', () => playAgainBtn.setFillStyle(0x2980b9))
-      playAgainBtn.on('pointerout', () => playAgainBtn.setFillStyle(0x3498db))
-      playAgainBtn.on('pointerdown', () => this.scene.restart())
-
-      // Main Menu button
-      const menuBtn = this.add.rectangle(centerX, 360, 200, 50, 0x555555)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0).setDepth(25001)
-      this.add.text(centerX, 360, 'MAIN MENU', {
-        fontSize: '18px', color: '#ffffff', fontStyle: 'bold'
-      }).setOrigin(0.5).setScrollFactor(0).setDepth(25002)
-
-      menuBtn.on('pointerover', () => menuBtn.setFillStyle(0x666666))
-      menuBtn.on('pointerout', () => menuBtn.setFillStyle(0x555555))
-      menuBtn.on('pointerdown', () => this.scene.start('MenuScene'))
-    }
-
-    // Wire up button events (after functions are declared)
-    submitBtn.on('pointerover', () => submitBtn.setFillStyle(0x2ecc71))
-    submitBtn.on('pointerout', () => submitBtn.setFillStyle(0x27ae60))
-    submitBtn.on('pointerdown', () => {
-      if (playerName.length > 0) submitScore()
+      // Stat text
+      const statText = this.add.text(x, y, `${stat.icon} ${stat.value}`, {
+        fontSize: '16px',
+        color: stat.color,
+        fontFamily: 'Arial, sans-serif',
+        fontStyle: 'bold'
+      }).setOrigin(0.5)
+      gameOverContainer.add(statText)
     })
 
-    skipBtn.on('pointerover', () => skipBtn.setFillStyle(0x666666))
-    skipBtn.on('pointerout', () => skipBtn.setFillStyle(0x555555))
-    skipBtn.on('pointerdown', skipToMenu)
+    // Divider line
+    const divider = this.add.rectangle(centerX, centerY + 20, panelWidth - 60, 2, 0x30363d)
+    gameOverContainer.add(divider)
+
+    // Action buttons
+    const btnY = centerY + 80
+    const btnWidth = 180
+    const btnHeight = 50
+
+    // Play Again button (primary)
+    const playAgainBg = this.add.rectangle(centerX, btnY, btnWidth, btnHeight, 0x238636)
+      .setStrokeStyle(2, 0x2ea043)
+      .setInteractive({ useHandCursor: true })
+    gameOverContainer.add(playAgainBg)
+
+    const playAgainText = this.add.text(centerX, btnY, '🎮 PLAY AGAIN', {
+      fontSize: '18px',
+      color: '#ffffff',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold'
+    }).setOrigin(0.5)
+    gameOverContainer.add(playAgainText)
+
+    playAgainBg.on('pointerover', () => playAgainBg.setFillStyle(0x2ea043))
+    playAgainBg.on('pointerout', () => playAgainBg.setFillStyle(0x238636))
+    playAgainBg.on('pointerdown', () => {
+      gameOverContainer.destroy()
+      this.scene.restart()
+    })
+
+    // Main Menu button (secondary)
+    const menuBg = this.add.rectangle(centerX, btnY + 60, btnWidth, btnHeight, 0x21262d)
+      .setStrokeStyle(2, 0x30363d)
+      .setInteractive({ useHandCursor: true })
+    gameOverContainer.add(menuBg)
+
+    const menuText = this.add.text(centerX, btnY + 60, 'MAIN MENU', {
+      fontSize: '16px',
+      color: '#8b949e',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold'
+    }).setOrigin(0.5)
+    gameOverContainer.add(menuText)
+
+    menuBg.on('pointerover', () => { menuBg.setFillStyle(0x30363d); menuText.setColor('#ffffff') })
+    menuBg.on('pointerout', () => { menuBg.setFillStyle(0x21262d); menuText.setColor('#8b949e') })
+    menuBg.on('pointerdown', () => {
+      gameOverContainer.destroy()
+      this.scene.start('MenuScene')
+    })
+
+    // Share section at bottom
+    const shareY = btnY + 140
+    const shareLabel = this.add.text(centerX, shareY, 'SHARE', {
+      fontSize: '12px',
+      color: '#6e7681',
+      fontFamily: 'Arial, sans-serif'
+    }).setOrigin(0.5)
+    gameOverContainer.add(shareLabel)
+
+    const shareMessage = victory
+      ? `🏆 Victory in DotSlayer! Floor ${this.runStats.stagesCompleted} | $${score.toLocaleString()}`
+      : `💀 Floor ${this.runStats.stagesCompleted} in DotSlayer | $${score.toLocaleString()}`
+    const shareUrl = 'https://dotslayer.vercel.app'
+
+    // Share buttons
+    const shareBtnSize = 40
+    const shareSpacing = 55
+
+    // Twitter
+    const twitterBg = this.add.rectangle(centerX - shareSpacing, shareY + 30, shareBtnSize, shareBtnSize, 0x1da1f2)
+      .setInteractive({ useHandCursor: true })
+    gameOverContainer.add(twitterBg)
+    const twitterIcon = this.add.text(centerX - shareSpacing, shareY + 30, '𝕏', {
+      fontSize: '18px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5)
+    gameOverContainer.add(twitterIcon)
+
+    twitterBg.on('pointerover', () => twitterBg.setFillStyle(0x1991da))
+    twitterBg.on('pointerout', () => twitterBg.setFillStyle(0x1da1f2))
+    twitterBg.on('pointerdown', () => {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage + '\n' + shareUrl)}`, '_blank')
+    })
+
+    // Reddit
+    const redditBg = this.add.rectangle(centerX, shareY + 30, shareBtnSize, shareBtnSize, 0xff4500)
+      .setInteractive({ useHandCursor: true })
+    gameOverContainer.add(redditBg)
+    const redditIcon = this.add.text(centerX, shareY + 30, 'r/', {
+      fontSize: '14px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5)
+    gameOverContainer.add(redditIcon)
+
+    redditBg.on('pointerover', () => redditBg.setFillStyle(0xe63e00))
+    redditBg.on('pointerout', () => redditBg.setFillStyle(0xff4500))
+    redditBg.on('pointerdown', () => {
+      window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareMessage)}`, '_blank')
+    })
+
+    // Copy
+    const copyBg = this.add.rectangle(centerX + shareSpacing, shareY + 30, shareBtnSize, shareBtnSize, 0x6e7681)
+      .setInteractive({ useHandCursor: true })
+    gameOverContainer.add(copyBg)
+    const copyIcon = this.add.text(centerX + shareSpacing, shareY + 30, '📋', {
+      fontSize: '16px'
+    }).setOrigin(0.5)
+    gameOverContainer.add(copyIcon)
+
+    copyBg.on('pointerover', () => copyBg.setFillStyle(0x8b949e))
+    copyBg.on('pointerout', () => copyBg.setFillStyle(0x6e7681))
+    copyBg.on('pointerdown', () => {
+      navigator.clipboard.writeText(`${shareMessage}\n${shareUrl}`)
+      copyIcon.setText('✓')
+      this.time.delayedCall(1500, () => copyIcon.setText('📋'))
+    })
+
+    // Submit score to leaderboard in background
+    const userId = this.currentUserId || 'anonymous'
+    const displayName = this.currentPlayerName || 'Player'
+
+    this.leaderboardService.submitScore(
+      userId,
+      displayName,
+      score,
+      this.runStats.stagesCompleted,
+      this.runStats.totalKills,
+      timePlayed
+    ).catch(err => console.error('Leaderboard submit error:', err))
+
+    // Sync stats to Supabase if logged in
+    if (this.currentUserId) {
+      const runStatsForSync: RunStats = {
+        kills: this.runStats.totalKills,
+        damageDealt: this.runStats.damageDealt || 0,
+        goldEarned: this.runStats.totalMoney,
+        goldSpent: this.runStats.goldSpent || 0,
+        floorsCompleted: this.runStats.stagesCompleted,
+        bossesKilled: this.runStats.bossesKilled,
+        eliteKills: this.runStats.eliteEnemiesKilled || 0,
+        criticalHits: this.runStats.criticalHits || 0,
+        itemsCollected: this.itemsCollectedThisRun,
+        legendariesCollected: this.legendariesCollectedThisRun,
+        weaponsSwitched: this.runStats.weaponsSwitched || 0,
+        shopUpgrades: this.runStats.shopUpgradesBought || 0,
+        highestCombo: this.runStats.highestCombo,
+        score: score,
+        playTime: timePlayed,
+        floorsWithoutDamage: this.runStats.floorsWithoutDamage || 0,
+        wasVictory: victory
+      }
+      slayerStatsService.recordRunEnd(this.currentUserId, runStatsForSync).catch(err => {
+        console.error('Failed to sync run stats:', err)
+      })
+    }
+
+    // Animate panel entrance
+    gameOverContainer.setAlpha(0)
+    this.tweens.add({
+      targets: gameOverContainer,
+      alpha: 1,
+      duration: 300,
+      ease: 'Power2'
+    })
   }
 }
