@@ -25,6 +25,14 @@ export enum EnemyType {
   NECROMANCER = 'necromancer', // Summons minions
   EXPLODER = 'exploder',      // Explodes on death
   CHARGER = 'charger',        // Charges at player in straight line
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY TIER ENEMIES - Ultra rare, ultra deadly!
+  // ═══════════════════════════════════════════════════════════════
+  SHADOWLORD = 'shadowlord',  // Creates shadow clones
+  WARDEN = 'warden',          // Spawns shields and barriers
+  CORRUPTED = 'corrupted',    // Leaves poison trails
+  MIRROR = 'mirror',          // Reflects damage back
+  BERSERKER_KING = 'berserker_king', // Ultimate berserker
 }
 
 export interface EnemyStats {
@@ -284,6 +292,69 @@ export const ENEMY_STATS: Record<EnemyType, EnemyStats> = {
     size: 22,
     behavior: 'berserker',
   },
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY TIER ENEMIES - Ultra rare, ultra deadly!
+  // ═══════════════════════════════════════════════════════════════
+  [EnemyType.SHADOWLORD]: {
+    health: 400,
+    speed: 200,
+    damage: 45,
+    attackRange: 500,
+    attackSpeed: 1500,
+    moneyDrop: [200, 400],
+    xpDrop: [150, 250],
+    color: 0x1a1a2e,    // Dark shadow
+    size: 32,
+    behavior: 'fast',   // Creates shadow clones
+  },
+  [EnemyType.WARDEN]: {
+    health: 600,
+    speed: 80,
+    damage: 30,
+    attackRange: 450,
+    attackSpeed: 2500,
+    moneyDrop: [180, 350],
+    xpDrop: [130, 220],
+    color: 0x0984e3,    // Shield blue
+    size: 34,
+    behavior: 'tank',   // Creates barriers
+  },
+  [EnemyType.CORRUPTED]: {
+    health: 300,
+    speed: 160,
+    damage: 35,
+    attackRange: 400,
+    attackSpeed: 1200,
+    moneyDrop: [170, 340],
+    xpDrop: [120, 200],
+    color: 0x6c3483,    // Toxic purple
+    size: 26,
+    behavior: 'chase',  // Leaves poison trails
+  },
+  [EnemyType.MIRROR]: {
+    health: 250,
+    speed: 150,
+    damage: 20,
+    attackRange: 350,
+    attackSpeed: 2000,
+    moneyDrop: [220, 450],
+    xpDrop: [160, 280],
+    color: 0xbdc3c7,    // Reflective silver
+    size: 24,
+    behavior: 'tank',   // Reflects damage
+  },
+  [EnemyType.BERSERKER_KING]: {
+    health: 500,
+    speed: 350,
+    damage: 70,
+    attackRange: 550,
+    attackSpeed: 500,
+    moneyDrop: [300, 600],
+    xpDrop: [200, 400],
+    color: 0xe74c3c,    // Blood red
+    size: 36,
+    behavior: 'berserker', // Ultimate rage mode
+  },
 }
 
 export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
@@ -363,6 +434,12 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
       [EnemyType.NECROMANCER]: '💀 Necromancer',
       [EnemyType.EXPLODER]: '💥 Exploder',
       [EnemyType.CHARGER]: '🐗 Charger',
+      // LEGENDARY TIER
+      [EnemyType.SHADOWLORD]: '👤 SHADOW LORD',
+      [EnemyType.WARDEN]: '🛡️ WARDEN',
+      [EnemyType.CORRUPTED]: '☠️ CORRUPTED',
+      [EnemyType.MIRROR]: '🪞 MIRROR DEMON',
+      [EnemyType.BERSERKER_KING]: '👑 BERSERKER KING',
     }
 
     this.nameTag = scene.add.text(x, y - 35, typeNames[type], {
@@ -550,6 +627,169 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
           this.setTint(0xff6666)
         }
         break
+
+      // ═══════════════════════════════════════════════════════════════
+      // LEGENDARY ENEMY ABILITIES - Devastating powers!
+      // ═══════════════════════════════════════════════════════════════
+
+      case EnemyType.SHADOWLORD:
+        // Creates shadow clones every 5 seconds
+        if (currentTime - this.lastSpecialAbility > 5000) {
+          this.createShadowClone()
+          this.lastSpecialAbility = currentTime
+        }
+        // Ethereal visual effect
+        if (Math.random() < 0.03) {
+          this.setAlpha(0.5)
+          this.scene.time.delayedCall(200, () => {
+            if (this.active) this.setAlpha(1)
+          })
+        }
+        break
+
+      case EnemyType.WARDEN:
+        // Creates shield barrier every 6 seconds
+        if (currentTime - this.lastSpecialAbility > 6000) {
+          this.createShieldBarrier()
+          this.lastSpecialAbility = currentTime
+        }
+        // Shield glow effect
+        if (Math.random() < 0.02) {
+          const glow = this.scene.add.circle(this.x, this.y, ENEMY_STATS[EnemyType.WARDEN].size + 10, 0x0984e3, 0.3)
+          this.scene.tweens.add({
+            targets: glow,
+            scale: 1.5,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => glow.destroy()
+          })
+        }
+        break
+
+      case EnemyType.CORRUPTED:
+        // Leaves poison trail constantly
+        if (currentTime - this.lastSpecialAbility > 500) {
+          this.leavePoisonTrail()
+          this.lastSpecialAbility = currentTime
+        }
+        break
+
+      case EnemyType.MIRROR:
+        // Visual reflection effect
+        if (Math.random() < 0.02) {
+          this.setTint(0xffffff)
+          this.scene.time.delayedCall(100, () => {
+            if (this.active) this.clearTint()
+          })
+        }
+        break
+
+      case EnemyType.BERSERKER_KING:
+        // Constant rage aura
+        if (Math.random() < 0.05) {
+          const rage = this.scene.add.circle(this.x, this.y, 20, 0xe74c3c, 0.4)
+          this.scene.tweens.add({
+            targets: rage,
+            scale: 3,
+            alpha: 0,
+            duration: 400,
+            onComplete: () => rage.destroy()
+          })
+        }
+        // Gets faster over time in combat
+        const bkHpPercent = this.health / this.maxHealth
+        if (bkHpPercent < 0.5 && !this.enraged) {
+          this.enraged = true
+          this.speed *= 1.8
+          this.setTint(0xff0000)
+          // Enrage visual effect
+          const enrageText = this.scene.add.text(this.x, this.y - 50, '💢 ENRAGED!', {
+            fontSize: '16px',
+            color: '#ff0000',
+            fontStyle: 'bold'
+          }).setOrigin(0.5)
+          this.scene.tweens.add({
+            targets: enrageText,
+            y: enrageText.y - 30,
+            alpha: 0,
+            duration: 1000,
+            onComplete: () => enrageText.destroy()
+          })
+        }
+        break
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY ENEMY ABILITY IMPLEMENTATIONS
+  // ═══════════════════════════════════════════════════════════════
+
+  private createShadowClone() {
+    // Emit event for GameScene to handle shadow clone spawning
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('shadowClone', {
+        detail: {
+          x: this.x + (Math.random() - 0.5) * 100,
+          y: this.y + (Math.random() - 0.5) * 100,
+        }
+      }))
+    }
+
+    // Visual effect
+    const shadow = this.scene.add.circle(this.x, this.y, 25, 0x1a1a2e, 0.6)
+    this.scene.tweens.add({
+      targets: shadow,
+      scale: 2,
+      alpha: 0,
+      duration: 500,
+      onComplete: () => shadow.destroy()
+    })
+  }
+
+  private createShieldBarrier() {
+    // Visual barrier effect
+    const barrier = this.scene.add.circle(this.x, this.y, 80, 0x0984e3, 0)
+    barrier.setStrokeStyle(4, 0x0984e3, 0.8)
+
+    this.scene.tweens.add({
+      targets: barrier,
+      scale: 1.5,
+      duration: 3000,
+      onComplete: () => {
+        this.scene.tweens.add({
+          targets: barrier,
+          alpha: 0,
+          duration: 500,
+          onComplete: () => barrier.destroy()
+        })
+      }
+    })
+
+    // Emit event for GameScene to track barrier
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('shieldBarrier', {
+        detail: { x: this.x, y: this.y, radius: 120, duration: 3000 }
+      }))
+    }
+  }
+
+  private leavePoisonTrail() {
+    const poison = this.scene.add.circle(this.x, this.y, 15, 0x6c3483, 0.4)
+    poison.setDepth(-1)
+
+    // Poison fades over time
+    this.scene.tweens.add({
+      targets: poison,
+      alpha: 0,
+      duration: 3000,
+      onComplete: () => poison.destroy()
+    })
+
+    // Emit poison zone event
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('poisonZone', {
+        detail: { x: this.x, y: this.y, radius: 15, damage: 5, duration: 3000 }
+      }))
     }
   }
 
@@ -774,6 +1014,36 @@ export class AdvancedEnemy extends Phaser.Physics.Arcade.Sprite {
         onComplete: () => blockText.destroy()
       })
       return false
+    }
+
+    // Mirror enemy reflects 30% of damage back to player!
+    if (this.enemyType === EnemyType.MIRROR && Math.random() < 0.3) {
+      // Reflect visual
+      const reflectText = this.scene.add.text(this.x, this.y - 40, '🪞 REFLECTED!', {
+        fontSize: '14px',
+        color: '#bdc3c7',
+        fontStyle: 'bold'
+      }).setOrigin(0.5)
+      this.scene.tweens.add({
+        targets: reflectText,
+        y: this.y - 70,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => reflectText.destroy()
+      })
+
+      // Mirror flash
+      this.setTint(0xffffff)
+      this.scene.time.delayedCall(150, () => {
+        if (this.active) this.clearTint()
+      })
+
+      // Emit reflect event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mirrorReflect', {
+          detail: { damage: Math.floor(amount * 0.5) }
+        }))
+      }
     }
 
     this.health -= amount

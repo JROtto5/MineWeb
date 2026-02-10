@@ -15,6 +15,17 @@ export enum PowerUpType {
   GOLD_RUSH = 'gold_rush',
   NUKE = 'nuke',
   REGEN = 'regen',
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY POWER-UPS - Game-changing abilities!
+  // ═══════════════════════════════════════════════════════════════
+  METEOR_STORM = 'meteor_storm',     // Rains meteors on all enemies
+  TITAN_MODE = 'titan_mode',         // Giant size + massive damage
+  LASER_BEAM = 'laser_beam',         // Continuous laser attack
+  BLACK_HOLE = 'black_hole',         // Sucks in all enemies to center
+  CHAIN_LIGHTNING = 'chain_lightning', // Lightning bounces between enemies
+  SHADOW_CLONE = 'shadow_clone',     // Creates AI-controlled clone
+  BERSERKER_RAGE = 'berserker_rage', // Unlimited ammo + speed + damage
+  TIME_STOP = 'time_stop',           // Completely freezes time
 }
 
 interface PowerUpConfig {
@@ -38,6 +49,17 @@ const POWERUP_CONFIGS: Record<PowerUpType, PowerUpConfig> = {
   [PowerUpType.GOLD_RUSH]: { color: 0xffd700, icon: '💰', duration: 15000 },
   [PowerUpType.NUKE]: { color: 0xff0000, icon: '☢️', value: 1000 },
   [PowerUpType.REGEN]: { color: 0xff69b4, icon: '💗', duration: 12000, value: 5 },
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY POWER-UPS - Ultra rare game-changers!
+  // ═══════════════════════════════════════════════════════════════
+  [PowerUpType.METEOR_STORM]: { color: 0xff6600, icon: '☄️', duration: 8000 },
+  [PowerUpType.TITAN_MODE]: { color: 0x6c5b7b, icon: '🗿', duration: 15000 },
+  [PowerUpType.LASER_BEAM]: { color: 0x00ff00, icon: '⚡', duration: 6000 },
+  [PowerUpType.BLACK_HOLE]: { color: 0x4b0082, icon: '🌀', duration: 5000 },
+  [PowerUpType.CHAIN_LIGHTNING]: { color: 0x00ffff, icon: '⚡', duration: 10000 },
+  [PowerUpType.SHADOW_CLONE]: { color: 0x8b008b, icon: '👥', duration: 20000 },
+  [PowerUpType.BERSERKER_RAGE]: { color: 0xff0000, icon: '😈', duration: 12000 },
+  [PowerUpType.TIME_STOP]: { color: 0xffffff, icon: '⏱️', duration: 5000 },
 }
 
 export class PowerUp extends Phaser.Physics.Arcade.Sprite {
@@ -163,6 +185,41 @@ export class PowerUp extends Phaser.Physics.Arcade.Sprite {
       case PowerUpType.REGEN:
         player.activateRegen(config.duration!, config.value!)
         break
+      // ═══════════════════════════════════════════════════════════════
+      // LEGENDARY POWER-UPS
+      // ═══════════════════════════════════════════════════════════════
+      case PowerUpType.METEOR_STORM:
+        player.activateMeteorStorm(config.duration!)
+        this.emitMessage('☄️ METEOR STORM! Rain fire upon your enemies!', 'legendary')
+        break
+      case PowerUpType.TITAN_MODE:
+        player.activateTitanMode(config.duration!)
+        this.emitMessage('🗿 TITAN MODE! You are now UNSTOPPABLE!', 'legendary')
+        break
+      case PowerUpType.LASER_BEAM:
+        player.activateLaserBeam(config.duration!)
+        this.emitMessage('⚡ LASER BEAM! Continuous destruction!', 'legendary')
+        break
+      case PowerUpType.BLACK_HOLE:
+        player.activateBlackHole(config.duration!)
+        this.emitMessage('🌀 BLACK HOLE! All enemies drawn to their doom!', 'legendary')
+        break
+      case PowerUpType.CHAIN_LIGHTNING:
+        player.activateChainLightning(config.duration!)
+        this.emitMessage('⚡ CHAIN LIGHTNING! Zap them all!', 'legendary')
+        break
+      case PowerUpType.SHADOW_CLONE:
+        player.activateShadowClone(config.duration!)
+        this.emitMessage('👥 SHADOW CLONE! Fight alongside your double!', 'legendary')
+        break
+      case PowerUpType.BERSERKER_RAGE:
+        player.activateBerserkerRage(config.duration!)
+        this.emitMessage('😈 BERSERKER RAGE! UNLIMITED POWER!', 'legendary')
+        break
+      case PowerUpType.TIME_STOP:
+        player.activateTimeStop(config.duration!)
+        this.emitMessage('⏱️ TIME STOP! The world stands still!', 'legendary')
+        break
     }
 
     // Collect effect
@@ -253,6 +310,17 @@ export class PowerUpManager {
       { type: PowerUpType.GOLD_RUSH, weight: 7 },
       { type: PowerUpType.NUKE, weight: 1 }, // Very rare!
       { type: PowerUpType.REGEN, weight: 6 },
+      // ═══════════════════════════════════════════════════════════════
+      // LEGENDARY POWER-UPS - Ultra rare! (0.5 weight each)
+      // ═══════════════════════════════════════════════════════════════
+      { type: PowerUpType.METEOR_STORM, weight: 0.5 },
+      { type: PowerUpType.TITAN_MODE, weight: 0.5 },
+      { type: PowerUpType.LASER_BEAM, weight: 0.5 },
+      { type: PowerUpType.BLACK_HOLE, weight: 0.5 },
+      { type: PowerUpType.CHAIN_LIGHTNING, weight: 0.5 },
+      { type: PowerUpType.SHADOW_CLONE, weight: 0.5 },
+      { type: PowerUpType.BERSERKER_RAGE, weight: 0.5 },
+      { type: PowerUpType.TIME_STOP, weight: 0.5 },
     ]
 
     const totalWeight = weightedTypes.reduce((sum, w) => sum + w.weight, 0)

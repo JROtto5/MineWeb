@@ -129,6 +129,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
   private regenAmount = 0
   private lastRegenTick = 0
 
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY POWER-UP STATES
+  // ═══════════════════════════════════════════════════════════════
+  private meteorStormActive = false
+  private meteorStormEnd = 0
+  private titanModeActive = false
+  private titanModeEnd = 0
+  private laserBeamActive = false
+  private laserBeamEnd = 0
+  private blackHoleActive = false
+  private blackHoleEnd = 0
+  private chainLightningActive = false
+  private chainLightningEnd = 0
+  private shadowCloneActive = false
+  private shadowCloneEnd = 0
+  private berserkerRageActive = false
+  private berserkerRageEnd = 0
+  private timeStopActive = false
+  private timeStopEnd = 0
+  private originalScale = 1
+
   private lastShot = 0
   private aimLine!: Phaser.GameObjects.Line
   private powerUpIndicators: Phaser.GameObjects.Container
@@ -372,6 +393,96 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY POWER-UP ACTIVATION METHODS
+  // ═══════════════════════════════════════════════════════════════
+
+  activateMeteorStorm(duration: number) {
+    this.meteorStormActive = true
+    this.meteorStormEnd = Math.max(this.meteorStormEnd, this.scene.time.now + duration)
+    // Emit event for GameScene to spawn meteors
+    this.scene.events.emit('meteorStormActivated', { duration })
+    this.scene.cameras.main.shake(500, 0.005)
+  }
+
+  activateTitanMode(duration: number) {
+    if (!this.titanModeActive) {
+      this.originalScale = this.scale
+      this.setScale(2.5) // Become a TITAN!
+    }
+    this.titanModeActive = true
+    this.titanModeEnd = Math.max(this.titanModeEnd, this.scene.time.now + duration)
+    this.setTint(0x8b4513) // Brown titan color
+    // Massive damage boost
+    this.activateDamageBoost(duration)
+    // Invincibility while titan
+    this.activateInvincibility(duration)
+  }
+
+  activateLaserBeam(duration: number) {
+    this.laserBeamActive = true
+    this.laserBeamEnd = Math.max(this.laserBeamEnd, this.scene.time.now + duration)
+    // Emit event for GameScene to create continuous laser
+    this.scene.events.emit('laserBeamActivated', { duration })
+    this.setTint(0x00ff00)
+  }
+
+  activateBlackHole(duration: number) {
+    this.blackHoleActive = true
+    this.blackHoleEnd = Math.max(this.blackHoleEnd, this.scene.time.now + duration)
+    // Emit event for GameScene to pull enemies to center
+    this.scene.events.emit('blackHoleActivated', { duration, x: this.x, y: this.y })
+    this.scene.cameras.main.flash(300, 75, 0, 130)
+  }
+
+  activateChainLightning(duration: number) {
+    this.chainLightningActive = true
+    this.chainLightningEnd = Math.max(this.chainLightningEnd, this.scene.time.now + duration)
+    // Emit event for GameScene to enable chain lightning on hits
+    this.scene.events.emit('chainLightningActivated', { duration })
+    this.setTint(0x00ffff)
+  }
+
+  activateShadowClone(duration: number) {
+    this.shadowCloneActive = true
+    this.shadowCloneEnd = Math.max(this.shadowCloneEnd, this.scene.time.now + duration)
+    // Emit event for GameScene to create AI clone
+    this.scene.events.emit('shadowCloneActivated', { duration, x: this.x, y: this.y })
+  }
+
+  activateBerserkerRage(duration: number) {
+    this.berserkerRageActive = true
+    this.berserkerRageEnd = Math.max(this.berserkerRageEnd, this.scene.time.now + duration)
+    // Triple damage, double speed, unlimited ammo
+    this.activateDamageBoost(duration)
+    this.activateSpeedBoost(duration)
+    this.activateRapidFire(duration)
+    // Unlimited ammo effect (max out ammo every frame)
+    this.currentAmmo = 9999
+    this.setTint(0xff0000)
+    this.scene.cameras.main.flash(200, 255, 0, 0)
+  }
+
+  activateTimeStop(duration: number) {
+    this.timeStopActive = true
+    this.timeStopEnd = Math.max(this.timeStopEnd, this.scene.time.now + duration)
+    // Complete time freeze (0 time scale for everything except player)
+    this.scene.events.emit('timeStopActivated', { duration })
+    this.scene.cameras.main.flash(200, 255, 255, 255)
+    // Visual effect - white tint on everything
+    this.setTint(0xffffff)
+  }
+
+  // Legendary power-up getters
+  isMeteorStormActive(): boolean { return this.meteorStormActive }
+  isTitanModeActive(): boolean { return this.titanModeActive }
+  isLaserBeamActive(): boolean { return this.laserBeamActive }
+  isBlackHoleActive(): boolean { return this.blackHoleActive }
+  isChainLightningActive(): boolean { return this.chainLightningActive }
+  isShadowCloneActive(): boolean { return this.shadowCloneActive }
+  isBerserkerRageActive(): boolean { return this.berserkerRageActive }
+  isTimeStopActive(): boolean { return this.timeStopActive }
+
   // Getters for new power-ups
   isMagnetActive(): boolean { return this.magnetActive }
   isFreezeActive(): boolean { return this.freezeActive }
@@ -439,6 +550,66 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.health = Math.min(this.maxHealth, this.health + this.regenAmount)
         this.lastRegenTick = currentTime
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LEGENDARY POWER-UP EXPIRATION CHECKS
+    // ═══════════════════════════════════════════════════════════════
+
+    // Check meteor storm
+    if (this.meteorStormActive && currentTime >= this.meteorStormEnd) {
+      this.meteorStormActive = false
+    }
+
+    // Check titan mode
+    if (this.titanModeActive && currentTime >= this.titanModeEnd) {
+      this.titanModeActive = false
+      this.setScale(this.originalScale) // Return to normal size
+      this.clearTint()
+    }
+
+    // Check laser beam
+    if (this.laserBeamActive && currentTime >= this.laserBeamEnd) {
+      this.laserBeamActive = false
+      this.clearTint()
+    }
+
+    // Check black hole
+    if (this.blackHoleActive && currentTime >= this.blackHoleEnd) {
+      this.blackHoleActive = false
+    }
+
+    // Check chain lightning
+    if (this.chainLightningActive && currentTime >= this.chainLightningEnd) {
+      this.chainLightningActive = false
+      this.clearTint()
+    }
+
+    // Check shadow clone
+    if (this.shadowCloneActive && currentTime >= this.shadowCloneEnd) {
+      this.shadowCloneActive = false
+      this.scene.events.emit('shadowCloneDeactivated')
+    }
+
+    // Check berserker rage
+    if (this.berserkerRageActive && currentTime >= this.berserkerRageEnd) {
+      this.berserkerRageActive = false
+      this.clearTint()
+      // Reset ammo to normal max
+      const weapon = this.weapons[this.currentWeapon]
+      this.currentAmmo = Math.min(this.currentAmmo, weapon.maxAmmo)
+    }
+
+    // Check time stop
+    if (this.timeStopActive && currentTime >= this.timeStopEnd) {
+      this.timeStopActive = false
+      this.scene.events.emit('timeStopDeactivated')
+      this.clearTint()
+    }
+
+    // Berserker rage keeps ammo full
+    if (this.berserkerRageActive) {
+      this.currentAmmo = 9999
     }
   }
 

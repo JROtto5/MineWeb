@@ -300,6 +300,48 @@ export default class GameSceneV3 extends Phaser.Scene {
       this.nukeAllEnemies()
     })
 
+    // ═══════════════════════════════════════════════════════════════
+    // LEGENDARY POWER-UP EVENT LISTENERS
+    // ═══════════════════════════════════════════════════════════════
+
+    // Meteor Storm - rain fire from the sky!
+    this.events.on('meteorStormActivated', (data: { duration: number }) => {
+      this.startMeteorStorm(data.duration)
+    })
+
+    // Laser Beam - continuous death ray!
+    this.events.on('laserBeamActivated', (data: { duration: number }) => {
+      this.startLaserBeam(data.duration)
+    })
+
+    // Black Hole - pull all enemies to doom!
+    this.events.on('blackHoleActivated', (data: { duration: number; x: number; y: number }) => {
+      this.createBlackHole(data.duration, data.x, data.y)
+    })
+
+    // Chain Lightning - zap between enemies!
+    this.events.on('chainLightningActivated', (data: { duration: number }) => {
+      this.startChainLightning(data.duration)
+    })
+
+    // Shadow Clone - AI-controlled ally!
+    this.events.on('shadowCloneActivated', (data: { duration: number; x: number; y: number }) => {
+      this.createShadowClone(data.duration, data.x, data.y)
+    })
+
+    this.events.on('shadowCloneDeactivated', () => {
+      this.destroyShadowClone()
+    })
+
+    // Time Stop - freeze everything!
+    this.events.on('timeStopActivated', (data: { duration: number }) => {
+      this.activateTimeStop(data.duration)
+    })
+
+    this.events.on('timeStopDeactivated', () => {
+      this.deactivateTimeStop()
+    })
+
     // Listen for boss summon minions events (Mega Boss ability)
     if (typeof window !== 'undefined') {
       const summonHandler = (event: Event) => {
@@ -3123,6 +3165,37 @@ export default class GameSceneV3 extends Phaser.Scene {
     })
   }
 
+  // HELPER: Handle enemy death with rewards and effects
+  private handleEnemyDeath(enemy: any) {
+    if (!enemy || !enemy.active) return
+
+    // Track kills
+    this.enemiesKilled++
+    this.runStats.totalKills++
+    this.runStats.enemiesKilledThisRun++
+
+    // Award money and XP
+    const money = enemy.reward || 50
+    const xp = enemy.xpReward || Math.floor(money / 2)
+    this.player.addMoney(money)
+    this.player.addXP(xp)
+    this.runStats.totalMoney += money
+
+    // Visual effects
+    try {
+      this.visualEffects.createDeathExplosion(enemy.x, enemy.y, enemy.color || 0xff0000, 1)
+      this.visualEffects.showMoneyGain(enemy.x, enemy.y - 20, money)
+    } catch (e) {
+      // Silently ignore visual errors
+    }
+
+    // Chance to drop power-up
+    this.powerUpManager.tryDropPowerUp(enemy.x, enemy.y)
+
+    // Destroy enemy
+    enemy.destroy()
+  }
+
   // FREEZE POWER-UP: Freeze all enemies in place
   private freezeAllEnemies(duration: number) {
     // Create visual freeze effect
@@ -3232,6 +3305,573 @@ export default class GameSceneV3 extends Phaser.Scene {
 
     // Show reward
     this.addKillFeedMessage(`☢️ NUKE! ${killCount} enemies destroyed! +$${totalReward}`, '#ff0000', 3000)
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LEGENDARY POWER-UP EFFECTS - EPIC DESTRUCTION!
+  // ═══════════════════════════════════════════════════════════════
+
+  private meteorStormTimer: Phaser.Time.TimerEvent | null = null
+
+  // METEOR STORM: Rain meteors from the sky!
+  private startMeteorStorm(duration: number) {
+    this.addKillFeedMessage('☄️ METEOR STORM! Destruction from above!', '#ff6600', 3000)
+
+    // Spawn meteors every 200ms
+    this.meteorStormTimer = this.time.addEvent({
+      delay: 200,
+      callback: () => this.spawnMeteor(),
+      callbackScope: this,
+      repeat: Math.floor(duration / 200) - 1
+    })
+  }
+
+  private spawnMeteor() {
+    // Random position within camera view
+    const x = this.cameras.main.scrollX + Math.random() * this.cameras.main.width
+    const y = this.cameras.main.scrollY - 100 // Start above screen
+
+    // Create meteor visual
+    const meteor = this.add.circle(x, y, 20, 0xff6600, 1).setDepth(2000)
+    const trail = this.add.circle(x, y, 15, 0xff0000, 0.5).setDepth(1999)
+
+    // Target position
+    const targetX = x + (Math.random() - 0.5) * 200
+    const targetY = y + this.cameras.main.height + 200
+
+    // Animate meteor falling
+    this.tweens.add({
+      targets: [meteor, trail],
+      x: targetX,
+      y: targetY,
+      duration: 800,
+      ease: 'Cubic.easeIn',
+      onUpdate: () => {
+        trail.setPosition(meteor.x, meteor.y - 20)
+      },
+      onComplete: () => {
+        // Impact explosion
+        this.createMeteorImpact(meteor.x, meteor.y)
+        meteor.destroy()
+        trail.destroy()
+      }
+    })
+  }
+
+  private createMeteorImpact(x: number, y: number) {
+    // Visual explosion
+    for (let ring = 0; ring < 3; ring++) {
+      const explosion = this.add.circle(x, y, 20 + ring * 30, 0xff6600, 0.5).setDepth(3000)
+      this.tweens.add({
+        targets: explosion,
+        scale: 2,
+        alpha: 0,
+        duration: 300,
+        ease: 'Cubic.easeOut',
+        onComplete: () => explosion.destroy()
+      })
+    }
+
+    // Damage enemies in radius
+    const impactRadius = 100
+    const damage = 500
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y)
+        if (dist < impactRadius) {
+          enemy.takeDamage(damage)
+          this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, true)
+          if (enemy.isDead()) {
+            this.handleEnemyDeath(enemy)
+          }
+        }
+      }
+    })
+
+    // Damage bosses too
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        const dist = Phaser.Math.Distance.Between(x, y, boss.x, boss.y)
+        if (dist < impactRadius * 1.5) {
+          boss.takeDamage(damage)
+          this.visualEffects.showDamageNumber(boss.x, boss.y, damage, true)
+        }
+      }
+    })
+  }
+
+  private laserBeamGraphics: Phaser.GameObjects.Graphics | null = null
+  private laserBeamTimer: Phaser.Time.TimerEvent | null = null
+
+  // LASER BEAM: Continuous death ray!
+  private startLaserBeam(duration: number) {
+    this.addKillFeedMessage('⚡ LASER BEAM! Continuous destruction!', '#00ff00', 3000)
+
+    this.laserBeamGraphics = this.add.graphics().setDepth(3000)
+
+    // Update laser every 50ms
+    this.laserBeamTimer = this.time.addEvent({
+      delay: 50,
+      callback: () => this.updateLaserBeam(),
+      callbackScope: this,
+      repeat: Math.floor(duration / 50) - 1
+    })
+
+    // Clean up when done
+    this.time.delayedCall(duration, () => {
+      if (this.laserBeamGraphics) {
+        this.laserBeamGraphics.destroy()
+        this.laserBeamGraphics = null
+      }
+    })
+  }
+
+  private updateLaserBeam() {
+    if (!this.laserBeamGraphics || !this.player.isLaserBeamActive()) return
+
+    // Clear previous beam
+    this.laserBeamGraphics.clear()
+
+    // Draw laser from player to cursor
+    const pointer = this.input.activePointer
+    const worldX = pointer.worldX
+    const worldY = pointer.worldY
+
+    // Draw glowing laser beam
+    this.laserBeamGraphics.lineStyle(15, 0x00ff00, 0.3)
+    this.laserBeamGraphics.lineBetween(this.player.x, this.player.y, worldX, worldY)
+    this.laserBeamGraphics.lineStyle(8, 0x00ff00, 0.6)
+    this.laserBeamGraphics.lineBetween(this.player.x, this.player.y, worldX, worldY)
+    this.laserBeamGraphics.lineStyle(3, 0xffffff, 1)
+    this.laserBeamGraphics.lineBetween(this.player.x, this.player.y, worldX, worldY)
+
+    // Damage enemies along the beam
+    const damage = 100
+    const line = new Phaser.Geom.Line(this.player.x, this.player.y, worldX, worldY)
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const point = new Phaser.Geom.Point(enemy.x, enemy.y)
+        const nearestPoint = Phaser.Geom.Line.GetNearestPoint(line, point)
+        const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, nearestPoint.x, nearestPoint.y)
+
+        if (dist < 30) {
+          enemy.takeDamage(damage)
+          this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, false)
+          if (enemy.isDead()) {
+            this.handleEnemyDeath(enemy)
+          }
+        }
+      }
+    })
+
+    // Damage bosses too
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        const point = new Phaser.Geom.Point(boss.x, boss.y)
+        const nearestPoint = Phaser.Geom.Line.GetNearestPoint(line, point)
+        const dist = Phaser.Math.Distance.Between(boss.x, boss.y, nearestPoint.x, nearestPoint.y)
+
+        if (dist < 50) {
+          boss.takeDamage(damage)
+          this.visualEffects.showDamageNumber(boss.x, boss.y, damage, false)
+        }
+      }
+    })
+  }
+
+  private blackHoleGraphics: Phaser.GameObjects.Graphics | null = null
+  private blackHoleX = 0
+  private blackHoleY = 0
+  private blackHoleActive = false
+
+  // BLACK HOLE: Pull all enemies to their doom!
+  private createBlackHole(duration: number, x: number, y: number) {
+    this.addKillFeedMessage('🌀 BLACK HOLE! All enemies drawn to doom!', '#4b0082', 3000)
+
+    this.blackHoleX = x
+    this.blackHoleY = y
+    this.blackHoleActive = true
+
+    // Create visual
+    this.blackHoleGraphics = this.add.graphics().setDepth(1500)
+
+    // Update black hole effect
+    const blackHoleTimer = this.time.addEvent({
+      delay: 50,
+      callback: () => this.updateBlackHole(),
+      callbackScope: this,
+      repeat: Math.floor(duration / 50) - 1
+    })
+
+    // Clean up when done
+    this.time.delayedCall(duration, () => {
+      this.blackHoleActive = false
+      if (this.blackHoleGraphics) {
+        // Final implosion effect
+        this.cameras.main.shake(300, 0.02)
+        this.damageBlackHoleArea()
+        this.blackHoleGraphics.destroy()
+        this.blackHoleGraphics = null
+      }
+    })
+  }
+
+  private updateBlackHole() {
+    if (!this.blackHoleGraphics || !this.blackHoleActive) return
+
+    this.blackHoleGraphics.clear()
+
+    // Draw swirling black hole
+    const time = this.time.now / 100
+    for (let ring = 0; ring < 5; ring++) {
+      const radius = 30 + ring * 20
+      const alpha = 0.8 - ring * 0.15
+      this.blackHoleGraphics.lineStyle(5, 0x4b0082, alpha)
+      this.blackHoleGraphics.strokeCircle(this.blackHoleX, this.blackHoleY, radius)
+    }
+
+    // Draw inner core
+    this.blackHoleGraphics.fillStyle(0x000000, 1)
+    this.blackHoleGraphics.fillCircle(this.blackHoleX, this.blackHoleY, 25)
+
+    // Pull enemies toward black hole
+    const pullStrength = 5
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.blackHoleX, this.blackHoleY)
+        const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.blackHoleX, this.blackHoleY)
+
+        if (dist > 30) {
+          enemy.x += Math.cos(angle) * pullStrength * (200 / dist)
+          enemy.y += Math.sin(angle) * pullStrength * (200 / dist)
+        }
+
+        // Damage enemies that get too close
+        if (dist < 50) {
+          enemy.takeDamage(50)
+          if (enemy.isDead()) {
+            this.handleEnemyDeath(enemy)
+          }
+        }
+      }
+    })
+  }
+
+  private damageBlackHoleArea() {
+    const damage = 1000
+    const radius = 150
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, this.blackHoleX, this.blackHoleY)
+        if (dist < radius) {
+          enemy.takeDamage(damage)
+          this.visualEffects.showDamageNumber(enemy.x, enemy.y, damage, true)
+          if (enemy.isDead()) {
+            this.handleEnemyDeath(enemy)
+          }
+        }
+      }
+    })
+  }
+
+  private chainLightningActive = false
+
+  // CHAIN LIGHTNING: Zap between enemies!
+  private startChainLightning(duration: number) {
+    this.addKillFeedMessage('⚡ CHAIN LIGHTNING! Zap them all!', '#00ffff', 3000)
+    this.chainLightningActive = true
+
+    // Trigger chain lightning every 500ms
+    const lightningTimer = this.time.addEvent({
+      delay: 500,
+      callback: () => this.triggerChainLightning(),
+      callbackScope: this,
+      repeat: Math.floor(duration / 500) - 1
+    })
+
+    this.time.delayedCall(duration, () => {
+      this.chainLightningActive = false
+    })
+  }
+
+  private triggerChainLightning() {
+    if (!this.chainLightningActive) return
+
+    // Find nearest enemy to player
+    let closestEnemy: any = null
+    let closestDist = Infinity
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y)
+        if (dist < closestDist && dist < 500) {
+          closestDist = dist
+          closestEnemy = enemy
+        }
+      }
+    })
+
+    if (!closestEnemy) return
+
+    // Chain from enemy to enemy
+    const chainTargets: any[] = [closestEnemy]
+    let lastTarget = closestEnemy
+
+    for (let i = 0; i < 8; i++) {
+      let nextTarget: any = null
+      let nextDist = Infinity
+
+      this.enemies.children.entries.forEach((enemy: any) => {
+        if (enemy.active && !chainTargets.includes(enemy)) {
+          const dist = Phaser.Math.Distance.Between(lastTarget.x, lastTarget.y, enemy.x, enemy.y)
+          if (dist < nextDist && dist < 200) {
+            nextDist = dist
+            nextTarget = enemy
+          }
+        }
+      })
+
+      if (nextTarget) {
+        chainTargets.push(nextTarget)
+        lastTarget = nextTarget
+      } else {
+        break
+      }
+    }
+
+    // Draw lightning and damage
+    const graphics = this.add.graphics().setDepth(3000)
+
+    // Lightning from player to first enemy
+    this.drawLightningBolt(graphics, this.player.x, this.player.y, chainTargets[0].x, chainTargets[0].y)
+
+    // Chain between enemies
+    for (let i = 0; i < chainTargets.length - 1; i++) {
+      this.drawLightningBolt(graphics, chainTargets[i].x, chainTargets[i].y, chainTargets[i + 1].x, chainTargets[i + 1].y)
+    }
+
+    // Damage all targets
+    const damage = 200
+    chainTargets.forEach((enemy, index) => {
+      const chainDamage = Math.floor(damage * (1 - index * 0.1)) // Damage decreases along chain
+      enemy.takeDamage(chainDamage)
+      this.visualEffects.showDamageNumber(enemy.x, enemy.y, chainDamage, true)
+
+      if (enemy.isDead()) {
+        this.handleEnemyDeath(enemy)
+      }
+    })
+
+    // Fade out lightning
+    this.tweens.add({
+      targets: graphics,
+      alpha: 0,
+      duration: 200,
+      onComplete: () => graphics.destroy()
+    })
+  }
+
+  private drawLightningBolt(graphics: Phaser.GameObjects.Graphics, x1: number, y1: number, x2: number, y2: number) {
+    const segments = 8
+    const points: { x: number; y: number }[] = [{ x: x1, y: y1 }]
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments
+      const baseX = x1 + (x2 - x1) * t
+      const baseY = y1 + (y2 - y1) * t
+      const offset = (Math.random() - 0.5) * 30
+
+      // Perpendicular offset
+      const angle = Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2
+      points.push({
+        x: baseX + Math.cos(angle) * offset,
+        y: baseY + Math.sin(angle) * offset
+      })
+    }
+    points.push({ x: x2, y: y2 })
+
+    // Draw glow
+    graphics.lineStyle(8, 0x00ffff, 0.3)
+    graphics.beginPath()
+    graphics.moveTo(points[0].x, points[0].y)
+    for (let i = 1; i < points.length; i++) {
+      graphics.lineTo(points[i].x, points[i].y)
+    }
+    graphics.strokePath()
+
+    // Draw core
+    graphics.lineStyle(3, 0xffffff, 1)
+    graphics.beginPath()
+    graphics.moveTo(points[0].x, points[0].y)
+    for (let i = 1; i < points.length; i++) {
+      graphics.lineTo(points[i].x, points[i].y)
+    }
+    graphics.strokePath()
+  }
+
+  private shadowClone: Phaser.GameObjects.Sprite | null = null
+  private shadowCloneTimer: Phaser.Time.TimerEvent | null = null
+
+  // SHADOW CLONE: AI-controlled ally!
+  private createShadowClone(duration: number, x: number, y: number) {
+    this.addKillFeedMessage('👥 SHADOW CLONE! Fight alongside your double!', '#8b008b', 3000)
+
+    // Create clone visual (darker player)
+    const graphics = this.make.graphics({ x: 0, y: 0 }, false)
+    graphics.fillStyle(0x8b008b, 0.8)
+    graphics.fillCircle(16, 16, 16)
+    graphics.lineStyle(2, 0xff00ff, 1)
+    graphics.strokeCircle(16, 16, 16)
+    graphics.generateTexture('shadow_clone', 32, 32)
+    graphics.destroy()
+
+    this.shadowClone = this.add.sprite(x + 50, y, 'shadow_clone').setDepth(100)
+
+    // Clone shoots at enemies automatically
+    this.shadowCloneTimer = this.time.addEvent({
+      delay: 300,
+      callback: () => this.shadowCloneAttack(),
+      callbackScope: this,
+      repeat: Math.floor(duration / 300) - 1
+    })
+  }
+
+  private shadowCloneAttack() {
+    if (!this.shadowClone) return
+
+    // Find closest enemy
+    let closestEnemy: any = null
+    let closestDist = Infinity
+
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.active) {
+        const dist = Phaser.Math.Distance.Between(this.shadowClone!.x, this.shadowClone!.y, enemy.x, enemy.y)
+        if (dist < closestDist && dist < 600) {
+          closestDist = dist
+          closestEnemy = enemy
+        }
+      }
+    })
+
+    // Also check bosses
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.active) {
+        const dist = Phaser.Math.Distance.Between(this.shadowClone!.x, this.shadowClone!.y, boss.x, boss.y)
+        if (dist < closestDist && dist < 600) {
+          closestDist = dist
+          closestEnemy = boss
+        }
+      }
+    })
+
+    if (!closestEnemy) return
+
+    // Move clone toward player position
+    const toPlayer = Phaser.Math.Angle.Between(this.shadowClone.x, this.shadowClone.y, this.player.x, this.player.y)
+    this.shadowClone.x += Math.cos(toPlayer) * 2
+    this.shadowClone.y += Math.sin(toPlayer) * 2
+
+    // Shoot at enemy
+    const angle = Phaser.Math.Angle.Between(this.shadowClone.x, this.shadowClone.y, closestEnemy.x, closestEnemy.y)
+    const damage = Math.floor(this.player.getCurrentDamage() * 0.5)
+
+    // Visual bullet
+    const bullet = this.add.circle(this.shadowClone.x, this.shadowClone.y, 5, 0xff00ff).setDepth(2000)
+    this.tweens.add({
+      targets: bullet,
+      x: closestEnemy.x,
+      y: closestEnemy.y,
+      duration: 150,
+      onComplete: () => {
+        bullet.destroy()
+        if (closestEnemy.active) {
+          closestEnemy.takeDamage(damage)
+          this.visualEffects.showDamageNumber(closestEnemy.x, closestEnemy.y, damage, false)
+          if (closestEnemy.isDead && closestEnemy.isDead()) {
+            this.handleEnemyDeath(closestEnemy)
+          }
+        }
+      }
+    })
+
+    // Rotate clone to face enemy
+    this.shadowClone.setRotation(angle + Math.PI / 2)
+  }
+
+  private destroyShadowClone() {
+    if (this.shadowClone) {
+      // Fade out effect
+      this.tweens.add({
+        targets: this.shadowClone,
+        alpha: 0,
+        scale: 0.5,
+        duration: 500,
+        onComplete: () => {
+          this.shadowClone?.destroy()
+          this.shadowClone = null
+        }
+      })
+    }
+    if (this.shadowCloneTimer) {
+      this.shadowCloneTimer.destroy()
+      this.shadowCloneTimer = null
+    }
+  }
+
+  private timeStopOverlay: Phaser.GameObjects.Rectangle | null = null
+
+  // TIME STOP: Freeze everything except the player!
+  private activateTimeStop(duration: number) {
+    this.addKillFeedMessage('⏱️ TIME STOP! The world stands still!', '#ffffff', 3000)
+
+    // Visual overlay
+    this.timeStopOverlay = this.add.rectangle(
+      this.cameras.main.scrollX + this.cameras.main.width / 2,
+      this.cameras.main.scrollY + this.cameras.main.height / 2,
+      this.cameras.main.width * 2,
+      this.cameras.main.height * 2,
+      0xffffff, 0.1
+    ).setDepth(4000).setScrollFactor(0)
+
+    // Freeze all enemies completely
+    this.enemies.children.entries.forEach((enemy: any) => {
+      if (enemy.body) {
+        enemy.body.velocity.x = 0
+        enemy.body.velocity.y = 0
+        enemy.setTint(0x888888)
+      }
+    })
+
+    // Freeze bosses too
+    this.bosses.children.entries.forEach((boss: any) => {
+      if (boss.body) {
+        boss.body.velocity.x = 0
+        boss.body.velocity.y = 0
+        boss.setTint(0x888888)
+      }
+    })
+
+    // Player still moves at normal speed!
+    this.time.timeScale = 1.0
+  }
+
+  private deactivateTimeStop() {
+    if (this.timeStopOverlay) {
+      this.timeStopOverlay.destroy()
+      this.timeStopOverlay = null
+    }
+
+    // Unfreeze enemies
+    this.enemies.children.entries.forEach((enemy: any) => {
+      enemy.clearTint()
+    })
+
+    this.bosses.children.entries.forEach((boss: any) => {
+      boss.clearTint()
+    })
   }
 
   private createCasinoZones() {
