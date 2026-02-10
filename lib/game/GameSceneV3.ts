@@ -564,7 +564,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     const screenHeight = this.scale.height
     const boxWidth = 320
     const boxHeight = 180
-    const boxX = 0 // Left edge of window
+    const boxX = 10 // Small margin from left edge
     const boxY = (screenHeight - boxHeight) / 2 // Vertically centered
 
     const container = this.add.container(boxX, boxY).setDepth(5000).setScrollFactor(0)
