@@ -560,29 +560,30 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
-    // FIX V10: Position kill feed with larger margin and smaller width
+    // FIX V11: Position kill feed on right side but well within screen bounds
     const screenWidth = this.scale.width
-    const margin = 120 // Large margin from right edge
-    const maxWidth = Math.min(280, screenWidth * 0.3) // Narrower width
+    const xPos = screenWidth * 0.65 // Position at 65% from left (35% from right)
+    const yStart = 280 // Lower starting position
+    const maxWidth = Math.min(300, screenWidth * 0.32)
 
-    const message = this.add.text(screenWidth - margin, 200 + this.killFeedMessages.length * 40, text, {
+    const message = this.add.text(xPos, yStart + this.killFeedMessages.length * 38, text, {
       fontSize: '14px',
       color: color,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
-      align: 'right',
+      align: 'left',
       wordWrap: { width: maxWidth, useAdvancedWrap: true },
       maxLines: 2,
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(5000)
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(5000)
 
-    // Slide in animation
+    // Slide in animation from right
     message.setAlpha(0)
     message.setX(screenWidth)
 
     this.tweens.add({
       targets: message,
-      x: screenWidth - margin,
+      x: xPos,
       alpha: 1,
       duration: 300,
       ease: 'Power2',
@@ -618,11 +619,11 @@ export default class GameSceneV3 extends Phaser.Scene {
       return true
     })
 
-    // Reposition messages with updated spacing (below FLOOR banner)
+    // Reposition messages with updated spacing
     this.killFeedMessages.forEach((msg, index) => {
       this.tweens.add({
         targets: msg.text,
-        y: 200 + index * 40,
+        y: 280 + index * 38,
         duration: 200,
         ease: 'Sine.easeOut',
       })
