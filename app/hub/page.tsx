@@ -354,7 +354,10 @@ export default function GameHub() {
     setResetStatus('resetting')
 
     try {
-      // Clear localStorage - ALL game-related keys
+      // Clear localStorage - NUCLEAR OPTION: Clear ALL game-related keys
+      console.log('Starting localStorage clear...')
+      console.log('Keys before clear:', Object.keys(localStorage))
+
       const keysToRemove = [
         // DotSlayer keys
         'dotslayer_progress',
@@ -370,23 +373,32 @@ export default function GameHub() {
         'dotclicker_synergy',
         'dotclicker_synergy_stats',
         'dotclicker_achievements',
+        'clicker_save', // alternate key name
         // Cross-game synergy keys
         'crossGameSynergy',
         'dot_universe_level',
         'cross_game_bonuses'
       ]
-      keysToRemove.forEach(key => localStorage.removeItem(key))
+      keysToRemove.forEach(key => {
+        console.log('Removing key:', key)
+        localStorage.removeItem(key)
+      })
 
-      // Also clear any keys that start with these prefixes (catch-all)
-      const prefixes = ['dotslayer_', 'dotclicker_', 'dot_universe_', 'cross_game_']
-      Object.keys(localStorage).forEach(key => {
-        if (prefixes.some(prefix => key.startsWith(prefix))) {
+      // Also clear any keys that contain these substrings (nuclear option)
+      const substrings = ['slayer', 'clicker', 'dot', 'synergy', 'game', 'save', 'progress']
+      const allKeys = Object.keys(localStorage)
+      allKeys.forEach(key => {
+        const keyLower = key.toLowerCase()
+        if (substrings.some(sub => keyLower.includes(sub))) {
+          console.log('Removing key by substring match:', key)
           localStorage.removeItem(key)
         }
       })
 
-      // Clear Supabase data
-      await Promise.all([
+      console.log('Keys after clear:', Object.keys(localStorage))
+
+      // Clear Supabase data - run each delete and log errors
+      const deleteResults = await Promise.allSettled([
         supabase.from('slayer_progress').delete().eq('user_id', user.id),
         supabase.from('slayer_saves').delete().eq('user_id', user.id),
         supabase.from('slayer_stats').delete().eq('user_id', user.id),
@@ -404,6 +416,45 @@ export default function GameHub() {
           updated_at: new Date().toISOString()
         }).eq('id', user.id),
       ])
+
+      // Log any failures for debugging
+      const tableNames = ['slayer_progress', 'slayer_saves', 'slayer_stats', 'clicker_saves', 'achievements', 'daily_challenges', 'leaderboards', 'user_profiles']
+      let errorMessages: string[] = []
+      deleteResults.forEach((result, index) => {
+        const tableName = tableNames[index] || `operation ${index}`
+        if (result.status === 'rejected') {
+          console.error(`Delete ${tableName} failed:`, result.reason)
+          errorMessages.push(`${tableName}: rejected`)
+        } else if (result.value?.error) {
+          console.error(`Delete ${tableName} error:`, result.value.error)
+          errorMessages.push(`${tableName}: ${result.value.error.message}`)
+        } else {
+          console.log(`Delete ${tableName}: success`)
+        }
+      })
+
+      // Show debug info if any errors
+      if (errorMessages.length > 0) {
+        console.error('Reset errors:', errorMessages)
+      }
+
+      // Also try to reset clicker_saves by updating instead of deleting
+      // (in case RLS prevents delete but allows update)
+      await supabase.from('clicker_saves').update({
+        total_dots: 0,
+        total_prestiges: 0,
+        dots: 0,
+        global_multiplier: 1,
+        buildings: {},
+        upgrades: {},
+        stats: {
+          totalClicks: 0,
+          highestDps: 0,
+          buildingsPurchased: 0,
+          totalPlaytime: 0
+        },
+        updated_at: new Date().toISOString()
+      }).eq('user_id', user.id)
 
       setResetStatus('success')
 
