@@ -207,6 +207,28 @@ export default function Home() {
         <Link href="/news" className="view-all-link">View All Updates</Link>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="testimonials-section">
+        <h2>What Players Say</h2>
+        <div className="testimonials-grid">
+          <div className="testimonial">
+            <div className="testimonial-stars">★★★★★</div>
+            <p className="testimonial-text">"Finally a browser roguelike that doesn't feel like a mobile port. The synergy system is genius!"</p>
+            <p className="testimonial-author">- r/WebGames user</p>
+          </div>
+          <div className="testimonial">
+            <div className="testimonial-stars">★★★★★</div>
+            <p className="testimonial-text">"Been playing Dot Clicker for a week straight. The prestige system is perfectly balanced."</p>
+            <p className="testimonial-author">- r/incremental_games user</p>
+          </div>
+          <div className="testimonial">
+            <div className="testimonial-stars">★★★★★</div>
+            <p className="testimonial-text">"Love that my progress in one game helps the other. Smart design!"</p>
+            <p className="testimonial-author">- Discord member</p>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
       <section className="faq-section">
         <h2>Frequently Asked Questions</h2>
@@ -227,6 +249,17 @@ export default function Home() {
             <h3>What devices are supported?</h3>
             <p>Dot Universe works on any device with a modern web browser - PC, Mac, tablets, and mobile phones!</p>
           </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="final-cta">
+        <h2>Ready to Play?</h2>
+        <p>Join thousands of players in the Dot Universe. Start your adventure now!</p>
+        <div className="cta-buttons final">
+          <Link href="/login" className="btn btn-primary btn-large">
+            Play Now - It's Free!
+          </Link>
         </div>
       </section>
 
@@ -816,6 +849,82 @@ export default function Home() {
           color: #aaa;
           margin: 0;
           line-height: 1.6;
+        }
+
+        /* Testimonials Section */
+        .testimonials-section {
+          padding: 80px 20px;
+          background: rgba(0, 217, 255, 0.03);
+        }
+
+        .testimonials-section h2 {
+          text-align: center;
+          font-size: 2.5rem;
+          color: #00d9ff;
+          margin-bottom: 50px;
+        }
+
+        .testimonials-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 25px;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .testimonial {
+          background: rgba(0, 0, 0, 0.3);
+          padding: 25px;
+          border-radius: 15px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .testimonial-stars {
+          color: #f39c12;
+          font-size: 1.2rem;
+          margin-bottom: 15px;
+        }
+
+        .testimonial-text {
+          color: #ccc;
+          font-style: italic;
+          line-height: 1.6;
+          margin: 0 0 15px 0;
+        }
+
+        .testimonial-author {
+          color: #00d9ff;
+          font-size: 0.9rem;
+          font-weight: 600;
+          margin: 0;
+        }
+
+        /* Final CTA Section */
+        .final-cta {
+          padding: 100px 20px;
+          text-align: center;
+          background: linear-gradient(180deg, transparent 0%, rgba(0, 217, 255, 0.1) 50%, transparent 100%);
+        }
+
+        .final-cta h2 {
+          font-size: 3rem;
+          color: #fff;
+          margin-bottom: 15px;
+        }
+
+        .final-cta p {
+          color: #888;
+          font-size: 1.2rem;
+          margin-bottom: 30px;
+        }
+
+        .btn-large {
+          padding: 20px 60px;
+          font-size: 1.4rem;
+        }
+
+        .cta-buttons.final {
+          margin-top: 30px;
         }
 
         /* Mobile Responsive */

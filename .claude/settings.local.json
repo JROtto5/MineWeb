@@ -6,7 +6,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(powershell -Command \"Get-ChildItem -Path lib/game -Filter ''*.ts'' -Recurse | ForEach-Object { \\(Get-Content $_FullName\\) -replace \"\"import Phaser from ''phaser''\"\", \"\"import * as Phaser from ''phaser''\"\" | Set-Content $_FullName }\")",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(wc:*)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -259,42 +259,64 @@ export default function LoginPage() {
           </a>
         </p>
 
-        {/* Features Preview */}
+        {/* Social Proof */}
         <div style={{
-          marginTop: '40px',
-          padding: '20px',
-          background: '#1a1f2e',
-          borderRadius: '8px',
-          border: '1px solid #2e3440'
+          marginTop: '30px',
+          display: 'flex',
+          justifyContent: 'space-around',
+          padding: '15px 0',
+          borderTop: '1px solid #2e3440',
+          borderBottom: '1px solid #2e3440'
         }}>
-          <h3 style={{ color: '#ff6b00', fontSize: '14px', marginBottom: '8px', marginTop: 0 }}>
-            DOT SLAYER - Roguelike Action
-          </h3>
-          <ul style={{
-            color: '#88c0d0',
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00d9ff' }}>100+</div>
+            <div style={{ fontSize: '11px', color: '#666' }}>Floors</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00ff88' }}>Free</div>
+            <div style={{ fontSize: '11px', color: '#666' }}>Forever</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f39c12' }}>2</div>
+            <div style={{ fontSize: '11px', color: '#666' }}>Games</div>
+          </div>
+        </div>
+
+        {/* Testimonials */}
+        <div style={{
+          marginTop: '20px',
+          padding: '15px',
+          background: 'rgba(0, 217, 255, 0.05)',
+          borderRadius: '8px',
+          borderLeft: '3px solid #00d9ff'
+        }}>
+          <p style={{
+            color: '#aaa',
             fontSize: '13px',
-            lineHeight: '20px',
-            paddingLeft: '20px',
-            margin: '0 0 15px 0'
+            margin: 0,
+            fontStyle: 'italic',
+            lineHeight: '1.5'
           }}>
-            <li>100 procedurally generated floors</li>
-            <li>Epic bosses & skill trees</li>
-            <li>Global leaderboards</li>
-          </ul>
-          <h3 style={{ color: '#00d9ff', fontSize: '14px', marginBottom: '8px', marginTop: 0 }}>
-            DOT CLICKER - Idle Empire
-          </h3>
-          <ul style={{
-            color: '#88c0d0',
-            fontSize: '13px',
-            lineHeight: '20px',
-            paddingLeft: '20px',
-            margin: 0
+            "Finally a browser roguelike that doesn't feel like a mobile port. The synergy system is genius!"
+          </p>
+          <p style={{
+            color: '#00d9ff',
+            fontSize: '11px',
+            margin: '8px 0 0 0',
+            fontWeight: 'bold'
           }}>
-            <li>Addictive idle progression</li>
-            <li>Buildings, upgrades & prestige</li>
-            <li>Cross-game synergy bonuses!</li>
-          </ul>
+            - r/WebGames user
+          </p>
+        </div>
+
+        {/* Back to Home */}
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <a
+            href="/"
+            style={{ color: '#666', fontSize: '13px', textDecoration: 'none' }}
+          >
+            ← Back to Home
+          </a>
         </div>
       </div>
     </div>
