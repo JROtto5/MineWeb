@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface NewsItem {
   id: string
@@ -145,166 +146,173 @@ const getCategoryLabel = (category: NewsItem['category']) => {
 }
 
 export default function NewsPage() {
+  const router = useRouter()
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+  const [backHovered, setBackHovered] = useState(false)
+
   return (
-    <div className="news-container">
-      <header className="news-header">
-        <Link href="/hub" className="back-btn">← Back to Hub</Link>
-        <h1>📰 News & Updates</h1>
-        <p>Stay up to date with the latest Dot Universe news, updates, and patch notes.</p>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #050510 0%, #0a0a20 25%, #150a25 50%, #0a1520 75%, #050510 100%)',
+      color: 'white',
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      padding: '20px',
+      position: 'relative',
+      overflowX: 'hidden',
+    }}>
+      {/* Background glow effects */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: `
+          radial-gradient(circle at 20% 50%, rgba(0, 217, 255, 0.03) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(255, 107, 0, 0.03) 0%, transparent 50%),
+          radial-gradient(circle at 40% 80%, rgba(46, 204, 113, 0.03) 0%, transparent 50%)
+        `,
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
+
+      <header style={{
+        maxWidth: '800px',
+        margin: '0 auto 40px',
+        position: 'relative',
+        zIndex: 10,
+      }}>
+        <button
+          onClick={() => router.push('/hub')}
+          onMouseEnter={() => setBackHovered(true)}
+          onMouseLeave={() => setBackHovered(false)}
+          style={{
+            display: 'inline-block',
+            color: backHovered ? '#fff' : '#00d9ff',
+            background: 'transparent',
+            border: 'none',
+            marginBottom: '20px',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            transition: 'color 0.2s',
+            padding: 0,
+          }}
+        >
+          ← Back to Hub
+        </button>
+        <h1 style={{
+          fontSize: 'clamp(1.8rem, 5vw, 2.5rem)',
+          margin: '0 0 10px 0',
+          background: 'linear-gradient(135deg, #00d9ff, #ff6b00)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>
+          News & Updates
+        </h1>
+        <p style={{
+          color: '#888',
+          fontSize: '1.1rem',
+          margin: 0,
+        }}>
+          Stay up to date with the latest Dot Universe news, updates, and patch notes.
+        </p>
       </header>
 
-      <main className="news-list">
+      <main style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 10,
+      }}>
         {NEWS_ITEMS.map((item) => (
-          <article key={item.id} className="news-item">
-            <div className="news-meta">
-              <span className="news-date">{new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              <span className="news-category" style={{ backgroundColor: getCategoryColor(item.category) }}>
+          <article
+            key={item.id}
+            onMouseEnter={() => setHoveredItem(item.id)}
+            onMouseLeave={() => setHoveredItem(null)}
+            style={{
+              background: 'linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9))',
+              border: hoveredItem === item.id
+                ? '1px solid rgba(0, 217, 255, 0.2)'
+                : '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '16px',
+              padding: '25px',
+              marginBottom: '25px',
+              transition: 'all 0.3s',
+              transform: hoveredItem === item.id ? 'translateY(-2px)' : 'none',
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              marginBottom: '15px',
+              flexWrap: 'wrap',
+            }}>
+              <span style={{
+                color: '#666',
+                fontSize: '0.9rem',
+              }}>
+                {new Date(item.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+              <span style={{
+                backgroundColor: getCategoryColor(item.category),
+                padding: '4px 12px',
+                borderRadius: '15px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                color: '#fff',
+              }}>
                 {getCategoryLabel(item.category)}
               </span>
             </div>
-            <h2>{item.title}</h2>
-            <p className="news-content">{item.content}</p>
+            <h2 style={{
+              fontSize: '1.4rem',
+              margin: '0 0 12px 0',
+              color: '#fff',
+            }}>
+              {item.title}
+            </h2>
+            <p style={{
+              color: '#aaa',
+              lineHeight: 1.6,
+              margin: '0 0 15px 0',
+            }}>
+              {item.content}
+            </p>
             {item.highlights && item.highlights.length > 0 && (
-              <ul className="news-highlights">
+              <ul style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                display: 'grid',
+                gap: '8px',
+              }}>
                 {item.highlights.map((highlight, i) => (
-                  <li key={i}>{highlight}</li>
+                  <li key={i} style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    color: '#ccc',
+                    fontSize: '0.95rem',
+                  }}>
+                    <span style={{
+                      color: '#2ecc71',
+                      fontWeight: 'bold',
+                      flexShrink: 0,
+                    }}>
+                      ✓
+                    </span>
+                    {highlight}
+                  </li>
                 ))}
               </ul>
             )}
           </article>
         ))}
       </main>
-
-      <style jsx>{`
-        .news-container {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #050510 0%, #0a0a20 50%, #0a1520 100%);
-          color: white;
-          font-family: 'Segoe UI', system-ui, sans-serif;
-          padding: 20px;
-        }
-
-        .news-header {
-          max-width: 800px;
-          margin: 0 auto 40px;
-        }
-
-        .back-btn {
-          display: inline-block;
-          color: #00d9ff;
-          text-decoration: none;
-          margin-bottom: 20px;
-          font-size: 0.9rem;
-          transition: color 0.2s;
-        }
-        .back-btn:hover {
-          color: #fff;
-        }
-
-        .news-header h1 {
-          font-size: 2.5rem;
-          margin: 0 0 10px 0;
-          background: linear-gradient(135deg, #00d9ff, #ff6b00);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .news-header p {
-          color: #888;
-          font-size: 1.1rem;
-          margin: 0;
-        }
-
-        .news-list {
-          max-width: 800px;
-          margin: 0 auto;
-        }
-
-        .news-item {
-          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
-          padding: 25px;
-          margin-bottom: 25px;
-          transition: all 0.3s;
-        }
-
-        .news-item:hover {
-          border-color: rgba(0, 217, 255, 0.2);
-          transform: translateY(-2px);
-        }
-
-        .news-meta {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          margin-bottom: 15px;
-        }
-
-        .news-date {
-          color: #666;
-          font-size: 0.9rem;
-        }
-
-        .news-category {
-          padding: 4px 12px;
-          border-radius: 15px;
-          font-size: 0.75rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          color: #fff;
-        }
-
-        .news-item h2 {
-          font-size: 1.4rem;
-          margin: 0 0 12px 0;
-          color: #fff;
-        }
-
-        .news-content {
-          color: #aaa;
-          line-height: 1.6;
-          margin: 0 0 15px 0;
-        }
-
-        .news-highlights {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-          display: grid;
-          gap: 8px;
-        }
-
-        .news-highlights li {
-          display: flex;
-          align-items: flex-start;
-          gap: 10px;
-          color: #ccc;
-          font-size: 0.95rem;
-        }
-
-        .news-highlights li::before {
-          content: '✓';
-          color: #2ecc71;
-          font-weight: bold;
-        }
-
-        @media (max-width: 768px) {
-          .news-header h1 {
-            font-size: 1.8rem;
-          }
-          .news-item {
-            padding: 20px;
-          }
-          .news-meta {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-          }
-        }
-      `}</style>
     </div>
   )
 }

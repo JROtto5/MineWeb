@@ -24,39 +24,34 @@ export default function LoginPage() {
       setError('')
       setIsSubmitting(true)
       await signInWithGoogle()
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google'
+      setError(errorMessage)
       setIsSubmitting(false)
     }
   }
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!email || !password) {
       setError('Please fill in all fields')
       return
     }
-
     try {
       setError('')
       setIsSubmitting(true)
-
       const { error: authError } = isSignUp
         ? await signUpWithEmail(email, password)
         : await signInWithEmail(email, password)
-
       if (authError) {
         setError(authError.message || 'Authentication failed')
         setIsSubmitting(false)
-      } else {
-        // Success - will redirect via useEffect
-        if (isSignUp) {
-          setError('Check your email for confirmation link')
-        }
+      } else if (isSignUp) {
+        setError('Check your email for confirmation link')
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed')
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Authentication failed'
+      setError(errorMessage)
       setIsSubmitting(false)
     }
   }
@@ -64,77 +59,124 @@ export default function LoginPage() {
   if (loading) {
     return (
       <div style={{
-        background: 'linear-gradient(135deg, #0a4d68 0%, #05878a 50%, #0a4d68 100%)',
+        background: 'linear-gradient(135deg, #050510 0%, #0a0a20 50%, #050510 100%)',
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#05878a',
-        fontSize: '24px',
-        fontFamily: 'system-ui'
+        color: '#00d9ff',
+        fontSize: '1.2rem',
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        letterSpacing: '3px',
       }}>
-        Loading DotSlayer...
+        <div style={{
+          width: '50px',
+          height: '50px',
+          background: 'radial-gradient(circle at 30% 30%, #00ffff, #00d9ff, #0088aa)',
+          borderRadius: '50%',
+          marginBottom: '20px',
+          boxShadow: '0 0 40px rgba(0, 217, 255, 0.6)',
+        }} />
+        Loading Dot Universe...
       </div>
     )
   }
 
-  if (user) {
-    return null
-  }
+  if (user) return null
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #0a4d68 0%, #05878a 50%, #0a4d68 100%)',
+      background: 'linear-gradient(135deg, #050510 0%, #0a0a20 25%, #150a25 50%, #0a1520 75%, #050510 100%)',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'system-ui',
-      padding: '20px'
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      padding: '20px',
+      position: 'relative',
     }}>
+      {/* Background glows */}
       <div style={{
-        background: '#0f1419',
-        padding: '40px',
-        borderRadius: '16px',
-        border: '2px solid #05878a',
-        boxShadow: '0 0 40px rgba(5, 135, 138, 0.5)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(ellipse 60% 40% at 30% 20%, rgba(0, 217, 255, 0.08) 0%, transparent 50%),
+          radial-gradient(ellipse 50% 30% at 70% 80%, rgba(255, 107, 0, 0.06) 0%, transparent 50%)
+        `,
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{
+        background: 'linear-gradient(145deg, rgba(20, 25, 40, 0.95), rgba(10, 15, 30, 0.98))',
+        padding: '50px 40px',
+        borderRadius: '24px',
+        border: '1px solid rgba(0, 217, 255, 0.2)',
+        boxShadow: '0 0 60px rgba(0, 217, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.5)',
         maxWidth: '450px',
-        width: '100%'
+        width: '100%',
+        position: 'relative',
+        zIndex: 1,
       }}>
-        {/* Logo/Title */}
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+          <div style={{
+            width: '70px',
+            height: '70px',
+            background: 'linear-gradient(135deg, #00d9ff 0%, #0066cc 100%)',
+            borderRadius: '50%',
+            margin: '0 auto 20px',
+            boxShadow: '0 0 40px rgba(0, 217, 255, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              width: '20px',
+              height: '20px',
+              background: 'radial-gradient(circle, #fff 0%, transparent 70%)',
+              borderRadius: '50%',
+            }} />
+          </div>
+        </div>
+
         <h1 style={{
-          fontSize: '42px',
-          color: '#05878a',
+          fontSize: 'clamp(1.8rem, 5vw, 2.5rem)',
           textAlign: 'center',
           margin: '0 0 10px 0',
-          fontWeight: 'bold',
-          textShadow: '0 0 20px rgba(5, 135, 138, 0.8)'
+          fontWeight: 900,
+          letterSpacing: '4px',
         }}>
-          <span style={{ color: '#00d9ff' }}>●</span> DOT UNIVERSE <span style={{ color: '#ff6b00' }}>●</span>
+          <span style={{ color: '#00d9ff', textShadow: '0 0 20px rgba(0, 217, 255, 0.8)' }}>●</span>
+          <span style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #00d9ff 50%, #ffffff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            margin: '0 10px',
+          }}>DOT UNIVERSE</span>
+          <span style={{ color: '#ff6b00', textShadow: '0 0 20px rgba(255, 107, 0, 0.8)' }}>●</span>
         </h1>
 
-        <p style={{
-          color: '#88c0d0',
-          textAlign: 'center',
-          fontSize: '14px',
-          marginBottom: '30px'
-        }}>
+        <p style={{ color: '#889', textAlign: 'center', fontSize: '0.95rem', marginBottom: '30px' }}>
           Two Epic Games. One Account. Infinite Fun.
         </p>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
           <div style={{
-            background: '#8b0000',
-            color: '#ffffff',
-            padding: '12px',
-            borderRadius: '8px',
+            background: error.includes('email') ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)',
+            border: `1px solid ${error.includes('email') ? 'rgba(46, 204, 113, 0.3)' : 'rgba(231, 76, 60, 0.3)'}`,
+            color: error.includes('email') ? '#2ecc71' : '#e74c3c',
+            padding: '12px 15px',
+            borderRadius: '10px',
             marginBottom: '20px',
-            fontSize: '14px',
-            textAlign: 'center'
-          }}>
-            {error}
-          </div>
+            fontSize: '0.9rem',
+            textAlign: 'center',
+          }}>{error}</div>
         )}
 
         {/* Google Sign In */}
@@ -146,16 +188,19 @@ export default function LoginPage() {
             padding: '16px',
             background: '#ffffff',
             border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
+            borderRadius: '12px',
+            fontSize: '1rem',
+            fontWeight: 700,
             cursor: isSubmitting ? 'not-allowed' : 'pointer',
             marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '12px',
-            opacity: isSubmitting ? 0.6 : 1
+            opacity: isSubmitting ? 0.6 : 1,
+            color: '#333',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+            transition: 'all 0.3s',
           }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24">
@@ -169,15 +214,17 @@ export default function LoginPage() {
 
         {/* Divider */}
         <div style={{
-          textAlign: 'center',
-          margin: '20px 0',
-          color: '#4c566a',
-          fontSize: '14px'
+          display: 'flex',
+          alignItems: 'center',
+          margin: '25px 0',
+          gap: '15px',
         }}>
-          or
+          <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
+          <span style={{ color: '#556', fontSize: '0.85rem' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
         </div>
 
-        {/* Email/Password Form */}
+        {/* Email Form */}
         <form onSubmit={handleEmailAuth}>
           <input
             type="email"
@@ -187,17 +234,18 @@ export default function LoginPage() {
             disabled={isSubmitting}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '14px 16px',
               marginBottom: '12px',
-              background: '#1a1f2e',
-              border: '1px solid #2e3440',
-              borderRadius: '8px',
-              color: '#eceff4',
-              fontSize: '16px',
-              boxSizing: 'border-box'
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '2px solid rgba(0, 217, 255, 0.2)',
+              borderRadius: '12px',
+              color: '#fff',
+              fontSize: '1rem',
+              boxSizing: 'border-box',
+              outline: 'none',
+              transition: 'border-color 0.3s',
             }}
           />
-
           <input
             type="password"
             placeholder="Password"
@@ -206,117 +254,111 @@ export default function LoginPage() {
             disabled={isSubmitting}
             style={{
               width: '100%',
-              padding: '12px',
+              padding: '14px 16px',
               marginBottom: '20px',
-              background: '#1a1f2e',
-              border: '1px solid #2e3440',
-              borderRadius: '8px',
-              color: '#eceff4',
-              fontSize: '16px',
-              boxSizing: 'border-box'
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '2px solid rgba(0, 217, 255, 0.2)',
+              borderRadius: '12px',
+              color: '#fff',
+              fontSize: '1rem',
+              boxSizing: 'border-box',
+              outline: 'none',
+              transition: 'border-color 0.3s',
             }}
           />
-
           <button
             type="submit"
             disabled={isSubmitting}
             style={{
               width: '100%',
               padding: '16px',
-              background: isSubmitting ? '#444' : 'linear-gradient(135deg, #05878a, #088395)',
+              background: isSubmitting ? '#333' : 'linear-gradient(135deg, #00d9ff, #0077ff)',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '12px',
               color: '#ffffff',
-              fontSize: '16px',
-              fontWeight: 'bold',
+              fontSize: '1rem',
+              fontWeight: 700,
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 15px rgba(5, 135, 138, 0.4)'
+              boxShadow: isSubmitting ? 'none' : '0 4px 20px rgba(0, 217, 255, 0.4)',
+              transition: 'all 0.3s',
             }}
           >
-            {isSubmitting ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+            {isSubmitting ? 'Please wait...' : (isSignUp ? 'Create Account' : 'Sign In')}
           </button>
         </form>
 
-        <p style={{
-          textAlign: 'center',
-          marginTop: '20px',
-          color: '#88c0d0',
-          fontSize: '14px'
-        }}>
+        <p style={{ textAlign: 'center', marginTop: '20px', color: '#889', fontSize: '0.95rem' }}>
           {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <a
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setError('')
-            }}
+          <button
+            onClick={() => { setIsSignUp(!isSignUp); setError('') }}
             style={{
-              color: '#05878a',
+              background: 'none',
+              border: 'none',
+              color: '#00d9ff',
               cursor: 'pointer',
-              textDecoration: 'underline'
+              textDecoration: 'underline',
+              fontSize: '0.95rem',
+              fontWeight: 600,
             }}
           >
             {isSignUp ? 'Sign In' : 'Sign Up'}
-          </a>
+          </button>
         </p>
 
-        {/* Social Proof */}
+        {/* Stats */}
         <div style={{
           marginTop: '30px',
           display: 'flex',
           justifyContent: 'space-around',
-          padding: '15px 0',
-          borderTop: '1px solid #2e3440',
-          borderBottom: '1px solid #2e3440'
+          padding: '20px 0',
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
         }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00d9ff' }}>100+</div>
-            <div style={{ fontSize: '11px', color: '#666' }}>Floors</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#00ff88' }}>Free</div>
-            <div style={{ fontSize: '11px', color: '#666' }}>Forever</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f39c12' }}>2</div>
-            <div style={{ fontSize: '11px', color: '#666' }}>Games</div>
-          </div>
+          {[
+            { value: '100+', label: 'Floors', color: '#00d9ff' },
+            { value: 'Free', label: 'Forever', color: '#2ecc71' },
+            { value: '2', label: 'Games', color: '#f39c12' },
+          ].map((stat) => (
+            <div key={stat.label} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: stat.color }}>{stat.value}</div>
+              <div style={{ fontSize: '0.75rem', color: '#556' }}>{stat.label}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Testimonials */}
+        {/* Testimonial */}
         <div style={{
           marginTop: '20px',
-          padding: '15px',
+          padding: '15px 20px',
           background: 'rgba(0, 217, 255, 0.05)',
-          borderRadius: '8px',
-          borderLeft: '3px solid #00d9ff'
+          borderRadius: '12px',
+          borderLeft: '3px solid #00d9ff',
         }}>
-          <p style={{
-            color: '#aaa',
-            fontSize: '13px',
-            margin: 0,
-            fontStyle: 'italic',
-            lineHeight: '1.5'
-          }}>
+          <p style={{ color: '#aaa', fontSize: '0.9rem', margin: 0, fontStyle: 'italic', lineHeight: 1.6 }}>
             "Finally a browser roguelike that doesn't feel like a mobile port. The synergy system is genius!"
           </p>
-          <p style={{
-            color: '#00d9ff',
-            fontSize: '11px',
-            margin: '8px 0 0 0',
-            fontWeight: 'bold'
-          }}>
+          <p style={{ color: '#00d9ff', fontSize: '0.8rem', margin: '10px 0 0 0', fontWeight: 700 }}>
             - r/WebGames user
           </p>
         </div>
 
         {/* Back to Home */}
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <a
-            href="/"
-            style={{ color: '#666', fontSize: '13px', textDecoration: 'none' }}
+        <div style={{ textAlign: 'center', marginTop: '25px' }}>
+          <button
+            onClick={() => router.push('/')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#556',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
           >
             ← Back to Home
-          </a>
+          </button>
         </div>
       </div>
     </div>
