@@ -161,6 +161,75 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Stats Counter Section */}
+      <section className="stats-section">
+        <h2>Join the Community</h2>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <span className="stat-number">100+</span>
+            <span className="stat-label">Floors to Conquer</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">40+</span>
+            <span className="stat-label">Achievements</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">20+</span>
+            <span className="stat-label">Buildings</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">2</span>
+            <span className="stat-label">Connected Games</span>
+          </div>
+        </div>
+      </section>
+
+      {/* What's New Section */}
+      <section className="whats-new-section">
+        <h2>What's New</h2>
+        <div className="update-cards">
+          <div className="update-card featured">
+            <span className="update-tag">New</span>
+            <h3>Weekly Challenges</h3>
+            <p>Epic week-long challenges with massive gold rewards and exclusive badges!</p>
+          </div>
+          <div className="update-card">
+            <span className="update-tag">New</span>
+            <h3>Seasonal Events</h3>
+            <p>Special limited-time events with unique rewards throughout the year.</p>
+          </div>
+          <div className="update-card">
+            <span className="update-tag">New</span>
+            <h3>Player Profiles</h3>
+            <p>View your stats, achievements, and share your progress with friends.</p>
+          </div>
+        </div>
+        <Link href="/news" className="view-all-link">View All Updates</Link>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        <div className="faq-grid">
+          <div className="faq-item">
+            <h3>Is Dot Universe completely free?</h3>
+            <p>Yes! Both DotSlayer and Dot Clicker are 100% free to play with no ads, no paywalls, and no pay-to-win mechanics.</p>
+          </div>
+          <div className="faq-item">
+            <h3>What is Cross-Game Synergy?</h3>
+            <p>Cross-Game Synergy rewards you for playing both games. Progress in DotSlayer gives bonuses in Dot Clicker and vice versa!</p>
+          </div>
+          <div className="faq-item">
+            <h3>Do I need an account?</h3>
+            <p>You can play without an account, but creating a free account unlocks cloud saves, leaderboards, and achievements tracking.</p>
+          </div>
+          <div className="faq-item">
+            <h3>What devices are supported?</h3>
+            <p>Dot Universe works on any device with a modern web browser - PC, Mac, tablets, and mobile phones!</p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="landing-footer">
         <div className="footer-content">
@@ -172,9 +241,10 @@ export default function Home() {
             <Link href="/hub">Game Hub</Link>
             <Link href="/slayer">DotSlayer</Link>
             <Link href="/clicker">Dot Clicker</Link>
+            <Link href="/news">News</Link>
             <Link href="/login">Sign In</Link>
           </nav>
-          <p className="copyright">Play free browser games at Dot Universe</p>
+          <p className="copyright">Play free browser games at Dot Universe | 2025-2026</p>
         </div>
       </footer>
 
@@ -589,6 +659,165 @@ export default function Home() {
           font-size: 0.9rem;
         }
 
+        /* Stats Section */
+        .stats-section {
+          padding: 80px 20px;
+          background: linear-gradient(180deg, rgba(0, 217, 255, 0.05) 0%, transparent 100%);
+        }
+
+        .stats-section h2 {
+          text-align: center;
+          font-size: 2.5rem;
+          color: #00d9ff;
+          margin-bottom: 50px;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 30px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+
+        .stat-item {
+          text-align: center;
+          padding: 30px;
+        }
+
+        .stat-number {
+          display: block;
+          font-size: 3.5rem;
+          font-weight: 800;
+          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .stat-label {
+          display: block;
+          color: #888;
+          font-size: 1rem;
+          margin-top: 10px;
+        }
+
+        /* What's New Section */
+        .whats-new-section {
+          padding: 80px 20px;
+          max-width: 1000px;
+          margin: 0 auto;
+        }
+
+        .whats-new-section h2 {
+          text-align: center;
+          font-size: 2.5rem;
+          color: #f39c12;
+          margin-bottom: 50px;
+        }
+
+        .update-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 25px;
+          margin-bottom: 30px;
+        }
+
+        .update-card {
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
+          padding: 25px;
+          transition: all 0.3s;
+        }
+
+        .update-card:hover {
+          transform: translateY(-5px);
+          border-color: rgba(243, 156, 18, 0.3);
+        }
+
+        .update-card.featured {
+          border-color: rgba(243, 156, 18, 0.3);
+          background: linear-gradient(145deg, rgba(243, 156, 18, 0.1), rgba(20, 25, 40, 0.9));
+        }
+
+        .update-tag {
+          display: inline-block;
+          padding: 4px 12px;
+          background: #f39c12;
+          color: #000;
+          font-size: 0.7rem;
+          font-weight: 700;
+          border-radius: 15px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 12px;
+        }
+
+        .update-card h3 {
+          color: #fff;
+          margin: 0 0 10px 0;
+          font-size: 1.2rem;
+        }
+
+        .update-card p {
+          color: #888;
+          margin: 0;
+          font-size: 0.95rem;
+          line-height: 1.5;
+        }
+
+        .view-all-link {
+          display: block;
+          text-align: center;
+          color: #f39c12;
+          text-decoration: none;
+          font-weight: 600;
+          transition: color 0.2s;
+        }
+
+        .view-all-link:hover {
+          color: #fff;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+          padding: 80px 20px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .faq-section h2 {
+          text-align: center;
+          font-size: 2.5rem;
+          color: #00d9ff;
+          margin-bottom: 50px;
+        }
+
+        .faq-grid {
+          display: grid;
+          gap: 20px;
+        }
+
+        .faq-item {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 12px;
+          padding: 25px;
+          border-left: 4px solid #00d9ff;
+        }
+
+        .faq-item h3 {
+          color: #fff;
+          margin: 0 0 12px 0;
+          font-size: 1.1rem;
+        }
+
+        .faq-item p {
+          color: #aaa;
+          margin: 0;
+          line-height: 1.6;
+        }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
           h1 {
@@ -606,6 +835,25 @@ export default function Home() {
           .synergy-features {
             flex-direction: column;
             gap: 30px;
+          }
+
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+
+          .stat-number {
+            font-size: 2.5rem;
+          }
+
+          .update-cards {
+            grid-template-columns: 1fr;
+          }
+
+          .stats-section h2,
+          .whats-new-section h2,
+          .faq-section h2 {
+            font-size: 1.8rem;
           }
         }
       `}</style>

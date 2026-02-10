@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '../lib/context/AuthContext'
+import { GoogleAnalytics } from '../lib/analytics/GoogleAnalytics'
 
 export const metadata: Metadata = {
   title: {
@@ -35,8 +36,15 @@ export const metadata: Metadata = {
     // Competition
     'competitive browser game',
     'multiplayer leaderboards',
-    'free online games 2024',
-    'best browser games',
+    'free online games 2025',
+    'free online games 2026',
+    'best browser games 2025',
+    'best browser games 2026',
+    'top web games',
+    'play games no download',
+    'instant play games',
+    'cross game progression',
+    'synergy games',
   ].join(', '),
   authors: [{ name: 'Dot Universe Team' }],
   creator: 'Dot Universe',
@@ -131,6 +139,10 @@ const jsonLd = {
         '@type': 'ImageObject',
         url: 'https://dotslayer.vercel.app/logo.png',
       },
+      sameAs: [
+        'https://twitter.com/dotuniverse',
+        'https://discord.gg/dotuniverse',
+      ],
     },
     {
       '@type': 'VideoGame',
@@ -150,7 +162,7 @@ const jsonLd = {
       aggregateRating: {
         '@type': 'AggregateRating',
         ratingValue: '4.5',
-        ratingCount: '100',
+        ratingCount: '150',
         bestRating: '5',
         worstRating: '1',
       },
@@ -173,10 +185,84 @@ const jsonLd = {
       aggregateRating: {
         '@type': 'AggregateRating',
         ratingValue: '4.3',
-        ratingCount: '85',
+        ratingCount: '120',
         bestRating: '5',
         worstRating: '1',
       },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': 'https://dotslayer.vercel.app/#faq',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'Is Dot Universe completely free to play?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes! Both DotSlayer and Dot Clicker are 100% free to play with no downloads, no ads, and no paywalls. Just visit the website and start playing instantly in your browser.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What is Cross-Game Synergy?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Cross-Game Synergy is our unique system that rewards you for playing both games. Progress in DotSlayer gives bonuses in Dot Clicker and vice versa. For example, each floor cleared in DotSlayer gives +1% DPS in Clicker, and each prestige in Clicker gives +5% damage in Slayer.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Do I need to create an account to play?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'You can play without an account, but creating a free account (via Google or email) unlocks cloud saves, global leaderboards, achievements tracking, and cross-device syncing so you never lose your progress.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What devices can I play Dot Universe on?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Dot Universe works on any device with a modern web browser - PC, Mac, Chromebook, tablets, and mobile phones. Your progress syncs across all devices when logged in.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'How many floors are in DotSlayer?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'DotSlayer features 100 procedurally generated floors with increasing difficulty. Boss fights occur every 10 floors, and there are 6 unique themed environments. Can you conquer all 100 floors and become a DotSlayer champion?',
+          },
+        },
+      ],
+    },
+    {
+      '@type': 'HowTo',
+      '@id': 'https://dotslayer.vercel.app/#howto',
+      name: 'How to Get Started with Dot Universe',
+      description: 'Quick guide to start playing free browser games on Dot Universe',
+      step: [
+        {
+          '@type': 'HowToStep',
+          name: 'Visit Dot Universe',
+          text: 'Go to dotslayer.vercel.app in any web browser',
+        },
+        {
+          '@type': 'HowToStep',
+          name: 'Create Free Account (Optional)',
+          text: 'Sign up with Google or email to save progress and compete on leaderboards',
+        },
+        {
+          '@type': 'HowToStep',
+          name: 'Choose Your Game',
+          text: 'Pick DotSlayer for action roguelike gameplay or Dot Clicker for relaxing idle progression',
+        },
+        {
+          '@type': 'HowToStep',
+          name: 'Play Both for Synergy Bonuses',
+          text: 'Unlock powerful cross-game bonuses by playing both games and building your Dot Universe empire',
+        },
+      ],
     },
   ],
 }
@@ -200,6 +286,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
       <body>
+        <GoogleAnalytics />
         <AuthProvider>
           {children}
         </AuthProvider>

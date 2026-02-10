@@ -726,10 +726,26 @@ export default function GameHub() {
         </div>
       )}
 
+      {/* Quick Links */}
+      <section className="quick-links">
+        <Link href="/profile" className="quick-link profile-link">
+          <span className="link-icon">👤</span>
+          <span>My Profile</span>
+        </Link>
+        <Link href="/news" className="quick-link news-link">
+          <span className="link-icon">📰</span>
+          <span>News & Updates</span>
+        </Link>
+      </section>
+
       {/* Footer */}
       <footer className="hub-footer">
         <div className="footer-content">
-          <span className="version">v1.0</span>
+          <span className="version">v2.0</span>
+          <div className="footer-links">
+            <Link href="/profile" className="footer-link">Profile</Link>
+            <Link href="/news" className="footer-link">News</Link>
+          </div>
           <button onClick={() => router.push('/login')} className="logout-btn">
             <span>Sign Out</span>
           </button>
@@ -1618,6 +1634,50 @@ export default function GameHub() {
           font-size: 1.1rem;
         }
 
+        /* Quick Links */
+        .quick-links {
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+          padding: 20px;
+          position: relative;
+          z-index: 10;
+        }
+
+        .quick-link {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 15px 30px;
+          background: linear-gradient(145deg, rgba(20, 25, 40, 0.8), rgba(15, 20, 35, 0.9));
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
+          color: #aab;
+          text-decoration: none;
+          font-weight: 600;
+          transition: all 0.3s;
+        }
+
+        .quick-link:hover {
+          transform: translateY(-3px);
+          border-color: rgba(0, 217, 255, 0.3);
+          color: #fff;
+        }
+
+        .profile-link:hover {
+          background: linear-gradient(135deg, rgba(0, 217, 255, 0.15), rgba(0, 150, 255, 0.1));
+          box-shadow: 0 5px 20px rgba(0, 217, 255, 0.2);
+        }
+
+        .news-link:hover {
+          background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.1));
+          box-shadow: 0 5px 20px rgba(46, 204, 113, 0.2);
+        }
+
+        .link-icon {
+          font-size: 1.2rem;
+        }
+
         /* Footer */
         .hub-footer {
           padding: 30px;
@@ -1630,6 +1690,21 @@ export default function GameHub() {
           justify-content: center;
           align-items: center;
           gap: 20px;
+        }
+
+        .footer-links {
+          display: flex;
+          gap: 15px;
+        }
+
+        .footer-link {
+          color: #556;
+          text-decoration: none;
+          font-size: 0.85rem;
+          transition: color 0.2s;
+        }
+        .footer-link:hover {
+          color: #00d9ff;
         }
 
         .version {
