@@ -533,10 +533,10 @@ export default class GameSceneV3 extends Phaser.Scene {
     if (combo > 0) {
       this.comboDisplay.setVisible(true)
 
-      // Position in center top - FIX V5: Use screen dimensions
+      // Position in center top - FIX V8: Moved lower to avoid Hub button
       this.comboDisplay.setPosition(
         this.scale.width / 2,
-        100
+        160
       )
 
       // Update text
@@ -560,16 +560,19 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
-    // FIX V5: Use screen dimensions for kill feed
+    // FIX V7: Use screen dimensions for kill feed with proper bounds
     const screenWidth = this.scale.width
+    const maxWidth = Math.min(400, screenWidth * 0.4) // Max 400px or 40% of screen
 
     const message = this.add.text(screenWidth - 20, 20 + this.killFeedMessages.length * 35, text, {
-      fontSize: '18px',
+      fontSize: '16px',
       color: color,
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
       align: 'right',
+      wordWrap: { width: maxWidth, useAdvancedWrap: true },
+      maxLines: 2,
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(5000)
 
     // Slide in animation
