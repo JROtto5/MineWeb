@@ -420,6 +420,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.repositionEnemyTracker()
     // Reposition floor display
     this.repositionFloorDisplay()
+    // Reposition kill feed box
+    this.repositionKillFeedBox()
     // Ensure minimap stays visible
     if (this.minimap) {
       this.minimap.setVisible(true)
@@ -493,7 +495,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     const slotGap = 10
     const totalSlots = 9
     const startX = (screenWidth - (totalSlots * (slotSize + slotGap) - slotGap)) / 2
-    const barY = screenHeight - 100
+    const barY = screenHeight - 110 // Moved 10px up
 
     this.abilityHotbarUI.forEach((slot: any, index: number) => {
       const x = startX + index * (slotSize + slotGap)
@@ -589,6 +591,15 @@ export default class GameSceneV3 extends Phaser.Scene {
     this.killFeedContainer = container
   }
 
+  private repositionKillFeedBox() {
+    if (!this.killFeedBox) return
+    const screenHeight = this.scale.height
+    const boxHeight = 180
+    const boxX = 185
+    const boxY = screenHeight * 0.55 - 50
+    this.killFeedBox.container.setPosition(boxX, boxY)
+  }
+
   private addKillFeedMessage(text: string, color: string, duration: number = 3000) {
     if (!this.killFeedBox) return
 
@@ -664,7 +675,7 @@ export default class GameSceneV3 extends Phaser.Scene {
     const slotGap = 10
     const totalSlots = 9
     const startX = (screenWidth - (totalSlots * (slotSize + slotGap) - slotGap)) / 2
-    const barY = screenHeight - 100
+    const barY = screenHeight - 110 // Moved 10px up
 
     const abilities = [
       { key: '1', name: 'Dash', icon: '💨', check: () => this.player.canDash() },
