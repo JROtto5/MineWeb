@@ -564,8 +564,8 @@ export default class GameSceneV3 extends Phaser.Scene {
     const screenHeight = this.scale.height
     const boxWidth = 320
     const boxHeight = 180
-    const boxX = 200 // More to the right
-    const boxY = screenHeight * 0.55 // Lower on screen
+    const boxX = 185 // Slightly more left
+    const boxY = screenHeight * 0.55 - 50 // A bit higher
 
     const container = this.add.container(boxX, boxY).setDepth(5000).setScrollFactor(0)
 
