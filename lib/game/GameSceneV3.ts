@@ -561,11 +561,11 @@ export default class GameSceneV3 extends Phaser.Scene {
   }
 
   private createKillFeedBox() {
-    const screenWidth = this.scale.width
+    const screenHeight = this.scale.height
     const boxWidth = 320
     const boxHeight = 180
-    const boxX = screenWidth - boxWidth - 20 // 20px from right edge
-    const boxY = 180 // Below the floor info
+    const boxX = 0 // Left edge of window
+    const boxY = (screenHeight - boxHeight) / 2 // Vertically centered
 
     const container = this.add.container(boxX, boxY).setDepth(5000).setScrollFactor(0)
 
